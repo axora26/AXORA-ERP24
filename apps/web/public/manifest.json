@@ -1,0 +1,10 @@
+{
+  "name": "AXORA-ERP24",
+  "short_name": "AXORA-ERP24",
+  "description": "Plateforme entreprise integree AXORA-ERP24",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1E3A8A",
+  "icons": []
+}

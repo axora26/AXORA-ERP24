@@ -1,0 +1,32 @@
+{
+  "name": "axora-erp24",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AXORA-ERP24 — plateforme entreprise integree (ERP/CRM/Construction/BIM/Smart Building/IA)",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "pnpm --filter @axora24/web dev",
+    "dev:api": "pnpm --filter @axora24/api start:dev",
+    "build": "pnpm -r build",
+    "build:packages": "pnpm --filter \"./packages/**\" build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @axora24/api test:e2e",
+    "db:generate": "pnpm --filter @axora24/database generate",
+    "db:validate": "pnpm --filter @axora24/database validate",
+    "db:format": "pnpm --filter @axora24/database format",
+    "db:migrate": "pnpm --filter @axora24/database migrate",
+    "db:seed": "pnpm --filter @axora24/database seed",
+    "clean": "pnpm -r exec rm -rf dist .next node_modules/.cache"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2"
+  }
+}

@@ -1,0 +1,40 @@
+name: axora-erp24-dev
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: axora_erp24_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: axora
+      POSTGRES_PASSWORD: axora_dev_password
+      POSTGRES_DB: axora_erp24_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - axora_erp24_postgres_dev_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U axora -d axora_erp24_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: axora_erp24_redis_dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - axora_erp24_redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  axora_erp24_postgres_dev_data:
+    name: axora_erp24_postgres_dev_data
+  axora_erp24_redis_dev_data:
+    name: axora_erp24_redis_dev_data

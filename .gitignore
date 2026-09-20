@@ -26,6 +26,9 @@ test-results/
 *.db
 uploads/
 
+# Prisma generated client (regenere via pnpm db:generate)
+packages/database/prisma/migrations/**/migration.sql.bak
+
 # OS / IDE
 .DS_Store
 Thumbs.db

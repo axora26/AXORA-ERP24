@@ -1,0 +1,27 @@
+:root {
+  --axora-brand-900: #1e3a8a;
+  --axora-brand-600: #2563eb;
+  --axora-ink-900: #111827;
+  --axora-neutral-300: #bfc3c9;
+  --axora-neutral-0: #ffffff;
+  --axora-font-heading: "Montserrat", sans-serif;
+  --axora-font-body: "Inter", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--axora-font-body);
+  color: var(--axora-ink-900);
+  background: var(--axora-neutral-0);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--axora-font-heading);
+}
