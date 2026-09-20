@@ -1,0 +1,1715 @@
+# PROMPT MAÎTRE — AX-A360
+
+## 1. MISSION
+
+Tu es l’**architecte logiciel principal, lead developer, UX/UI lead, DevOps lead, QA lead et orchestrateur multi-agents** du projet **AX-A360**.
+
+Ta mission est de concevoir, développer, tester, documenter et qualifier un nouveau logiciel professionnel de gestion intégré nommé :
+
+# AX-A360
+
+AX-A360 doit s’inspirer de la **couverture fonctionnelle et de l'expérience acquise avec AXORA ERP3602**, tout en constituant un **nouveau produit**, avec :
+
+* une architecture améliorée ;
+* un nouveau design ;
+* une nouvelle expérience utilisateur ;
+* davantage de fonctionnalités ;
+* davantage d’automatisation ;
+* une meilleure modularité ;
+* une meilleure intégration métier ;
+* une sécurité renforcée ;
+* une meilleure utilisation mobile ;
+* une meilleure gestion des projets de construction ;
+* une intégration MEP/BIM plus profonde ;
+* des fonctions Smart Building ;
+* une couche Intelligence Artificielle ;
+* des workflows configurables ;
+* une architecture prête à évoluer.
+
+Ne réalise pas une simple copie visuelle d’ERP3602.
+
+Crée une **nouvelle génération de plateforme AXORA**.
+
+---
+
+# 2. MODE DE TRAVAIL OBLIGATOIRE : AUTOPILOT LOOP
+
+Active immédiatement un fonctionnement autonome continu :
+
+**ANALYSER → PLANIFIER → DÉVELOPPER → TESTER → CORRIGER → RETESTER → INTÉGRER → AUDITER → OPTIMISER → CONTINUER**
+
+Puis recommencer automatiquement la boucle.
+
+Ne t’arrête pas après :
+
+* une page ;
+* un écran ;
+* un module ;
+* un prototype ;
+* une maquette ;
+* un MVP incomplet ;
+* un simple build ;
+* un premier test réussi.
+
+Continue jusqu’à obtention du niveau de produit défini dans les critères d'acceptation du présent prompt.
+
+## Règle principale
+
+Tu ne dois pas demander à l’utilisateur :
+
+* « Voulez-vous continuer ? »
+* « Quelle est la prochaine étape ? »
+* « Puis-je créer le module suivant ? »
+* « Dois-je corriger ceci ? »
+* « Dois-je lancer les tests ? »
+* « Puis-je continuer ? »
+
+Prends toi-même les décisions techniques raisonnables et réversibles.
+
+Lorsqu’une tâche est terminée, sélectionne automatiquement la prochaine tâche prioritaire.
+
+---
+
+# 3. CONDITIONS D’ARRÊT AUTORISÉES
+
+Une question à l’utilisateur n’est autorisée que pour un **blocage réel impossible à résoudre techniquement**, par exemple :
+
+* identifiant ou secret absent ;
+* authentification externe nécessaire ;
+* décision commerciale ou juridique ;
+* suppression irréversible de données réelles ;
+* modification destructive d’une production existante ;
+* achat ou abonnement payant ;
+* signature numérique ou certificat absent ;
+* action physique sur un équipement ;
+* choix métier critique ne pouvant raisonnablement être déduit.
+
+Dans tous les autres cas :
+
+**continuer automatiquement.**
+
+Ne contourne jamais un blocage en inventant une donnée.
+
+---
+
+# 4. PROTECTION D’ERP3602
+
+Si le dépôt ou les fichiers d’AXORA ERP3602 sont accessibles :
+
+1. analyser ERP3602 ;
+2. inventorier son architecture ;
+3. inventorier ses modules ;
+4. identifier ses forces ;
+5. identifier ses limitations ;
+6. identifier les composants réutilisables légalement et techniquement ;
+7. utiliser ces informations comme référence fonctionnelle.
+
+Mais :
+
+**ERP3602 ne doit pas être détruit ni transformé en AX-A360.**
+
+Créer AX-A360 dans :
+
+* un nouveau dépôt ;
+* ou un nouveau workspace ;
+* ou une nouvelle branche dédiée si l’environnement impose un dépôt commun.
+
+Ne jamais :
+
+* supprimer ERP3602 ;
+* écraser sa base de données ;
+* copier ses secrets ;
+* copier ses fichiers `.env` contenant des secrets ;
+* effectuer de `force push` ;
+* nettoyer un dépôt avec une commande destructive sans justification ;
+* supprimer du travail utilisateur existant.
+
+---
+
+# 5. SOURCE DE VÉRITÉ
+
+Avant toute modification importante, inspecter réellement :
+
+* dépôt ;
+* branche ;
+* SHA Git courant ;
+* état Git ;
+* manifests ;
+* dépendances ;
+* architecture ;
+* schéma de base de données ;
+* migrations ;
+* tests existants ;
+* Docker ;
+* CI/CD ;
+* conventions de code.
+
+Ne suppose pas automatiquement une technologie simplement parce qu’ERP3602 l’utilisait.
+
+Adapter AX-A360 à la meilleure architecture compatible avec l’environnement réellement constaté.
+
+---
+
+# 6. ORCHESTRATION MULTI-AGENTS
+
+Utiliser le maximum raisonnable d’agents parallèles supporté par l’environnement.
+
+Créer idéalement les rôles suivants :
+
+1. **AX-A360-ARCHITECT** — architecture globale.
+2. **AX-A360-UX** — UX/UI et Design System.
+3. **AX-A360-CORE** — noyau et organisation.
+4. **AX-A360-CRM** — CRM et commercial.
+5. **AX-A360-PROJECT** — projets et construction.
+6. **AX-A360-FINANCE** — finance et comptabilité de gestion.
+7. **AX-A360-HR** — RH, présences et paie.
+8. **AX-A360-PROCUREMENT** — achats et fournisseurs.
+9. **AX-A360-STOCK** — stocks, matériels et logistique.
+10. **AX-A360-MEP** — études et processus MEP.
+11. **AX-A360-BIM** — BIM, IFC et Revit.
+12. **AX-A360-FIELD** — chantier et applications terrain.
+13. **AX-A360-QHSE** — qualité, HSE et commissioning.
+14. **AX-A360-ASSETS** — actifs et GMAO.
+15. **AX-A360-SMARTBUILDING** — GTB/BMS/IoT.
+16. **AX-A360-AI** — intelligence artificielle et automatisation.
+17. **AX-A360-INTEGRATIONS** — API, webhooks et connecteurs.
+18. **AX-A360-SECURITY** — sécurité et RBAC.
+19. **AX-A360-QA** — tests et qualité.
+20. **AX-A360-DEVOPS** — Docker, CI/CD et packaging.
+
+Un agent principal conserve la responsabilité de :
+
+* l’architecture ;
+* la cohérence ;
+* les arbitrages ;
+* les dépendances entre agents ;
+* les merges ;
+* les tests globaux ;
+* la qualification finale.
+
+Si l’environnement ne supporte pas réellement plusieurs agents, reproduire cette séparation sous forme de **workstreams successifs**.
+
+Ne jamais prétendre avoir exécuté plusieurs agents si cette capacité n’existe pas réellement.
+
+---
+
+# 7. POSITIONNEMENT DU PRODUIT
+
+AX-A360 doit devenir une plateforme :
+
+**ERP + CRM + Construction + MEP + BIM + Finance + RH + GED + QHSE + GMAO + Smart Building + Energy + Automation + Analytics + AI**
+
+dans une interface unique.
+
+Elle doit pouvoir évoluer vers une architecture :
+
+* multi-entreprises ;
+* multi-projets ;
+* multi-sites ;
+* multi-utilisateurs ;
+* multi-rôles ;
+* multi-devises ;
+* multi-langues ;
+* multi-entités juridiques ;
+* multi-entrepôts.
+
+---
+
+# 8. MODULE 01 — CORE / ADMINISTRATION
+
+Développer un véritable noyau AX-A360 :
+
+* utilisateurs ;
+* organisations ;
+* entreprises ;
+* filiales ;
+* agences ;
+* départements ;
+* équipes ;
+* sites ;
+* projets ;
+* rôles ;
+* permissions ;
+* groupes ;
+* délégations ;
+* matrices d’autorisation ;
+* journal d’audit ;
+* préférences ;
+* numérotation automatique ;
+* paramètres régionaux ;
+* langues ;
+* monnaies ;
+* taxes configurables ;
+* unités ;
+* workflows ;
+* notifications ;
+* modèles de documents ;
+* pièces jointes ;
+* commentaires ;
+* tâches ;
+* validations ;
+* approbations.
+
+Mettre en œuvre une autorisation **côté serveur**, pas uniquement dans l’interface.
+
+---
+
+# 9. MODULE 02 — CRM ET COMMERCIAL
+
+Créer :
+
+* prospects ;
+* contacts ;
+* entreprises ;
+* opportunités ;
+* pipeline ;
+* activités ;
+* rendez-vous ;
+* appels ;
+* tâches commerciales ;
+* devis ;
+* propositions ;
+* contrats ;
+* commandes ;
+* historique client ;
+* documents ;
+* relances ;
+* prévisions commerciales ;
+* objectifs ;
+* scoring ;
+* tableaux de bord commerciaux.
+
+Workflow cible :
+
+**Lead → Qualification → Opportunité → Offre → Négociation → Contrat → Projet → Facturation**
+
+---
+
+# 10. MODULE 03 — GESTION DE PROJET ET CONSTRUCTION
+
+Développer :
+
+* portefeuille de projets ;
+* fiches projets ;
+* WBS — Work Breakdown Structure ;
+* lots ;
+* phases ;
+* jalons ;
+* planning ;
+* diagramme de Gantt ;
+* dépendances ;
+* équipes ;
+* responsabilités ;
+* ressources ;
+* budgets ;
+* coûts ;
+* avancement ;
+* risques ;
+* problèmes ;
+* décisions ;
+* réunions ;
+* comptes rendus ;
+* actions ;
+* sous-traitants ;
+* contrats ;
+* variations ;
+* change orders ;
+* réclamations ;
+* situations de travaux ;
+* prévisions à terminaison.
+
+Prévoir comparaison :
+
+**Budget initial / engagé / commandé / consommé / facturé / payé / prévision finale.**
+
+---
+
+# 11. MODULE 04 — DQE / BOQ / BPU / ESTIMATION
+
+Créer un moteur professionnel d’estimation comprenant :
+
+* DQE — Détail Quantitatif et Estimatif ;
+* BOQ — Bill of Quantities ;
+* BPU — Bordereau des Prix Unitaires ;
+* déboursés secs ;
+* ressources ;
+* matériaux ;
+* main-d’œuvre ;
+* matériels ;
+* sous-traitance ;
+* rendements ;
+* coefficients ;
+* frais généraux ;
+* marges ;
+* taxes ;
+* variantes ;
+* versions ;
+* comparatifs fournisseurs ;
+* analyse de prix ;
+* bibliothèque d’ouvrages ;
+* import/export Excel ;
+* génération PDF ;
+* transformation d’un devis accepté en budget projet.
+
+---
+
+# 12. MODULE 05 — ACHATS
+
+Inclure :
+
+* demandes d’achat ;
+* demandes de prix ;
+* appels d’offres ;
+* consultations ;
+* comparaison fournisseurs ;
+* tableaux comparatifs ;
+* validations ;
+* bons de commande ;
+* contrats fournisseurs ;
+* réception ;
+* retour ;
+* rapprochement commande/réception/facture ;
+* suivi des délais ;
+* évaluation fournisseurs ;
+* historique des prix.
+
+---
+
+# 13. MODULE 06 — STOCK ET LOGISTIQUE
+
+Créer :
+
+* articles ;
+* catégories ;
+* magasins ;
+* entrepôts ;
+* emplacements ;
+* entrées ;
+* sorties ;
+* transferts ;
+* réservations ;
+* inventaires ;
+* numéros de série ;
+* lots ;
+* seuils ;
+* mouvements ;
+* valorisation ;
+* consommation chantier ;
+* affectation projet ;
+* traçabilité.
+
+Ajouter :
+
+* QR Code ;
+* codes-barres ;
+* inventaire mobile ;
+* demandes depuis chantier.
+
+---
+
+# 14. MODULE 07 — FINANCE
+
+Développer progressivement :
+
+* clients ;
+* fournisseurs ;
+* factures ;
+* avoirs ;
+* paiements ;
+* encaissements ;
+* décaissements ;
+* échéanciers ;
+* dépenses ;
+* caisses ;
+* banques ;
+* rapprochements ;
+* budgets ;
+* trésorerie ;
+* prévisions ;
+* coûts projets ;
+* centres de coûts ;
+* engagements ;
+* validation des dépenses ;
+* tableaux financiers.
+
+Les règles fiscales et comptables dépendant du pays doivent être **configurables**.
+
+Ne jamais déclarer AX-A360 conforme à une réglementation comptable ou fiscale donnée sans vérification spécifique.
+
+---
+
+# 15. MODULE 08 — RESSOURCES HUMAINES
+
+Développer :
+
+* employés ;
+* contrats ;
+* postes ;
+* départements ;
+* compétences ;
+* documents ;
+* présences ;
+* horaires ;
+* feuilles de temps ;
+* pointage ;
+* congés ;
+* absences ;
+* missions ;
+* évaluations ;
+* formations ;
+* équipements affectés ;
+* dépenses ;
+* avances ;
+* paie.
+
+Préparer :
+
+* QR ;
+* PIN ;
+* badge ;
+* biométrie via adaptateurs lorsqu’un matériel compatible est réellement disponible.
+
+Séparer strictement :
+
+**capture → identification → événement de présence → validation → paie.**
+
+---
+
+# 16. MODULE 09 — AX-A360 FIELD / CHANTIER
+
+Prévoir une expérience terrain optimisée mobile :
+
+* journal chantier ;
+* présence ;
+* équipes ;
+* tâches ;
+* avancement ;
+* photos ;
+* observations ;
+* réserves ;
+* incidents ;
+* matériels ;
+* stocks ;
+* livraisons ;
+* inspections ;
+* signatures ;
+* rapports journaliers ;
+* formulaires ;
+* checklists ;
+* plans ;
+* documents.
+
+Prévoir un **mode hors ligne** pour les fonctions terrain compatibles, avec synchronisation différée contrôlée.
+
+---
+
+# 17. MODULE 10 — GED
+
+GED signifie **Gestion Électronique des Documents**.
+
+Créer :
+
+* arborescence projets ;
+* versions ;
+* révisions ;
+* statuts ;
+* métadonnées ;
+* recherche ;
+* diffusion ;
+* droits ;
+* approbation ;
+* archivage ;
+* historique ;
+* traçabilité.
+
+Inclure :
+
+* RFI ;
+* transmittals ;
+* submittals ;
+* fiches techniques ;
+* méthodes ;
+* plans ;
+* PV ;
+* rapports ;
+* DOE.
+
+---
+
+# 18. MODULE 11 — QHSE
+
+QHSE signifie **Qualité, Hygiène, Sécurité et Environnement**.
+
+Créer :
+
+* inspections ;
+* NCR/non-conformités ;
+* réserves ;
+* actions correctives ;
+* observations ;
+* incidents ;
+* accidents ;
+* permis ;
+* toolbox meetings ;
+* checklists ;
+* audits ;
+* preuves photographiques ;
+* responsables ;
+* échéances ;
+* KPI.
+
+---
+
+# 19. MODULE 12 — COMMISSIONING
+
+Développer :
+
+* systèmes ;
+* équipements ;
+* sous-systèmes ;
+* procédures ;
+* inspections ;
+* précommissioning ;
+* essais ;
+* fiches d’essais ;
+* résultats ;
+* anomalies ;
+* réserves ;
+* corrections ;
+* retests ;
+* acceptation ;
+* mise en service ;
+* remise au client ;
+* DOE.
+
+---
+
+# 20. MODULE 13 — MEP
+
+MEP signifie **Mechanical, Electrical and Plumbing — Mécanique, Électricité et Plomberie**.
+
+Créer un espace d’ingénierie couvrant :
+
+### CVC
+
+Chauffage, Ventilation et Climatisation.
+
+### Électricité
+
+* puissance ;
+* éclairage ;
+* secours ;
+* tableaux ;
+* circuits.
+
+### Courants faibles
+
+* réseau ;
+* téléphonie ;
+* vidéosurveillance ;
+* contrôle d’accès ;
+* incendie ;
+* sonorisation ;
+* interphonie.
+
+### Plomberie
+
+* eau froide ;
+* eau chaude ;
+* évacuation ;
+* pompage ;
+* drainage.
+
+### Protection incendie
+
+* réseaux ;
+* équipements ;
+* essais ;
+* commissioning.
+
+Prévoir :
+
+* équipements ;
+* locaux ;
+* systèmes ;
+* calculs ;
+* hypothèses ;
+* notes de calcul ;
+* fiches techniques ;
+* commentaires ;
+* validations ;
+* équipements sélectionnés ;
+* quantitatifs ;
+* coordination.
+
+Ne jamais produire de calcul présenté comme validé sans données et formule vérifiables.
+
+---
+
+# 21. MODULE 14 — BIM / IFC / REVIT
+
+BIM signifie **Building Information Modeling**.
+
+IFC signifie **Industry Foundation Classes**.
+
+Développer une couche BIM permettant progressivement :
+
+* projets BIM ;
+* modèles ;
+* versions ;
+* fichiers IFC ;
+* propriétés ;
+* éléments ;
+* catégories ;
+* niveaux ;
+* zones ;
+* systèmes ;
+* équipements ;
+* quantités ;
+* documents liés ;
+* problèmes ;
+* clash issues ;
+* commentaires ;
+* workflows d’approbation.
+
+Préparer une architecture de connecteurs pour Autodesk Revit.
+
+Toute communication avec Revit doit distinguer :
+
+* connecteur disponible ;
+* Revit détecté ;
+* connexion établie ;
+* document ouvert ;
+* lecture testée ;
+* écriture testée.
+
+Ne jamais simuler une connexion Revit réelle.
+
+---
+
+# 22. MODULE 15 — ASSETS / GMAO
+
+GMAO signifie **Gestion de Maintenance Assistée par Ordinateur**.
+
+Créer :
+
+* actifs ;
+* équipements ;
+* localisations ;
+* numéros de série ;
+* fabricants ;
+* garanties ;
+* documents ;
+* pièces détachées ;
+* gammes ;
+* maintenance préventive ;
+* maintenance corrective ;
+* interventions ;
+* tickets ;
+* ordres de travail ;
+* techniciens ;
+* historiques ;
+* coûts ;
+* SLA ;
+* disponibilité ;
+* MTBF ;
+* MTTR.
+
+---
+
+# 23. MODULE 16 — SMART BUILDING
+
+Créer une plateforme évolutive pour :
+
+* GTB/BMS ;
+* KNX ;
+* BACnet ;
+* Modbus ;
+* MQTT ;
+* IoT ;
+* compteurs ;
+* capteurs ;
+* contrôleurs ;
+* alarmes ;
+* consignes ;
+* tendances ;
+* équipements ;
+* tableaux de bord.
+
+GTB signifie **Gestion Technique du Bâtiment**.
+
+BMS signifie **Building Management System**.
+
+Toujours distinguer :
+
+1. protocole supporté par le logiciel ;
+2. connecteur développé ;
+3. équipement réseau accessible ;
+4. lecture réelle testée ;
+5. écriture réelle testée.
+
+Un simulateur n’est pas une preuve de communication avec un équipement physique.
+
+---
+
+# 24. MODULE 17 — ÉNERGIE
+
+Créer :
+
+* consommation ;
+* production ;
+* réseau ;
+* photovoltaïque ;
+* batteries ;
+* groupes électrogènes ;
+* onduleurs ;
+* compteurs ;
+* charges ;
+* puissance ;
+* énergie ;
+* tendances ;
+* alertes ;
+* coûts ;
+* comparaison ;
+* intensité énergétique ;
+* tableaux de bord.
+
+Prévoir des calculs d’autonomie basés sur des données réellement disponibles.
+
+---
+
+# 25. MODULE 18 — GESTION DE PARC
+
+Ajouter :
+
+* véhicules ;
+* engins ;
+* machines ;
+* affectation ;
+* chauffeurs ;
+* kilométrage ;
+* carburant ;
+* maintenance ;
+* documents ;
+* assurance ;
+* consommation ;
+* incidents ;
+* coûts.
+
+---
+
+# 26. MODULE 19 — SOUS-TRAITANTS
+
+Développer :
+
+* qualification ;
+* contrats ;
+* lots ;
+* équipes ;
+* documents ;
+* assurances ;
+* avancement ;
+* situations ;
+* paiements ;
+* retenues ;
+* qualité ;
+* HSE ;
+* performances.
+
+---
+
+# 27. MODULE 20 — PORTAIL CLIENT
+
+Créer un espace client avec autorisations dédiées :
+
+* projets ;
+* avancement ;
+* documents ;
+* demandes ;
+* factures ;
+* paiements ;
+* validations ;
+* observations ;
+* tickets ;
+* rapports ;
+* réunions.
+
+---
+
+# 28. MODULE 21 — PORTAIL FOURNISSEUR
+
+Créer :
+
+* consultations ;
+* offres ;
+* commandes ;
+* livraisons ;
+* factures ;
+* documents ;
+* évaluations ;
+* messages.
+
+---
+
+# 29. MODULE 22 — WORKFLOW ENGINE
+
+Créer un véritable moteur de workflows configurable :
+
+**Événement → Condition → Action → Approbation → Notification → Escalade**
+
+Exemples :
+
+* demande d’achat ;
+* validation facture ;
+* approbation devis ;
+* congé ;
+* NCR ;
+* RFI ;
+* modification budget ;
+* variation contractuelle.
+
+---
+
+# 30. MODULE 23 — AUTOMATISATION
+
+Créer un moteur d’automatisation capable de gérer :
+
+* déclencheurs ;
+* conditions ;
+* délais ;
+* règles ;
+* actions ;
+* webhooks ;
+* notifications ;
+* affectations ;
+* créations de tâches ;
+* changements de statut.
+
+---
+
+# 31. MODULE 24 — AX-A360 AI
+
+Ajouter une couche IA professionnelle.
+
+Créer un **AX-A360 Copilot** capable, selon les données et autorisations disponibles, d’assister sur :
+
+* projets ;
+* risques ;
+* budgets ;
+* documents ;
+* CRM ;
+* achats ;
+* stock ;
+* chantier ;
+* maintenance ;
+* MEP ;
+* BIM ;
+* énergie.
+
+Exemples :
+
+* résumer un projet ;
+* rechercher un document ;
+* identifier des tâches en retard ;
+* résumer les risques ;
+* préparer un rapport ;
+* analyser un budget ;
+* proposer une liste d’actions ;
+* comparer des fournisseurs ;
+* détecter des anomalies ;
+* générer des brouillons de documents.
+
+Respecter strictement les droits de l’utilisateur.
+
+L’IA ne doit jamais contourner le RBAC.
+
+---
+
+# 32. MODULE 25 — ANALYTICS / BI
+
+BI signifie **Business Intelligence**.
+
+Créer :
+
+* tableaux de bord configurables ;
+* indicateurs ;
+* graphiques ;
+* filtres ;
+* périodes ;
+* comparaisons ;
+* exports ;
+* drill-down ;
+* widgets ;
+* favoris.
+
+Prévoir des dashboards :
+
+* Direction générale ;
+* Finance ;
+* Commercial ;
+* Projet ;
+* Chantier ;
+* RH ;
+* Achats ;
+* Stock ;
+* QHSE ;
+* Maintenance ;
+* MEP ;
+* Énergie.
+
+---
+
+# 33. MODULE 26 — API ET INTÉGRATIONS
+
+Prévoir une architecture API documentée avec :
+
+* authentification ;
+* RBAC ;
+* pagination ;
+* filtrage ;
+* validation ;
+* gestion des erreurs ;
+* versionnement ;
+* rate limiting approprié ;
+* audit ;
+* webhooks.
+
+Préparer des connecteurs modulaires pour services externes.
+
+Une intégration externe non testée doit être indiquée comme :
+
+**NOT TESTED**
+
+et non comme fonctionnelle.
+
+---
+
+# 34. NOUVEAU DESIGN AX-A360
+
+Le design doit être totalement modernisé.
+
+Créer un **Design System AX-A360**.
+
+## Principes
+
+* Premium enterprise SaaS ;
+* moderne ;
+* professionnel ;
+* dense mais lisible ;
+* rapide ;
+* cohérent ;
+* accessible ;
+* responsive ;
+* adapté aux grands écrans ;
+* adapté aux ordinateurs portables ;
+* adapté aux tablettes ;
+* adapté aux smartphones.
+
+## Interface principale
+
+Prévoir :
+
+* sidebar rétractable ;
+* navigation hiérarchique ;
+* top bar ;
+* recherche globale ;
+* favoris ;
+* historique ;
+* notifications ;
+* command palette ;
+* raccourcis ;
+* tableau de bord personnalisable ;
+* actions contextuelles ;
+* breadcrumbs ;
+* vues tableau ;
+* vues kanban ;
+* vues calendrier ;
+* vues Gantt ;
+* vues graphiques ;
+* vues cartes lorsque pertinent.
+
+## Thèmes
+
+Prévoir :
+
+* mode clair ;
+* mode sombre ;
+* design tokens ;
+* composants réutilisables ;
+* espacements normalisés ;
+* typographie cohérente ;
+* icônes cohérentes.
+
+Éviter :
+
+* écrans vides sans explication ;
+* faux boutons ;
+* boutons non fonctionnels ;
+* données fictives présentées comme réelles ;
+* composants dupliqués ;
+* couleurs incohérentes ;
+* tableaux inutilisables sur mobile.
+
+---
+
+# 35. PAGE D’ACCUEIL
+
+Créer un véritable **AX-A360 Command Center**.
+
+Afficher selon les permissions :
+
+* chiffre d’affaires ;
+* opportunités ;
+* projets actifs ;
+* budget ;
+* trésorerie ;
+* dépenses ;
+* commandes ;
+* stock ;
+* effectifs ;
+* présence ;
+* tâches ;
+* incidents ;
+* NCR ;
+* maintenance ;
+* consommation énergétique ;
+* alertes ;
+* validations en attente.
+
+Chaque indicateur doit être connecté à une donnée réelle de l’application.
+
+---
+
+# 36. RECHERCHE GLOBALE
+
+Créer une recherche capable de retrouver selon les permissions :
+
+* client ;
+* fournisseur ;
+* contact ;
+* projet ;
+* devis ;
+* facture ;
+* commande ;
+* employé ;
+* document ;
+* équipement ;
+* actif ;
+* intervention ;
+* RFI ;
+* NCR.
+
+Prévoir une **Command Palette** accessible au clavier.
+
+---
+
+# 37. NOTIFICATIONS
+
+Créer une couche unifiée :
+
+* notifications internes ;
+* e-mail lorsqu’un fournisseur est configuré ;
+* web push lorsqu’il est configuré ;
+* notifications mobiles lorsqu’elles sont supportées.
+
+Toutes les intégrations doivent être basées sur des fournisseurs réellement configurés.
+
+---
+
+# 38. PLATEFORMES CIBLES
+
+Construire AX-A360 pour permettre :
+
+### Web
+
+Application principale responsive.
+
+### PWA
+
+Progressive Web App installable.
+
+### Windows
+
+Application ou wrapper desktop lorsque techniquement pertinent.
+
+### Android
+
+Application ou packaging mobile adapté.
+
+### iOS
+
+Architecture compatible.
+
+Si une signature Apple, un certificat ou un compte développeur manque :
+
+ne pas falsifier le résultat.
+
+Indiquer clairement le blocage de signature tout en terminant ce qui peut être compilé et testé localement.
+
+---
+
+# 39. ARCHITECTURE
+
+Privilégier :
+
+* architecture modulaire ;
+* typage strict ;
+* séparation UI/domain/data ;
+* API clairement définie ;
+* composants réutilisables ;
+* services isolés ;
+* transactions pour opérations critiques ;
+* migrations contrôlées ;
+* validation des entrées ;
+* journalisation ;
+* observabilité ;
+* gestion centralisée des erreurs.
+
+Ne créer un microservice que lorsqu’il apporte un bénéfice réel.
+
+Éviter une complexité artificielle.
+
+---
+
+# 40. BASE DE DONNÉES
+
+Concevoir un modèle capable de supporter :
+
+* multi-tenant ;
+* multi-company ;
+* multi-project ;
+* audit ;
+* historique ;
+* documents ;
+* workflows ;
+* finance ;
+* stock ;
+* RH ;
+* BIM ;
+* assets.
+
+Prendre particulièrement en compte :
+
+* intégrité référentielle ;
+* transactions ;
+* concurrence ;
+* index ;
+* performances ;
+* migrations ;
+* sauvegardes ;
+* sécurité.
+
+Toute opération financière, de stock ou de paiement critique doit être transactionnelle lorsque nécessaire.
+
+---
+
+# 41. SÉCURITÉ
+
+Appliquer au minimum :
+
+* authentification sécurisée ;
+* hash robuste des mots de passe ;
+* sessions sécurisées ;
+* autorisation serveur ;
+* RBAC ;
+* validation des entrées ;
+* protection des routes ;
+* limitation des privilèges ;
+* audit ;
+* protection des secrets ;
+* journalisation des opérations sensibles ;
+* politiques de mot de passe configurables ;
+* MFA lorsque disponible.
+
+MFA signifie **Multi-Factor Authentication — authentification multifacteur**.
+
+Ne jamais stocker :
+
+* token ;
+* clé API ;
+* mot de passe ;
+* secret ;
+
+directement dans le code source.
+
+---
+
+# 42. DONNÉES DE DÉMONSTRATION
+
+Créer des jeux de données de démonstration séparés des données réelles.
+
+Les données fictives doivent être identifiables comme :
+
+**DEMO**
+
+Créer une organisation de démonstration permettant de tester les workflows sans polluer la production.
+
+---
+
+# 43. TESTS OBLIGATOIRES
+
+Chaque fonctionnalité significative doit être contrôlée.
+
+Utiliser selon le projet :
+
+* lint ;
+* formatter ;
+* typecheck ;
+* tests unitaires ;
+* tests d’intégration ;
+* tests API ;
+* tests de base de données ;
+* tests RBAC ;
+* tests E2E ;
+* tests responsive ;
+* tests build ;
+* tests migrations ;
+* tests sécurité ;
+* tests régression.
+
+E2E signifie **End-to-End — test de bout en bout**.
+
+---
+
+# 44. PARCOURS E2E PRIORITAIRES
+
+Tester en priorité :
+
+### Parcours commercial
+
+Lead → Opportunité → Devis → Contrat → Projet.
+
+### Projet
+
+Projet → Budget → Planning → Tâches → Avancement.
+
+### Achats
+
+Demande → Validation → Consultation → Commande → Réception.
+
+### Stock
+
+Réception → Entrée → Affectation → Sortie chantier.
+
+### Finance
+
+Facture → Validation → Paiement → Solde.
+
+### RH
+
+Employé → Présence → Timesheet → Validation.
+
+### Chantier
+
+Tâche → Photo → Contrôle → Réserve → Correction → Fermeture.
+
+### QHSE
+
+Inspection → NCR → Action corrective → Vérification → Clôture.
+
+### Commissioning
+
+Équipement → Test → Anomalie → Correction → Retest → Acceptation.
+
+### Maintenance
+
+Actif → Ticket → OT → Intervention → Clôture.
+
+OT signifie **Ordre de Travail**.
+
+---
+
+# 45. DÉFINITION DE « TERMINÉ »
+
+Une page affichée n’est PAS une fonctionnalité terminée.
+
+Pour qu’un module soit considéré terminé, contrôler selon son périmètre :
+
+* interface ;
+* UX ;
+* responsive ;
+* règles métier ;
+* serveur ;
+* API ;
+* base de données ;
+* migration ;
+* validation ;
+* RBAC ;
+* audit ;
+* états loading ;
+* états empty ;
+* erreurs ;
+* sécurité ;
+* tests ;
+* intégrations ;
+* export ;
+* impression ;
+* performance raisonnable.
+
+---
+
+# 46. INTERDICTION DES FAUX PASS
+
+Utiliser :
+
+* `PASS`
+* `PARTIAL`
+* `FAIL`
+* `BLOCKED`
+* `NOT TESTED`
+* `NOT VERIFIED`
+
+`PASS` n’est autorisé que si le contrôle correspondant a réellement été exécuté et réussi.
+
+Ne jamais déclarer :
+
+* READY ;
+* PRODUCTION READY ;
+* DEPLOYED ;
+* TESTED ;
+* CONNECTED ;
+* COMPLETE ;
+
+sans preuve.
+
+---
+
+# 47. BOUCLE DE CORRECTION AUTOMATIQUE
+
+À chaque test échoué :
+
+1. enregistrer l’erreur ;
+2. identifier la cause ;
+3. corriger ;
+4. relancer le test ciblé ;
+5. relancer les tests associés ;
+6. contrôler les régressions ;
+7. continuer.
+
+Ne demande pas l’autorisation pour corriger un bug normal.
+
+---
+
+# 48. GESTION DU CONTEXTE LONG
+
+Le développement peut dépasser la capacité d’une session.
+
+Créer obligatoirement :
+
+`docs/AX-A360_EXECUTION_STATE.md`
+
+Il doit contenir en permanence :
+
+* objectif ;
+* architecture actuelle ;
+* branche ;
+* SHA ;
+* modules terminés ;
+* modules actifs ;
+* backlog ;
+* décisions ;
+* blocages ;
+* tests ;
+* dernière action ;
+* prochaine action.
+
+Créer également :
+
+`docs/AX-A360_DECISIONS.md`
+
+`docs/AX-A360_TEST_EVIDENCE.md`
+
+`docs/AX-A360_MODULE_MATRIX.md`
+
+`docs/AX-A360_ARCHITECTURE.md`
+
+Avant toute compression ou nouvelle session, mettre ces fichiers à jour.
+
+Après reprise :
+
+1. relire l’état ;
+2. vérifier Git ;
+3. vérifier SHA ;
+4. reprendre automatiquement au prochain travail non terminé.
+
+---
+
+# 49. GIT
+
+Appliquer une discipline Git professionnelle.
+
+Avant modification :
+
+* vérifier repository ;
+* branche ;
+* HEAD SHA ;
+* working tree.
+
+Créer des commits atomiques et explicites.
+
+Exemples :
+
+`feat(crm): implement opportunity pipeline`
+
+`feat(projects): add WBS management`
+
+`fix(finance): enforce payment transaction integrity`
+
+`test(rbac): add project permission matrix`
+
+Ne pas pousser directement sur une branche protégée sans politique explicitement autorisée.
+
+---
+
+# 50. CI/CD
+
+Mettre en place ou améliorer :
+
+* installation ;
+* lint ;
+* typecheck ;
+* tests ;
+* build ;
+* tests de migration ;
+* contrôles sécurité appropriés ;
+* packaging.
+
+CI/CD signifie **Continuous Integration / Continuous Delivery — Intégration continue / Livraison continue**.
+
+Un workflow CI visible n’est pas une preuve qu’il passe.
+
+Contrôler réellement son résultat lorsque l’environnement le permet.
+
+---
+
+# 51. DOCKER ET ENVIRONNEMENT
+
+Lorsque pertinent, fournir :
+
+* environnement développement ;
+* Dockerfile ;
+* compose ;
+* configuration exemple ;
+* healthcheck ;
+* migrations ;
+* seed DEMO ;
+* documentation démarrage.
+
+Ne jamais inclure de secrets réels dans les fichiers distribués.
+
+---
+
+# 52. DOCUMENTATION
+
+Le produit final doit inclure au minimum :
+
+* README ;
+* installation ;
+* architecture ;
+* configuration ;
+* variables d’environnement ;
+* base de données ;
+* migrations ;
+* rôles ;
+* permissions ;
+* modules ;
+* API ;
+* tests ;
+* Docker ;
+* déploiement ;
+* sauvegarde ;
+* restauration ;
+* troubleshooting.
+
+---
+
+# 53. QUALITÉ DE CODE
+
+Éliminer :
+
+* code mort ;
+* duplication inutile ;
+* warnings sérieux ;
+* imports inutilisés ;
+* types non maîtrisés ;
+* données fictives cachées ;
+* TODO critiques ;
+* secrets ;
+* hacks temporaires non documentés ;
+* routes cassées ;
+* boutons factices.
+
+---
+
+# 54. PERFORMANCE
+
+Mesurer et améliorer en priorité :
+
+* chargement initial ;
+* requêtes lentes ;
+* N+1 queries ;
+* grands tableaux ;
+* pagination ;
+* recherches ;
+* filtrage ;
+* cache lorsqu’utile ;
+* taille des bundles ;
+* images ;
+* rendu mobile.
+
+Optimiser sur la base de mesures et non d’intuition uniquement.
+
+---
+
+# 55. ACCESSIBILITÉ
+
+Viser une interface conforme aux bonnes pratiques modernes d’accessibilité :
+
+* navigation clavier ;
+* contraste ;
+* focus visible ;
+* labels ;
+* formulaires ;
+* messages d’erreur ;
+* structure sémantique ;
+* lecteurs d’écran lorsque pertinent.
+
+---
+
+# 56. CRITÈRES DE LIVRAISON
+
+Ne considère pas AX-A360 comme livré tant que les éléments suivants n’ont pas été évalués :
+
+* installation reproductible ;
+* authentification ;
+* autorisations ;
+* navigation ;
+* principaux modules ;
+* base de données ;
+* migrations ;
+* workflows majeurs ;
+* tests ;
+* build ;
+* documentation ;
+* sécurité ;
+* responsive ;
+* données DEMO ;
+* CI/CD ;
+* packaging applicable.
+
+Les éléments impossibles à terminer pour une dépendance externe doivent être explicitement classés `BLOCKED` ou `NOT TESTED`.
+
+---
+
+# 57. RAPPORT FINAL
+
+À la fin, produire :
+
+# AX-A360 — FINAL DELIVERY REPORT
+
+## Version
+
+## Date
+
+## Repository
+
+## Branch
+
+## Commit SHA
+
+## Architecture
+
+## Modules
+
+## Fonctionnalités
+
+## Base de données
+
+## Sécurité
+
+## Tests
+
+## Build
+
+## CI/CD
+
+## Web
+
+## PWA
+
+## Windows
+
+## Android
+
+## iOS
+
+## Docker
+
+## Documentation
+
+## Performances
+
+## Problèmes connus
+
+## Éléments NOT TESTED
+
+## Éléments BLOCKED
+
+## Instructions de lancement
+
+## Identifiants DEMO si créés
+
+## Prochaines évolutions recommandées
+
+---
+
+# 58. RÈGLE D’EXÉCUTION FINALE
+
+À partir de maintenant :
+
+**ne te contente pas d’expliquer comment construire AX-A360. Construis-le.**
+
+Commence par :
+
+1. inspecter l’environnement disponible ;
+2. localiser ERP3602 si accessible ;
+3. analyser son architecture sans le modifier destructivement ;
+4. créer le workspace AX-A360 ;
+5. établir l’architecture cible ;
+6. créer le Design System ;
+7. construire le Core ;
+8. construire les modules prioritaires ;
+9. connecter les modules ;
+10. développer les workflows ;
+11. tester ;
+12. corriger ;
+13. retester ;
+14. poursuivre les modules restants ;
+15. effectuer l’audit transversal ;
+16. préparer les packages disponibles ;
+17. produire la documentation ;
+18. qualifier le produit.
+
+À chaque fin de tâche, demande-toi :
+
+**« Quel est maintenant le blocage ou l’écart le plus important entre l’état actuel d’AX-A360 et un produit final réellement exploitable ? »**
+
+Puis traite immédiatement cet écart.
+
+Ensuite recommence.
+
+## MODE FINAL
+
+**AUTOPILOT = ON**
+**LOOP = ON**
+**MULTI-AGENT = MAXIMUM DISPONIBLE**
+**AUTO-TEST = ON**
+**AUTO-FIX = ON**
+**AUTO-RETEST = ON**
+**AUTO-DOCUMENT = ON**
+**ASK_USER = BLOCKER CRITIQUE UNIQUEMENT**
+**FAKE_SUCCESS = INTERDIT**
+**DESTRUCTIVE_ACTION = INTERDITE SANS AUTORISATION**
+**TARGET_PRODUCT = AX-A360**
+
+Commence immédiatement.
