@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
+import { CrmWorkspace } from "./components/crm-workspace";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -50,9 +51,16 @@ const metrics: Metric[] = [
   { label: "Actions critiques", value: "7", trend: "2 à traiter aujourd'hui", icon: FileCheck2, tone: "amber" },
 ];
 
-const navItems = [
-  { label: "Vue d'ensemble", icon: LayoutDashboard, active: true },
-  { label: "CRM & Ventes", icon: UsersRound },
+type WorkspaceView = "overview" | "crm";
+
+/**
+ * Navigation : seules les vues reellement livrees sont activables. Les autres
+ * restent desactivees et annoncees comme telles — jamais un ecran vide qui
+ * laisserait croire qu'un module existe deja.
+ */
+const navItems: Array<{ label: string; icon: typeof LayoutDashboard; view?: WorkspaceView }> = [
+  { label: "Vue d'ensemble", icon: LayoutDashboard, view: "overview" },
+  { label: "CRM & Ventes", icon: UsersRound, view: "crm" },
   { label: "Projets", icon: FolderKanban },
   { label: "Construction", icon: HardHat },
   { label: "Finance", icon: CircleDollarSign },
@@ -172,6 +180,7 @@ function LoginScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) =>
 
 function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => Promise<void> }): React.ReactElement {
   const [mobileNav, setMobileNav] = useState(false);
+  const [view, setView] = useState<WorkspaceView>("overview");
   const initials = initialsOf(user.fullName);
   const firstName = (user.fullName ?? "").trim().split(" ")[0] || user.email;
 
@@ -181,7 +190,24 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => Promise
         <div className="sidebar-head"><Brand /><button className="close-nav" onClick={() => setMobileNav(false)} aria-label="Fermer le menu"><X size={20} /></button></div>
         <nav aria-label="Navigation principale">
           <p>ESPACE DE TRAVAIL</p>
-          {navItems.map((item) => <button key={item.label} className={item.active ? "active" : ""} disabled={!item.active} title={!item.active ? "Disponible dans un prochain incrément" : undefined}><item.icon size={18} /><span>{item.label}</span>{item.active && <i />}</button>)}
+          {navItems.map((item) => (
+            <button
+              key={item.label}
+              className={item.view === view ? "active" : ""}
+              disabled={!item.view}
+              title={!item.view ? "Disponible dans un prochain incrément" : undefined}
+              onClick={() => {
+                if (item.view) {
+                  setView(item.view);
+                  setMobileNav(false);
+                }
+              }}
+            >
+              <item.icon size={18} />
+              <span>{item.label}</span>
+              {item.view === view && <i />}
+            </button>
+          ))}
           <p>ADMINISTRATION</p>
           <button disabled><Building2 size={18} /><span>Organisation</span></button>
           <button disabled><ShieldCheck size={18} /><span>Accès & sécurité</span></button>
@@ -199,6 +225,7 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => Promise
         </header>
 
         <div className="dashboard-content">
+          {view === "crm" ? <CrmWorkspace /> : <>
           <section className="welcome-row">
             <div><p className="breadcrumb">Command Center / Vue d'ensemble</p><h1>Bonjour, {firstName}</h1><p>Voici la situation consolidée de vos opérations.</p></div>
             <button className="secondary-button"><span>Cette semaine</span><ChevronDown size={16} /></button>
@@ -243,6 +270,7 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => Promise
             <div className="panel-head"><div><h2>Projets prioritaires</h2><p>Suivi des opérations à plus forte valeur</p></div><button>Voir tous les projets <ArrowRight size={15} /></button></div>
             <div className="table-wrap"><table><thead><tr><th>Projet</th><th>Phase</th><th>Progression</th><th>Budget</th><th>Santé</th></tr></thead><tbody>{projects.map((project) => <tr key={project.code}><td><strong>{project.name}</strong><small>{project.code}</small></td><td><span className="phase-chip">{project.phase}</span></td><td><div className="progress-cell"><div><i style={{ width: `${project.progress}%` }} /></div><span>{project.progress}%</span></div></td><td>{project.budget}</td><td><span className={`health ${project.health === "Attention" ? "warning" : "ok"}`}><i />{project.health}</span></td></tr>)}</tbody></table></div>
           </section>
+          </>}
         </div>
       </main>
     </div>

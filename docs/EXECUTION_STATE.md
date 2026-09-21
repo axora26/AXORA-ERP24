@@ -4,7 +4,7 @@
 
 ## Phase courante
 
-**INC-01 — Core / Identity / Organization / RBAC / Audit** en cours (voir `docs/foundation/06-product-backlog.md`). INC-00 termine et verifie.
+**INC-02 — CRM (prospects -> opportunites -> pipeline)** livre en local (voir `docs/foundation/06-product-backlog.md`). INC-00 et INC-01 implementes, aucun encore VERIFIED faute de run CI distant.
 
 ## Fait (verifie par execution reelle, pas suppose)
 
@@ -39,10 +39,30 @@
 
 **Gates executes localement sur l'arbre de travail correspondant** : `pnpm typecheck` OK, `pnpm lint` OK (0 erreur, 0 warning), `pnpm test` 16 tests PASS, `pnpm test:e2e` 8 tests PASS contre PostgreSQL 18 reel, `pnpm build:packages` + `pnpm build` OK.
 
+### INC-02 — CRM (2026-09-21)
+
+**Modele de donnees** (`packages/database/prisma/schema.prisma`, migration `20260921172536_inc_02_crm`) : `CrmAccount`, `CrmContact`, `CrmLead`, `CrmPipelineStage`, `CrmOpportunity`, `CrmActivity`. Chaque entite porte `organizationId` ET `companyId`. Montants en `Decimal(18,2)`. `CrmActivity` n'a pas de `updatedAt` : l'historique est append-only par construction.
+
+**Securite du scope entreprise** : `CompanyScopeService` revalide systematiquement tout `companyId` transmis (query ou body) contre les `CompanyMembership` de la SESSION. Un identifiant appartenant a un autre tenant renvoie 403 avec le meme message qu'une entreprise inexistante (pas de divulgation d'existence). Toutes les routes CRM portent `SessionGuard` + `PermissionGuard` + `@RequirePermission` explicite (deny-by-default).
+
+**Parcours livre** : creation de prospect -> conversion transactionnelle en opportunite (creation du compte si absent, du contact, rattachement `sourceLeadId`, deux activites immuables) -> deplacement d'etape avec cloture automatique WON/LOST -> tableau de bord agrege en Decimal exact.
+
+**Defauts reels corriges au passage** :
+- le proprietaire d'une organisation n'etait membre d'aucune entreprise (`CompanyMembership` jamais cree au bootstrap) — tout module scope entreprise lui aurait ete refuse ; corrige au bootstrap + migration de rattrapage `20260921180000_backfill_owner_company_membership` ;
+- les organisations existantes n'avaient ni pipeline par defaut (migration `20260921180500_backfill_default_pipeline`) ni les nouvelles cles de permission — d'ou `PermissionSyncService`, qui complete au demarrage les roles `isSystem` OWNER avec toutes les cles de `ALL_PERMISSIONS` (ajout uniquement, jamais de retrait, jamais de role personnalise touche) ;
+- `pnpm db:validate`, `db:format` et `db:migrate` pointaient vers des scripts inexistants et la CLI Prisma ne trouvait pas le `.env` du monorepo — corrige par `scripts/with-env.mjs` (meme invariant de precedence que le chargeur applicatif) ;
+- normalisation de `relatedType` : les valeurs sont en casse mixte (`Lead`, `Opportunity`) alors que le validateur d'enum compare en majuscules, ce qui renvoyait 400 sur des requetes valides — detecte par les tests e2e avant toute livraison.
+
+**Interface** (`apps/web/app/components/crm-workspace.tsx`) : indicateurs, pipeline par etape, liste de prospects avec creation et conversion, liste d'opportunites. **Aucune donnee de demonstration** : quand il n'y a rien, l'ecran affiche un etat vide explicite. Parcours verifie dans un navigateur reel (creation d'un prospect puis conversion, compteurs mis a jour en direct).
+
+**Gates executes localement** : `pnpm typecheck` OK, `pnpm lint` OK (0 erreur, 0 warning), `pnpm test` 26 tests PASS, `pnpm test:e2e` 24 tests PASS sur PostgreSQL 18 reel (dont 16 tests CRM : isolation cross-company, double conversion, decimales exactes, historique immuable), `pnpm build` OK.
+
 ## Pas encore fait (a ne jamais presenter comme fait)
 
 - CI GitHub Actions jamais executee sur un runner reel (GitHub Actions) — uniquement verifie en local. Le job `e2e-tests` ajoute le 2026-09-21 n'a jamais tourne sur un runner : sa validite est UNVERIFIED.
-- Indicateurs du dashboard (CA, projets, budget, activite) : donnees fictives signalees dans l'UI, pas encore connectees a des donnees reelles.
+- Indicateurs de la vue d'ensemble (CA, projets, budget, activite) : donnees fictives signalees par un bandeau dans l'UI, pas encore connectees a des donnees reelles. L'espace CRM, lui, n'affiche que des donnees reelles.
+- CRM : pas d'edition ni de suppression des comptes/contacts, pas de pagination ni de filtres, pas de reorganisation des etapes du pipeline, pas de gestion multi-devises (un pipeline melangeant plusieurs devises est signale `MIXED` et non additionne).
+- Aucun utilisateur ne peut encore etre rattache a plusieurs entreprises via l'interface : le cas est gere cote API (400 si `companyId` est requis et absent) mais non expose.
 - MFA (TOTP) : colonnes DB presentes (`mfaEnabled`, `mfaSecretEnc`) mais aucune logique d'activation/verification implementee.
 - Pas de rotation/expiration automatique des sessions au-dela de la duree fixe (7 jours) ; pas de refresh token.
 - Audit log : le modele existe et est utilise pour `organization.bootstrap`, mais pas encore pour login/logout/echecs d'authentification.
@@ -51,6 +71,6 @@
 
 ## Prochaine etape immediate
 
-1. INC-02 — CRM (prospects -> opportunites -> pipeline) selon `docs/foundation/06-product-backlog.md`.
-2. Poursuivre sans marquer INC-00/INC-01 VERIFIED tant que la CI distante n'a pas execute les gates.
-3. Reprendre le diagnostic CI des que la facturation GitHub est regularisee.
+1. Reprendre la CI distante des que la facturation GitHub est regularisee — aucun increment ne peut passer VERIFIED avant.
+2. INC-03 — Estimation : Study / DQE / BPU / Pricing (depend de INC-02).
+3. Completer INC-01 : MFA (TOTP), audit des echecs d'authentification, administration des roles dans l'UI.

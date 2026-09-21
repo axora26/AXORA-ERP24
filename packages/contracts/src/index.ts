@@ -10,3 +10,4 @@ export * from "./tenancy.js";
 export * from "./permissions.js";
 export * from "./module-status.js";
 export * from "./http.js";
+export * from "./crm.js";

@@ -15,8 +15,42 @@ export const CORE_PERMISSIONS = {
   AUDIT_READ: "core.audit.read",
 } as const;
 
-export type PermissionKey =
+/**
+ * INC-02 — CRM. Lecture et ecriture separees : un commercial peut consulter
+ * le pipeline sans pouvoir reconfigurer ses etapes.
+ */
+export const CRM_PERMISSIONS = {
+  ACCOUNT_READ: "crm.account.read",
+  ACCOUNT_MANAGE: "crm.account.manage",
+  CONTACT_READ: "crm.contact.read",
+  CONTACT_MANAGE: "crm.contact.manage",
+  LEAD_READ: "crm.lead.read",
+  LEAD_MANAGE: "crm.lead.manage",
+  OPPORTUNITY_READ: "crm.opportunity.read",
+  OPPORTUNITY_MANAGE: "crm.opportunity.manage",
+  ACTIVITY_READ: "crm.activity.read",
+  ACTIVITY_CREATE: "crm.activity.create",
+  PIPELINE_MANAGE: "crm.pipeline.manage",
+} as const;
+
+/**
+ * Toutes les permissions connues du produit. Le role systeme OWNER cree au
+ * bootstrap d'une organisation les recoit toutes ; les autres roles sont
+ * construits explicitement (deny-by-default, docs/foundation/03-security.md).
+ */
+export const ALL_PERMISSIONS = {
+  ...CORE_PERMISSIONS,
+  ...CRM_PERMISSIONS,
+} as const;
+
+export type CorePermissionKey =
   (typeof CORE_PERMISSIONS)[keyof typeof CORE_PERMISSIONS];
+
+export type CrmPermissionKey =
+  (typeof CRM_PERMISSIONS)[keyof typeof CRM_PERMISSIONS];
+
+export type PermissionKey =
+  (typeof ALL_PERMISSIONS)[keyof typeof ALL_PERMISSIONS];
 
 export interface PermissionCheck {
   key: PermissionKey | string;

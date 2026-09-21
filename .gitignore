@@ -29,6 +29,12 @@ uploads/
 # Prisma generated client (regenere via pnpm db:generate)
 packages/database/prisma/migrations/**/migration.sql.bak
 
+# Artefacts Windows : "nul"/"NUL" est un nom de peripherique reserve. Un
+# ">NUL" execute dans un shell POSIX cree un vrai fichier que git ne peut
+# meme pas indexer ("short read while indexing nul") et qui casse git add.
+nul
+NUL
+
 # OS / IDE
 .DS_Store
 Thumbs.db

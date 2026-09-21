@@ -217,3 +217,177 @@ model AuditLog {
   @@index([organizationId, createdAt])
   @@map("audit_logs")
 }
+
+// ---------------------------------------------------------------------------
+// INC-02 — CRM (prospects -> opportunites -> pipeline)
+// Reference : docs/foundation/06-product-backlog.md #INC-02
+//
+// INVARIANTS DE CE DOMAINE :
+// 1. Toute entite porte organizationId ET companyId (scope entreprise exige
+//    par le backlog INC-02). Le companyId n'est jamais accepte tel quel depuis
+//    le client : il est verifie contre les CompanyMembership de la session.
+// 2. CrmActivity est append-only (historique client immuable) : pas de champ
+//    updatedAt, aucune route d'update/delete exposee.
+// 3. Les montants utilisent Decimal(18,2) — jamais Float sur un prix.
+// ---------------------------------------------------------------------------
+
+enum CrmLeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  DISQUALIFIED
+}
+
+enum CrmOpportunityStatus {
+  OPEN
+  WON
+  LOST
+}
+
+enum CrmActivityType {
+  NOTE
+  CALL
+  MEETING
+  EMAIL
+  TASK
+  STAGE_CHANGE
+  CONVERSION
+}
+
+model CrmAccount {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  name           String
+  industry       String?
+  city           String?
+  country        String?
+  website        String?
+  phone          String?
+  email          String?
+  ownerUserId    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  contacts      CrmContact[]
+  leads         CrmLead[]
+  opportunities CrmOpportunity[]
+
+  @@unique([companyId, name])
+  @@index([organizationId, companyId])
+  @@map("crm_accounts")
+}
+
+model CrmContact {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  accountId      String?
+  fullName       String
+  email          String?
+  phone          String?
+  jobTitle       String?
+  isPrimary      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  account       CrmAccount?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  opportunities CrmOpportunity[]
+
+  @@index([organizationId, companyId])
+  @@index([accountId])
+  @@map("crm_contacts")
+}
+
+model CrmLead {
+  id             String        @id @default(cuid())
+  organizationId String
+  companyId      String
+  accountId      String?
+  contactName    String
+  companyName    String
+  email          String?
+  phone          String?
+  source         String?
+  status         CrmLeadStatus @default(NEW)
+  ownerUserId    String?
+  convertedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  account       CrmAccount?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  opportunities CrmOpportunity[]
+
+  @@index([organizationId, companyId])
+  @@index([companyId, status])
+  @@map("crm_leads")
+}
+
+model CrmPipelineStage {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  name           String
+  position       Int
+  probability    Int      @default(0)
+  isWon          Boolean  @default(false)
+  isLost         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  opportunities CrmOpportunity[]
+
+  @@unique([companyId, name])
+  @@index([organizationId, companyId])
+  @@map("crm_pipeline_stages")
+}
+
+model CrmOpportunity {
+  id                String               @id @default(cuid())
+  organizationId    String
+  companyId         String
+  accountId         String?
+  contactId         String?
+  sourceLeadId      String?
+  stageId           String
+  name              String
+  amount            Decimal              @default(0) @db.Decimal(18, 2)
+  currency          String               @default("USD") @db.Char(3)
+  expectedCloseDate DateTime?
+  status            CrmOpportunityStatus @default(OPEN)
+  ownerUserId       String?
+  closedAt          DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  account    CrmAccount?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  contact    CrmContact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  sourceLead CrmLead?         @relation(fields: [sourceLeadId], references: [id], onDelete: SetNull)
+  stage      CrmPipelineStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId])
+  @@index([companyId, status])
+  @@index([stageId])
+  @@map("crm_opportunities")
+}
+
+/// Historique client IMMUABLE (backlog INC-02 : "historique client immuable
+/// des activites"). Aucun updatedAt, aucune route UPDATE/DELETE exposee.
+model CrmActivity {
+  id             String          @id @default(cuid())
+  organizationId String
+  companyId      String
+  type           CrmActivityType
+  subject        String
+  body           String?
+  relatedType    String
+  relatedId      String
+  actorUserId    String?
+  occurredAt     DateTime        @default(now())
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, companyId])
+  @@index([companyId, relatedType, relatedId])
+  @@map("crm_activities")
+}

@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { hashPassword, verifyPassword, createSessionToken } from "@axora24/security";
-import { CORE_PERMISSIONS } from "@axora24/contracts";
+import { ALL_PERMISSIONS } from "@axora24/contracts";
+import { DEFAULT_PIPELINE_STAGES } from "../crm/pipeline.defaults.js";
 import { PrismaService } from "../core/prisma.service.js";
 import type { LoginDto, RegisterOrganizationDto } from "./auth.dto.js";
 import { LoginThrottleService } from "./login-throttle.service.js";
@@ -45,7 +46,7 @@ export class AuthService {
         data: { name: input.organizationName, slug: input.organizationSlug },
       });
 
-      await tx.company.create({
+      const company = await tx.company.create({
         data: { organizationId: organization.id, name: input.companyName },
       });
 
@@ -58,8 +59,29 @@ export class AuthService {
         },
       });
 
-      // Assure que toutes les permissions Core existent (idempotent).
-      const permissionKeys = Object.values(CORE_PERMISSIONS);
+      // Le proprietaire doit etre membre de sa propre entreprise : le scope
+      // entreprise des modules metier (INC-02 et suivants) est resolu depuis
+      // CompanyMembership, jamais depuis un identifiant transmis par le client.
+      await tx.companyMembership.create({
+        data: { userId: user.id, companyId: company.id },
+      });
+
+      // Pipeline commercial par defaut de l'entreprise (INC-02) — etapes
+      // reconfigurables ensuite via crm.pipeline.manage.
+      await tx.crmPipelineStage.createMany({
+        data: DEFAULT_PIPELINE_STAGES.map((stage) => ({
+          organizationId: organization.id,
+          companyId: company.id,
+          name: stage.name,
+          position: stage.position,
+          probability: stage.probability,
+          isWon: stage.isWon,
+          isLost: stage.isLost,
+        })),
+      });
+
+      // Assure que toutes les permissions du produit existent (idempotent).
+      const permissionKeys = Object.values(ALL_PERMISSIONS);
       for (const key of permissionKeys) {
         await tx.permission.upsert({
           where: { key },
