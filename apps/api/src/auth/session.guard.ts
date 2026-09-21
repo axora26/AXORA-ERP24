@@ -12,6 +12,13 @@ export interface AuthenticatedUser {
   id: string;
   organizationId: string;
   email: string;
+  /**
+   * INVARIANT DE CONTRAT : GET /auth/me doit exposer exactement la meme forme
+   * d'utilisateur que POST /auth/login. Sans fullName ici, le client recevait
+   * un profil incomplet au rechargement de page et plantait (regression
+   * couverte par test/auth-contract.e2e.test.ts).
+   */
+  fullName: string;
 }
 
 declare module "express" {
@@ -58,6 +65,7 @@ export class SessionGuard implements CanActivate {
       id: session.user.id,
       organizationId: session.user.organizationId,
       email: session.user.email,
+      fullName: session.user.fullName,
     };
     return true;
   }

@@ -13,17 +13,18 @@
   "dependencies": {
     "@axora24/contracts": "workspace:*",
     "@axora24/ui": "workspace:*",
+    "lucide-react": "^1.47.0",
     "next": "^15.1.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
-    "@types/node": "^22.10.2",
-    "vitest": "^2.1.8",
     "eslint": "^9.17.0",
-    "eslint-config-next": "^15.1.3"
+    "eslint-config-next": "^15.1.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

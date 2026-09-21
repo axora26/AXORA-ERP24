@@ -1,6 +1,6 @@
 # AXORA-ERP24 — Etat d'execution courant
 
-**Derniere mise a jour** : 2026-09-20
+**Derniere mise a jour** : 2026-09-21
 
 ## Phase courante
 
@@ -27,10 +27,22 @@
 - **Total tests `apps/api`** : 5/5 PASS (`health.test.ts` + `tenant-isolation.e2e.test.ts`).
 - Verification manuelle HTTP complete : bootstrap 2 organisations reelles, login, `/auth/me`, isolation confirmee visuellement avant l'ecriture des tests automatises.
 
+### INC-01 — interface Core + fiabilisation des gates (2026-09-21)
+
+- `apps/web` : ecran de connexion et shell applicatif (sidebar, topbar, dashboard) responsive, verifies reellement dans un navigateur (375 px et pleine largeur) contre l'API et PostgreSQL reels — connexion, restauration de session au rechargement, rendu mobile.
+- **Defaut reel corrige** : `GET /auth/me` ne renvoyait pas `fullName` alors que `POST /auth/login` le renvoyait. Au rechargement d'une page authentifiee, le client plantait (`user.fullName.split` sur `undefined`). `AuthenticatedUser` porte desormais `fullName` ; regression verrouillee par `test/auth-contract.e2e.test.ts`.
+- **Defaut reel corrige** : aucune couche de l'application ne chargeait `.env` (ni NestJS, ni @prisma/client v6). Le demarrage documente au README echouait sur une machine propre. `apps/api/src/config/env.ts` charge desormais le `.env` du monorepo **sans jamais ecraser une variable deja presente** (CI/production prioritaires) ; invariant couvert par 4 tests unitaires.
+- **Defaut reel corrige** : les tests e2e (base PostgreSQL requise) tournaient dans le gate `pnpm test`, execute en CI sur un runner sans base. Separation effective : `pnpm test` = unitaires purs, `pnpm test:e2e` = e2e (`vitest.e2e.config.ts`, fichier jusqu'ici reference par le script mais inexistant).
+- CI : nouveau job `e2e-tests` avec service `postgres:18-alpine` + `prisma migrate deploy`.
+- Donnees du dashboard : indicateurs financiers/projets encore fictifs, desormais **explicitement signales par un bandeau "Donnees de demonstration"** dans l'interface (regle AXORA : aucune valeur inventee presentee comme reelle).
+- Ports alignes sur 3100 pour le web (`.env`, `.env.example`, CORS par defaut de l'API).
+
+**Gates executes localement sur l'arbre de travail correspondant** : `pnpm typecheck` OK, `pnpm lint` OK (0 erreur, 0 warning), `pnpm test` 16 tests PASS, `pnpm test:e2e` 8 tests PASS contre PostgreSQL 18 reel, `pnpm build:packages` + `pnpm build` OK.
+
 ## Pas encore fait (a ne jamais presenter comme fait)
 
-- CI GitHub Actions jamais executee sur un runner reel (GitHub Actions) — uniquement verifie en local.
-- Pas de rate limiting sur `/auth/login` (brute-force possible) — a ajouter avant toute exposition publique.
+- CI GitHub Actions jamais executee sur un runner reel (GitHub Actions) — uniquement verifie en local. Le job `e2e-tests` ajoute le 2026-09-21 n'a jamais tourne sur un runner : sa validite est UNVERIFIED.
+- Indicateurs du dashboard (CA, projets, budget, activite) : donnees fictives signalees dans l'UI, pas encore connectees a des donnees reelles.
 - MFA (TOTP) : colonnes DB presentes (`mfaEnabled`, `mfaSecretEnc`) mais aucune logique d'activation/verification implementee.
 - Pas de rotation/expiration automatique des sessions au-dela de la duree fixe (7 jours) ; pas de refresh token.
 - Audit log : le modele existe et est utilise pour `organization.bootstrap`, mais pas encore pour login/logout/echecs d'authentification.
@@ -39,6 +51,6 @@
 
 ## Prochaine etape immediate
 
-1. Construire l'interface Core/connexion responsive et l'ouvrir dans Preview.
-2. Poursuivre sans marquer INC-00/INC-01 VERIFIED tant que la CI distante n'a pas exécuté les gates.
-3. Reprendre le diagnostic CI dès que la facturation GitHub est régularisée.
+1. INC-02 — CRM (prospects -> opportunites -> pipeline) selon `docs/foundation/06-product-backlog.md`.
+2. Poursuivre sans marquer INC-00/INC-01 VERIFIED tant que la CI distante n'a pas execute les gates.
+3. Reprendre le diagnostic CI des que la facturation GitHub est regularisee.
