@@ -21,8 +21,16 @@ export class AuthController {
   }
 
   @Post("login")
-  async login(@Body() body: LoginDto, @Res({ passthrough: true }) response: Response) {
-    const result = await this.authService.login(body);
+  async login(
+    @Body() body: LoginDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const ipAddress = request.ip ?? request.socket.remoteAddress ?? "unknown";
+    const result = await this.authService.login(body, {
+      ipAddress,
+      userAgent: request.get("user-agent") ?? "unknown",
+    });
     setSessionCookie(response, result.plainToken, result.expiresAt);
     return { user: result.user };
   }

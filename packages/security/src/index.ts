@@ -10,3 +10,4 @@
 export * from "./password.js";
 export * from "./authorization.js";
 export * from "./session.js";
+export * from "./throttle.js";

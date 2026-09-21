@@ -34,3 +34,18 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 **Justification** : reference `docs/foundation/03-security.md` — un guard de permission verifie qu'une ACTION est autorisee, il ne garantit pas que les DONNEES retournees par le service sont elles-memes scopees. Chaque service doit imposer son propre filtre tenant explicite, independamment du guard. Ce pattern (service scope explicitement, guard verifie l'action) doit etre reapplique systematiquement pour tous les futurs modules (INC-02+).
 **Verification** : 4 tests e2e ajoutes dans `apps/api/test/tenant-isolation.e2e.test.ts`, executes contre une base PostgreSQL reelle, 5/5 PASS incluant l'assertion croisee explicite `expect(meA.body.slug).not.toBe(slugB)`.
 **Reversible** : non applicable — c'est un correctif de securite, pas une decision technique reversible.
+
+## ADR-0006 — Limitation persistante des connexions et audit transactionnel des sessions
+
+**Statut** : Acceptee
+
+**Decision** :
+
+- calculer une cle SHA-256 du couple e-mail normalise/adresse IP afin de ne pas persister ces identifiants dans la table de limitation ;
+- bloquer pendant 15 minutes apres cinq echecs dans une fenetre de 15 minutes ;
+- persister le mecanisme dans PostgreSQL pour qu'il reste coherent entre instances API ;
+- creer la session, mettre a jour `lastLoginAt` et ecrire `auth.login.succeeded` dans une transaction ;
+- revoquer la session et ecrire `auth.logout.succeeded` dans une transaction ;
+- ne jamais stocker de mot de passe, jeton en clair ou cookie dans les metadonnees d'audit.
+
+**Raison** : un compteur en memoire ne resiste ni aux redemarrages ni au scale-out. Les evenements d'authentification doivent rester fiables et auditables sans exposer de secret.

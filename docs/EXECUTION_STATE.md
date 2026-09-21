@@ -39,8 +39,6 @@
 
 ## Prochaine etape immediate
 
-1. Ajouter rate limiting sur `/auth/login` (protection brute-force) avant toute exposition reseau.
-2. Ajouter l'audit des tentatives de login (succes/echec) — invariant §41 du prompt maitre.
-3. Committer l'etat INC-01 courant.
-4. Decider : completer INC-01 (roles/permissions CRUD, gestion utilisateurs, departements/sites) ou enchainer sur INC-02 (CRM) selon la priorite exprimee par l'utilisateur.
-5. Executer la CI sur un run GitHub Actions reel des que le depot est pousse vers un remote (actuellement local uniquement — aucun `git remote` configure).
+1. Construire l'interface Core/connexion responsive et l'ouvrir dans Preview.
+2. Poursuivre sans marquer INC-00/INC-01 VERIFIED tant que la CI distante n'a pas exécuté les gates.
+3. Reprendre le diagnostic CI dès que la facturation GitHub est régularisée.

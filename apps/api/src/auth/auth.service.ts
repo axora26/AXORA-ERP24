@@ -3,6 +3,7 @@ import { hashPassword, verifyPassword, createSessionToken } from "@axora24/secur
 import { CORE_PERMISSIONS } from "@axora24/contracts";
 import { PrismaService } from "../core/prisma.service.js";
 import type { LoginDto, RegisterOrganizationDto } from "./auth.dto.js";
+import { LoginThrottleService } from "./login-throttle.service.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
 
@@ -12,9 +13,17 @@ export interface SessionResult {
   user: { id: string; email: string; fullName: string; organizationId: string };
 }
 
+export interface RequestMetadata {
+  ipAddress: string;
+  userAgent: string;
+}
+
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly loginThrottle: LoginThrottleService,
+  ) {}
 
   /**
    * Bootstrap d'un nouveau tenant : Organization + Company + role OWNER
@@ -107,7 +116,10 @@ export class AuthService {
     };
   }
 
-  async login(input: LoginDto): Promise<SessionResult> {
+  async login(input: LoginDto, metadata: RequestMetadata): Promise<SessionResult> {
+    const normalizedEmail = input.email.trim().toLowerCase();
+    await this.loginThrottle.enforce(normalizedEmail, metadata.ipAddress);
+
     // NOTE : email n'est pas garanti unique globalement (unique par organizationId),
     // donc on prend le premier utilisateur actif correspondant. Une evolution
     // multi-organisation par email necessitera un ecran de selection d'organisation.
@@ -116,20 +128,18 @@ export class AuthService {
     });
 
     if (!user) {
+      await this.loginThrottle.recordFailure(normalizedEmail, metadata.ipAddress);
       throw new UnauthorizedException("Invalid credentials");
     }
 
     const validPassword = await verifyPassword(input.password, user.passwordHash);
     if (!validPassword) {
+      await this.loginThrottle.recordFailure(normalizedEmail, metadata.ipAddress);
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    const session = await this.createSession(user.id);
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
+    await this.loginThrottle.recordSuccess(normalizedEmail, metadata.ipAddress);
+    const session = await this.createAuditedLoginSession(user, metadata);
 
     return {
       plainToken: session.plainToken,
@@ -146,10 +156,31 @@ export class AuthService {
   async logout(plainToken: string): Promise<void> {
     const { hashSessionToken } = await import("@axora24/security");
     const tokenHash = hashSessionToken(plainToken);
-    await this.prisma.session.updateMany({
+    const session = await this.prisma.session.findUnique({
       where: { tokenHash },
-      data: { revokedAt: new Date() },
+      include: { user: { select: { organizationId: true } } },
     });
+
+    if (!session || session.revokedAt) {
+      return;
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.session.update({
+        where: { id: session.id },
+        data: { revokedAt: new Date() },
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          organizationId: session.user.organizationId,
+          actorUserId: session.userId,
+          action: "auth.logout.succeeded",
+          resourceType: "Session",
+          resourceId: session.tokenHash,
+          metadata: { outcome: "SUCCESS" },
+        },
+      }),
+    ]);
   }
 
   private async createSession(userId: string): Promise<{ plainToken: string; expiresAt: Date }> {
@@ -158,6 +189,46 @@ export class AuthService {
     await this.prisma.session.create({
       data: { userId, tokenHash, expiresAt },
     });
+    return { plainToken, expiresAt };
+  }
+
+  private async createAuditedLoginSession(
+    user: { id: string; organizationId: string },
+    metadata: RequestMetadata,
+  ): Promise<{ plainToken: string; expiresAt: Date }> {
+    const { plainToken, tokenHash } = createSessionToken();
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+
+    await this.prisma.$transaction([
+      this.prisma.session.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt,
+          ipAddress: metadata.ipAddress,
+          userAgent: metadata.userAgent,
+        },
+      }),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          organizationId: user.organizationId,
+          actorUserId: user.id,
+          action: "auth.login.succeeded",
+          resourceType: "Session",
+          resourceId: tokenHash,
+          metadata: {
+            outcome: "SUCCESS",
+            ipAddress: metadata.ipAddress,
+            userAgent: metadata.userAgent,
+          },
+        },
+      }),
+    ]);
+
     return { plainToken, expiresAt };
   }
 }

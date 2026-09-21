@@ -44,7 +44,7 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branches     Branch[]
   users        CompanyMembership[]
 
@@ -85,11 +85,11 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   companyMemberships CompanyMembership[]
-  sessions        Session[]
-  roleAssignments RoleAssignment[]
-  auditLogs       AuditLog[]
+  sessions           Session[]
+  roleAssignments    RoleAssignment[]
+  auditLogs          AuditLog[]
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -111,19 +111,30 @@ model CompanyMembership {
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  tokenHash    String   @unique
-  ipAddress    String?
-  userAgent    String?
-  expiresAt    DateTime
-  revokedAt    DateTime?
-  createdAt    DateTime @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")
+}
+
+model LoginThrottle {
+  keyHash         String    @id @db.Char(64)
+  failureCount    Int       @default(0)
+  windowStartedAt DateTime  @default(now()) @db.Timestamptz(3)
+  blockedUntil    DateTime? @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([blockedUntil])
+  @@map("login_throttles")
 }
 
 // ---------------------------------------------------------------------------
@@ -138,9 +149,9 @@ model Role {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  permissions     RolePermission[]
-  assignments     RoleAssignment[]
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions  RolePermission[]
+  assignments  RoleAssignment[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
