@@ -285,11 +285,25 @@ export default function Home(): React.ReactElement {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    void fetch(`${API_URL}/auth/me`, { credentials: "include" })
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 5_000);
+
+    void fetch(`${API_URL}/auth/me`, {
+      credentials: "include",
+      signal: controller.signal,
+    })
       .then(async (response) => response.ok ? response.json() as Promise<{ user: AuthUser }> : null)
       .then((result) => result && setUser(result.user))
       .catch(() => undefined)
-      .finally(() => setChecking(false));
+      .finally(() => {
+        window.clearTimeout(timeoutId);
+        setChecking(false);
+      });
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, []);
 
   async function logout(): Promise<void> {
