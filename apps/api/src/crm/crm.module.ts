@@ -13,5 +13,6 @@ import { AuthModule } from "../auth/auth.module.js";
   imports: [AuthModule],
   controllers: [CrmController],
   providers: [CrmService, CompanyScopeService, PrismaService],
+  exports: [CompanyScopeService],
 })
 export class CrmModule {}

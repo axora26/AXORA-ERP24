@@ -4,6 +4,12 @@ import type {
   CrmLeadView,
   CrmOpportunityView,
   CrmPipelineStageView,
+  DqeLineView,
+  DqeSummaryView,
+  DqeView,
+  EstimationRequirementView,
+  EstimationStudySummaryView,
+  EstimationStudyView,
 } from "@axora24/contracts";
 
 /**
@@ -78,6 +84,45 @@ export const crmApi = {
     api.post<CrmOpportunityView>(`/crm/leads/${leadId}/convert`, input),
   moveOpportunity: (opportunityId: string, stageId: string) =>
     api.patch<CrmOpportunityView>(`/crm/opportunities/${opportunityId}/stage`, { stageId }),
+};
+
+export const estimationApi = {
+  studies: () => api.get<EstimationStudySummaryView[]>("/estimation/studies"),
+  study: (studyId: string) => api.get<EstimationStudyView>(`/estimation/studies/${studyId}`),
+  createStudy: (input: {
+    opportunityId: string;
+    code: string;
+    title: string;
+    objective: string;
+    sourceReference?: string;
+  }) => api.post<EstimationStudyView>("/estimation/studies", input),
+  addRequirement: (
+    studyId: string,
+    input: {
+      position: number;
+      category: string;
+      statement: string;
+      sourceReference?: string;
+    },
+  ) => api.post<EstimationRequirementView>(`/estimation/studies/${studyId}/requirements`, input),
+  markStudyReady: (studyId: string) =>
+    api.post<EstimationStudyView>(`/estimation/studies/${studyId}/ready`, {}),
+  dqes: () => api.get<DqeSummaryView[]>("/estimation/dqes"),
+  dqe: (dqeId: string) => api.get<DqeView>(`/estimation/dqes/${dqeId}`),
+  createDqe: (input: { studyId: string; code: string; title: string; currency: string }) =>
+    api.post<DqeView>("/estimation/dqes", input),
+  addDqeLine: (
+    dqeId: string,
+    input: {
+      position: number;
+      reference?: string;
+      designation: string;
+      unitCode: string;
+      quantity: string;
+      unitPrice: string;
+    },
+  ) => api.post<DqeLineView>(`/estimation/dqes/${dqeId}/lines`, input),
+  finalizeDqe: (dqeId: string) => api.post<DqeView>(`/estimation/dqes/${dqeId}/finalize`, {}),
 };
 
 /**

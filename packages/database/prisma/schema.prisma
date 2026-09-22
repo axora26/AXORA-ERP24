@@ -391,3 +391,142 @@ model CrmActivity {
   @@index([companyId, relatedType, relatedId])
   @@map("crm_activities")
 }
+
+// ---------------------------------------------------------------------------
+// INC-03 — Estimation : Study -> DQE (tranche verticale fondatrice)
+// Reference : docs/foundation/06-product-backlog.md #INC-03 et ADR-0044 du
+// depot ERP3602 en lecture seule.
+//
+// INVARIANTS :
+// 1. Le scope organisation/entreprise vient exclusivement de la session.
+// 2. Quantites et prix sont Decimal(24,6), jamais Float/number JavaScript.
+// 3. Les exigences d'etude et la source Study -> DQE sont append-only.
+// 4. Un DQE finalise ne peut plus recevoir de ligne.
+// ---------------------------------------------------------------------------
+
+enum EstimationStudyStatus {
+  DRAFT
+  READY_FOR_DQE
+  ARCHIVED
+}
+
+enum EstimationRequirementCategory {
+  FACT
+  ASSUMPTION
+  CONSTRAINT
+  RISK
+  NOTE
+}
+
+enum DqeStatus {
+  DRAFT
+  FINALIZED
+  ARCHIVED
+}
+
+model EstimationStudy {
+  id              String                @id @default(cuid())
+  organizationId  String
+  companyId       String
+  opportunityId   String
+  code            String
+  title           String
+  objective       String
+  sourceReference String?
+  status          EstimationStudyStatus @default(DRAFT)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  requirements EstimationStudyRequirement[]
+  dqeSources   DqeStudySource[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status, createdAt])
+  @@index([opportunityId])
+  @@map("estimation_studies")
+}
+
+model EstimationStudyRequirement {
+  id              String                        @id @default(cuid())
+  organizationId  String
+  companyId       String
+  studyId         String
+  position        Int
+  category        EstimationRequirementCategory
+  statement       String
+  sourceReference String?
+  createdAt       DateTime                      @default(now())
+
+  study EstimationStudy @relation(fields: [studyId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([studyId, position])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, studyId, position])
+  @@map("estimation_study_requirements")
+}
+
+model DqeDocument {
+  id             String    @id @default(cuid())
+  organizationId String
+  companyId      String
+  opportunityId  String?
+  code           String
+  title          String
+  currency       String    @default("USD") @db.Char(3)
+  status         DqeStatus @default(DRAFT)
+  revision       Int       @default(1)
+  finalizedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  lines  DqeLine[]
+  source DqeStudySource?
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status, createdAt])
+  @@index([opportunityId])
+  @@map("dqe_documents")
+}
+
+model DqeLine {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  dqeId          String
+  position       Int
+  reference      String?
+  designation    String
+  unitCode       String
+  quantity       Decimal  @db.Decimal(24, 6)
+  unitPrice      Decimal  @db.Decimal(24, 6)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  document DqeDocument @relation(fields: [dqeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@unique([dqeId, position])
+  @@index([organizationId, companyId, dqeId, position])
+  @@map("dqe_lines")
+}
+
+/// Preuve immuable de provenance Study -> DQE. Aucun endpoint UPDATE/DELETE.
+model DqeStudySource {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  companyId          String
+  dqeId              String   @unique
+  studyId            String
+  studyCode          String
+  studyOpportunityId String
+  createdAt          DateTime @default(now())
+
+  dqe   DqeDocument     @relation(fields: [dqeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  study EstimationStudy @relation(fields: [studyId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([dqeId, organizationId, companyId])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, studyId])
+  @@map("dqe_study_sources")
+}

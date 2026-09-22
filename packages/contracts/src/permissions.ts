@@ -33,6 +33,18 @@ export const CRM_PERMISSIONS = {
   PIPELINE_MANAGE: "crm.pipeline.manage",
 } as const;
 
+/** INC-03 — Study, DQE/BPU et sources de prix. */
+export const ESTIMATION_PERMISSIONS = {
+  STUDY_READ: "estimation.study.read",
+  STUDY_MANAGE: "estimation.study.manage",
+  DQE_READ: "estimation.dqe.read",
+  DQE_MANAGE: "estimation.dqe.manage",
+  PRICING_READ: "estimation.pricing.read",
+  PRICING_MANAGE: "estimation.pricing.manage",
+  LIBRARY_READ: "estimation.library.read",
+  LIBRARY_MANAGE: "estimation.library.manage",
+} as const;
+
 /**
  * Toutes les permissions connues du produit. Le role systeme OWNER cree au
  * bootstrap d'une organisation les recoit toutes ; les autres roles sont
@@ -41,6 +53,7 @@ export const CRM_PERMISSIONS = {
 export const ALL_PERMISSIONS = {
   ...CORE_PERMISSIONS,
   ...CRM_PERMISSIONS,
+  ...ESTIMATION_PERMISSIONS,
 } as const;
 
 export type CorePermissionKey =
@@ -48,6 +61,9 @@ export type CorePermissionKey =
 
 export type CrmPermissionKey =
   (typeof CRM_PERMISSIONS)[keyof typeof CRM_PERMISSIONS];
+
+export type EstimationPermissionKey =
+  (typeof ESTIMATION_PERMISSIONS)[keyof typeof ESTIMATION_PERMISSIONS];
 
 export type PermissionKey =
   (typeof ALL_PERMISSIONS)[keyof typeof ALL_PERMISSIONS];

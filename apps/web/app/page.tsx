@@ -6,6 +6,7 @@ import {
   BarChart3,
   Bell,
   Building2,
+  Calculator,
   CheckCircle2,
   ChevronDown,
   CircleDollarSign,
@@ -26,6 +27,7 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { CrmWorkspace } from "./components/crm-workspace";
+import { EstimationWorkspace } from "./components/estimation-workspace";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -51,7 +53,7 @@ const metrics: Metric[] = [
   { label: "Actions critiques", value: "7", trend: "2 à traiter aujourd'hui", icon: FileCheck2, tone: "amber" },
 ];
 
-type WorkspaceView = "overview" | "crm";
+type WorkspaceView = "overview" | "crm" | "estimation";
 
 /**
  * Navigation : seules les vues reellement livrees sont activables. Les autres
@@ -61,6 +63,7 @@ type WorkspaceView = "overview" | "crm";
 const navItems: Array<{ label: string; icon: typeof LayoutDashboard; view?: WorkspaceView }> = [
   { label: "Vue d'ensemble", icon: LayoutDashboard, view: "overview" },
   { label: "CRM & Ventes", icon: UsersRound, view: "crm" },
+  { label: "Études & DQE", icon: Calculator, view: "estimation" },
   { label: "Projets", icon: FolderKanban },
   { label: "Construction", icon: HardHat },
   { label: "Finance", icon: CircleDollarSign },
@@ -225,7 +228,7 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => Promise
         </header>
 
         <div className="dashboard-content">
-          {view === "crm" ? <CrmWorkspace /> : <>
+          {view === "crm" ? <CrmWorkspace /> : view === "estimation" ? <EstimationWorkspace /> : <>
           <section className="welcome-row">
             <div><p className="breadcrumb">Command Center / Vue d'ensemble</p><h1>Bonjour, {firstName}</h1><p>Voici la situation consolidée de vos opérations.</p></div>
             <button className="secondary-button"><span>Cette semaine</span><ChevronDown size={16} /></button>
