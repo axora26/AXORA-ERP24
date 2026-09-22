@@ -45,6 +45,14 @@ export const ESTIMATION_PERMISSIONS = {
   LIBRARY_MANAGE: "estimation.library.manage",
 } as const;
 
+/** INC-04 — Devis (issus d'un DQE finalise) et contrat (issu d'un devis accepte). */
+export const SALES_PERMISSIONS = {
+  QUOTE_READ: "sales.quote.read",
+  QUOTE_MANAGE: "sales.quote.manage",
+  CONTRACT_READ: "sales.contract.read",
+  CONTRACT_MANAGE: "sales.contract.manage",
+} as const;
+
 /**
  * Toutes les permissions connues du produit. Le role systeme OWNER cree au
  * bootstrap d'une organisation les recoit toutes ; les autres roles sont
@@ -54,6 +62,7 @@ export const ALL_PERMISSIONS = {
   ...CORE_PERMISSIONS,
   ...CRM_PERMISSIONS,
   ...ESTIMATION_PERMISSIONS,
+  ...SALES_PERMISSIONS,
 } as const;
 
 export type CorePermissionKey =
@@ -64,6 +73,9 @@ export type CrmPermissionKey =
 
 export type EstimationPermissionKey =
   (typeof ESTIMATION_PERMISSIONS)[keyof typeof ESTIMATION_PERMISSIONS];
+
+export type SalesPermissionKey =
+  (typeof SALES_PERMISSIONS)[keyof typeof SALES_PERMISSIONS];
 
 export type PermissionKey =
   (typeof ALL_PERMISSIONS)[keyof typeof ALL_PERMISSIONS];

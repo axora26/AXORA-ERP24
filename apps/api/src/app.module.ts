@@ -4,8 +4,9 @@ import { CoreModule } from "./core/core.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { CrmModule } from "./crm/crm.module.js";
 import { EstimationModule } from "./estimation/estimation.module.js";
+import { SalesModule } from "./sales/sales.module.js";
 
 @Module({
-  imports: [HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule],
+  imports: [HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule],
 })
 export class AppModule {}

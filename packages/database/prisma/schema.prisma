@@ -530,3 +530,128 @@ model DqeStudySource {
   @@index([organizationId, companyId, studyId])
   @@map("dqe_study_sources")
 }
+
+// ---------------------------------------------------------------------------
+// INC-04 — Devis (Quote) -> Contrat (tranche verticale commerciale)
+// Reference : docs/foundation/06-product-backlog.md #INC-04.
+//
+// INVARIANTS :
+// 1. Un devis ne peut etre cree que depuis un DQE FINALIZED ; ses lignes sont
+//    une copie immuable des lignes du DQE au moment de la creation.
+// 2. Un contrat ne peut etre cree que depuis un devis ACCEPTED ; ses lignes
+//    sont une copie immuable exacte des lignes du devis accepte.
+// 3. Aucune inference juridique (signature, attribution, regime fiscal,
+//    juridiction) n'est codee : le contrat reste un enregistrement neutre
+//    (pattern ADR-0035 ERP3602 — "legally neutral contract records").
+// 4. Un devis ne peut avoir qu'un seul contrat (contrainte unique quoteId).
+// ---------------------------------------------------------------------------
+
+enum QuoteStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+enum ContractStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model Quote {
+  id              String      @id @default(cuid())
+  organizationId  String
+  companyId       String
+  opportunityId   String
+  dqeId           String
+  code            String
+  title           String
+  currency        String      @default("USD") @db.Char(3)
+  version         Int         @default(1)
+  status          QuoteStatus @default(DRAFT)
+  subtotal        Decimal     @db.Decimal(24, 6)
+  submittedAt     DateTime?
+  acceptedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  lines    QuoteLine[]
+  contract Contract?
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status, createdAt])
+  @@index([opportunityId])
+  @@index([dqeId])
+  @@map("sales_quotes")
+}
+
+/// Copie immuable des lignes du DQE source au moment de la creation du devis.
+model QuoteLine {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  quoteId        String
+  position       Int
+  reference      String?
+  designation    String
+  unitCode       String
+  quantity       Decimal  @db.Decimal(24, 6)
+  unitPrice      Decimal  @db.Decimal(24, 6)
+  createdAt      DateTime @default(now())
+
+  quote Quote @relation(fields: [quoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@unique([quoteId, position])
+  @@index([organizationId, companyId, quoteId, position])
+  @@map("sales_quote_lines")
+}
+
+/// Enregistrement contractuel neutre : aucune portee juridique codee.
+model Contract {
+  id             String         @id @default(cuid())
+  organizationId String
+  companyId      String
+  opportunityId  String
+  quoteId        String         @unique
+  code           String
+  title          String
+  currency       String         @default("USD") @db.Char(3)
+  subtotal       Decimal        @db.Decimal(24, 6)
+  status         ContractStatus @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  lines ContractLine[]
+  quote Quote          @relation(fields: [quoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@unique([quoteId, organizationId, companyId])
+  @@index([organizationId, companyId, status, createdAt])
+  @@index([opportunityId])
+  @@map("sales_contracts")
+}
+
+/// Copie immuable exacte des lignes du devis accepte.
+model ContractLine {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  contractId     String
+  position       Int
+  reference      String?
+  designation    String
+  unitCode       String
+  quantity       Decimal  @db.Decimal(24, 6)
+  unitPrice      Decimal  @db.Decimal(24, 6)
+  createdAt      DateTime @default(now())
+
+  contract Contract @relation(fields: [contractId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@unique([contractId, position])
+  @@index([organizationId, companyId, contractId, position])
+  @@map("sales_contract_lines")
+}
