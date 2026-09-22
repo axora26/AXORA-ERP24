@@ -254,8 +254,12 @@ td:first-child small { color: #98a2b3; font-size: 9px; }
 .estimation-list small { color: #98a2b3; font-size: 9px; }
 .record-code { color: var(--blue-600); font-size: 9px; font-weight: 700; letter-spacing: .04em; }
 .status-chip.status-ready_for_dqe,
-.status-chip.status-finalized { color: #0c6b3f; background: #e9f8f0; }
+.status-chip.status-finalized,
+.status-chip.status-accepted,
+.status-chip.status-active { color: #0c6b3f; background: #e9f8f0; }
 .status-chip.status-draft { color: #8a5b16; background: #fff7e8; }
+.status-chip.status-submitted { color: #1849a9; background: #eaf1ff; }
+.status-chip.status-rejected { color: #b42318; background: #fef2f1; }
 .status-chip.status-archived { color: #475467; background: #f2f4f7; }
 .dqe-panel { margin-top: 18px; }
 .numeric-cell { color: #182230; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }

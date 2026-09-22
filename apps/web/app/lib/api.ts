@@ -1,4 +1,6 @@
 import type {
+  ContractSummaryView,
+  ContractView,
   CrmActivityView,
   CrmDashboardView,
   CrmLeadView,
@@ -10,6 +12,8 @@ import type {
   EstimationRequirementView,
   EstimationStudySummaryView,
   EstimationStudyView,
+  QuoteSummaryView,
+  QuoteView,
 } from "@axora24/contracts";
 
 /**
@@ -123,6 +127,21 @@ export const estimationApi = {
     },
   ) => api.post<DqeLineView>(`/estimation/dqes/${dqeId}/lines`, input),
   finalizeDqe: (dqeId: string) => api.post<DqeView>(`/estimation/dqes/${dqeId}/finalize`, {}),
+};
+
+export const salesApi = {
+  quotes: () => api.get<QuoteSummaryView[]>("/sales/quotes"),
+  quote: (quoteId: string) => api.get<QuoteView>(`/sales/quotes/${quoteId}`),
+  createQuote: (input: { dqeId: string; code: string; title: string }) =>
+    api.post<QuoteView>("/sales/quotes", input),
+  submitQuote: (quoteId: string) => api.post<QuoteView>(`/sales/quotes/${quoteId}/submit`, {}),
+  acceptQuote: (quoteId: string) => api.post<QuoteView>(`/sales/quotes/${quoteId}/accept`, {}),
+  rejectQuote: (quoteId: string, reason: string) =>
+    api.post<QuoteView>(`/sales/quotes/${quoteId}/reject`, { reason }),
+  contracts: () => api.get<ContractSummaryView[]>("/sales/contracts"),
+  contract: (contractId: string) => api.get<ContractView>(`/sales/contracts/${contractId}`),
+  createContract: (input: { quoteId: string; code: string; title: string }) =>
+    api.post<ContractView>("/sales/contracts", input),
 };
 
 /**

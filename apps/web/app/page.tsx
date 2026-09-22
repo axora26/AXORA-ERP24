@@ -18,6 +18,7 @@ import {
   LogOut,
   Menu,
   PackageSearch,
+  Receipt,
   Search,
   ShieldCheck,
   Sparkles,
@@ -28,6 +29,7 @@ import {
 import { FormEvent, useEffect, useState } from "react";
 import { CrmWorkspace } from "./components/crm-workspace";
 import { EstimationWorkspace } from "./components/estimation-workspace";
+import { SalesWorkspace } from "./components/sales-workspace";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -53,7 +55,7 @@ const metrics: Metric[] = [
   { label: "Actions critiques", value: "7", trend: "2 à traiter aujourd'hui", icon: FileCheck2, tone: "amber" },
 ];
 
-type WorkspaceView = "overview" | "crm" | "estimation";
+type WorkspaceView = "overview" | "crm" | "estimation" | "sales";
 
 /**
  * Navigation : seules les vues reellement livrees sont activables. Les autres
@@ -64,6 +66,7 @@ const navItems: Array<{ label: string; icon: typeof LayoutDashboard; view?: Work
   { label: "Vue d'ensemble", icon: LayoutDashboard, view: "overview" },
   { label: "CRM & Ventes", icon: UsersRound, view: "crm" },
   { label: "Études & DQE", icon: Calculator, view: "estimation" },
+  { label: "Devis & Contrats", icon: Receipt, view: "sales" },
   { label: "Projets", icon: FolderKanban },
   { label: "Construction", icon: HardHat },
   { label: "Finance", icon: CircleDollarSign },
@@ -228,7 +231,7 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => Promise
         </header>
 
         <div className="dashboard-content">
-          {view === "crm" ? <CrmWorkspace /> : view === "estimation" ? <EstimationWorkspace /> : <>
+          {view === "crm" ? <CrmWorkspace /> : view === "estimation" ? <EstimationWorkspace /> : view === "sales" ? <SalesWorkspace /> : <>
           <section className="welcome-row">
             <div><p className="breadcrumb">Command Center / Vue d'ensemble</p><h1>Bonjour, {firstName}</h1><p>Voici la situation consolidée de vos opérations.</p></div>
             <button className="secondary-button"><span>Cette semaine</span><ChevronDown size={16} /></button>
