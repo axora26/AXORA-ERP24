@@ -30,6 +30,8 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-19 : Sous-traitants (fournisseurs qualifies avec vigilance, lots sur commandes emises, situations derivees des taches, factures en Finance, retenues de garantie de premier ordre).
 - INC-20 : Portails client & fournisseur (identites externes separees, invitation a usage unique, exposition explicite re-verifiee, revocation immediate en base). Demo locale : /portal/login?c=<id entreprise>, moa@clinique-saint-luc.demo / PortailClient2026! et adv@fournisseur.demo / PortailFournisseur2026!.
 - INC-21 : Workflow (evenements en outbox transactionnelle, definitions versionnees, executions idempotentes journalisees, approbations a quatre yeux avec escalade et barriere fail-closed sur achats/factures/situations, webhooks HMAC re-signes, notifications). Demo locale : daf@axora-erp24.local / Controle2026! (une approbation en attente).
+- INC-22 : Copilote IA (reponses ancrees et citees, strictement bornees par le RBAC de l'appelant, preuve d'inference append-only a empreinte verifiee en base ; aucun modele generatif appele). Demo : la DAF voit ses demandes d'achat et un refus QHSE trace.
+- Incident d'environnement : le conteneur a redemarre (PostgreSQL, API et web arretes) ; base relancee sans perte (29 migrations, donnees demo intactes), serveurs relances.
 - Correctif : le catalogue `ALL_PERMISSIONS` est desormais indexe par la cle de permission (une fusion d'objets ecrasait les constantes homonymes READ/MANAGE de modules differents) ; test de non-regression.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
@@ -40,4 +42,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-22 Copilote IA, INC-23 Analytics/API publique, INC-24 PWA et rapport de livraison.
+INC-23 Analytics/API publique, INC-24 PWA et rapport de livraison.

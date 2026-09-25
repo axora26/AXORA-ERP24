@@ -221,6 +221,15 @@ export const WORKFLOW_PERMISSIONS = {
   APPROVE: "workflow.approval.decide",
 } as const;
 
+/**
+ * INC-22 — Copilote IA. Utiliser le copilote n'accorde AUCUN acces : chaque
+ * outil de lecture exige en plus la permission de lecture de son module.
+ */
+export const AI_PERMISSIONS = {
+  USE: "ai.copilot.use",
+  AUDIT: "ai.evidence.read",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -255,6 +264,7 @@ export const PERMISSION_GROUPS = [
   SUBCONTRACTING_PERMISSIONS,
   PORTAL_PERMISSIONS,
   WORKFLOW_PERMISSIONS,
+  AI_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

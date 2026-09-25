@@ -149,6 +149,8 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "workflow.definition.read": "Consulter workflows, exécutions et approbations",
   "workflow.definition.manage": "Configurer les workflows et automatisations",
   "workflow.approval.decide": "Décider les approbations de workflow (rôle désigné)",
+  "ai.copilot.use": "Interroger le copilote (dans la limite de ses propres droits de lecture)",
+  "ai.evidence.read": "Auditer les preuves d'inférence du copilote",
 };
 
 export function registerResourceLabels(labels: Record<string, string>): void {

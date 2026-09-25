@@ -27,6 +27,7 @@ import {
   Box,
   UsersRound,
   Workflow,
+  Bot,
 } from "lucide-react";
 
 export interface NavItem {
@@ -54,6 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Pilotage",
     items: [
       { href: "/", label: "Vue d'ensemble", icon: LayoutDashboard, keywords: "dashboard accueil command center" },
+      { href: "/copilot", label: "Copilote", icon: Bot, permission: "ai.copilot.use", keywords: "ia assistant question synthese intelligence artificielle" },
       { href: "/workflow", label: "Workflows & approbations", icon: Workflow, permission: ["workflow.definition.read", "workflow.approval.decide"], keywords: "automatisation regles approbation validation escalade notifications webhook" },
     ],
   },

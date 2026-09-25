@@ -133,3 +133,16 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 **Consequences** : latence de quelques secondes entre la mutation et l'effet ; la barriere peut demander de reessayer pendant ce delai. La resolution DNS des cibles n'est pas epinglee (rebinding DNS non couvert) : documente comme limite.
 **Reversible** : oui (nouvelles actions ou evenements sans changer le modele).
 
+## ADR-0013 — Copilote : reponses ancrees et deterministes, preuve d'inference obligatoire
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-22 exige que le copilote n'accede jamais a une donnee que l'utilisateur ne pourrait pas lire lui-meme, et que chaque reponse soit tracable a une source reelle avec la preuve du filtrage RBAC (BC-22). Aucun fournisseur de modele generatif n'est configure dans l'environnement de livraison.
+**Decision** :
+- Le copilote est un moteur deterministe : planification par mots-cles et references de pieces, outils de lecture parametres par le perimetre entreprise, composition de phrases a partir des seules valeurs lues. Il ne produit aucune affirmation non sourcee ; une question hors perimetre recoit la liste de ce qui peut etre demande.
+- Les droits consultes sont exactement ceux que la garde RBAC a resolus pour la requete ; `ai.copilot.use` ne donne acces a aucune donnee, chaque outil exige la permission de lecture de son module (deny-by-default). La synthese reutilise les sections du tableau de bord, deja soumises a la meme regle.
+- Chaque question laisse une preuve append-only (`ai_inference_evidence`) : controles d'acces accordes et refuses, sources citees, reponse, empreinte SHA-256 recalculee par la base (CHECK), moteur et fournisseur de modele (null). La preuve appartient au proprietaire de la session (trigger).
+- Aucun chemin d'ecriture : le copilote ne propose que des liens vers les ecrans, qui appliquent leurs propres controles.
+**Consequences** : comprehension limitee aux formulations prevues ; un futur branchement LLM devra se limiter a reformuler les faits deja sources et renseigner `modelProvider` (NOT_TESTED tant qu'aucun fournisseur n'est configure).
+**Reversible** : oui (ajout d'outils ou d'un reformulateur sans changer la preuve).
+
