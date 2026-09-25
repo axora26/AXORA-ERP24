@@ -128,6 +128,10 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "smart.alarm.acknowledge": "Acquitter les alarmes techniques",
   "smart.setpoint.request": "Demander des consignes (écriture)",
   "smart.gateway.test": "Attester les essais réels de communication",
+  "energy.meter.read": "Consulter l'énergie (compteurs, bilans, autonomie)",
+  "energy.meter.manage": "Configurer compteurs, tarifs, stockages et alertes",
+  "energy.interval.import": "Importer des relevés d'intervalles",
+  "energy.alert.acknowledge": "Acquitter les alertes énergie",
 };
 
 export function registerResourceLabels(labels: Record<string, string>): void {

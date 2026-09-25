@@ -81,10 +81,14 @@ model SmartBuilding {
   name            String
   address         String?
   projectId       String?
+  /// Surface de reference pour l'intensite energetique (kWh/m2) — jamais supposee.
+  floorAreaM2     Decimal? @db.Decimal(12, 2)
   createdByUserId String
   createdAt       DateTime @default(now())
 
-  gateways SmartGateway[]
+  gateways       SmartGateway[]
+  energyMeters   EnergyMeter[]
+  energyStorages EnergyStorage[]
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
@@ -111,9 +115,10 @@ model SmartGateway {
   createdByUserId String
   createdAt       DateTime      @default(now())
 
-  building SmartBuilding      @relation(fields: [buildingId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
-  points   SmartPoint[]
-  tests    SmartGatewayTest[]
+  building     SmartBuilding      @relation(fields: [buildingId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  points       SmartPoint[]
+  tests        SmartGatewayTest[]
+  energyMeters EnergyMeter[]
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
@@ -142,11 +147,12 @@ model SmartPoint {
   createdByUserId String
   createdAt       DateTime       @default(now())
 
-  gateway   SmartGateway     @relation(fields: [gatewayId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
-  asset     Asset?           @relation(fields: [assetId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
-  readings  SmartReading[]
-  rules     SmartAlarmRule[]
-  setpoints SmartSetpoint[]
+  gateway        SmartGateway     @relation(fields: [gatewayId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  asset          Asset?           @relation(fields: [assetId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  readings       SmartReading[]
+  rules          SmartAlarmRule[]
+  setpoints      SmartSetpoint[]
+  energyStorages EnergyStorage[]
 
   @@unique([gatewayId, externalRef])
   @@unique([id, organizationId, companyId])

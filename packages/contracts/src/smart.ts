@@ -30,6 +30,7 @@ export interface SmartBuildingView {
   address: string | null;
   projectId: string | null;
   projectCode: string | null;
+  floorAreaM2: string | null;
   gateways: number;
   points: number;
   activeAlarms: number;

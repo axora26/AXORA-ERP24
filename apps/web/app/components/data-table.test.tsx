@@ -12,6 +12,7 @@ describe("DataTable", () => {
     render(
       <DataTable
         rows={[{ id: "a", label: "Alarme A" }]}
+        empty={null}
         onRowClick={onRowClick}
         columns={[
           { key: "label", header: "Libellé", render: (row) => row.label },

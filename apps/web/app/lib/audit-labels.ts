@@ -173,6 +173,15 @@ const LABELS: Record<string, string> = {
   "smart.setpoint.acknowledged": "Consigne acquittée par la passerelle",
   "smart.setpoint.failed": "Consigne refusée par la passerelle",
   "smart.test.recorded": "Essai réel de communication attesté",
+  "smart.building.updated": "Bâtiment GTB modifié",
+  "energy.meter.created": "Compteur d'énergie créé",
+  "energy.meter.updated": "Compteur d'énergie modifié",
+  "energy.intervals.imported": "Relevés d'énergie importés",
+  "energy.tariff.created": "Tarif d'énergie enregistré",
+  "energy.rule.created": "Règle d'alerte énergie créée",
+  "energy.rule.updated": "Règle d'alerte énergie modifiée",
+  "energy.alert.acknowledged": "Alerte énergie acquittée",
+  "energy.storage.created": "Stockage d'énergie déclaré",
 };
 
 export function describeAudit(action: string): string {

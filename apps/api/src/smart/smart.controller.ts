@@ -30,6 +30,12 @@ export class SmartController {
     return this.smart.createBuilding(scope, body, user.id);
   }
 
+  @Patch("buildings/:id")
+  @RequirePermission(S.MANAGE)
+  updateBuilding(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.smart.updateBuilding(scope, id, body, user.id);
+  }
+
   @Get("gateways")
   @RequirePermission(S.READ)
   gateways(@Scope() scope: CompanyScope) {

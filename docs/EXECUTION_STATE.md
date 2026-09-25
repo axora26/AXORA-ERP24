@@ -25,6 +25,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-14 : BIM/IFC (lecteur IFC teste sur fichiers reels buildingSMART IFC2X3/IFC4/IFC4X3, versions verifiees par empreinte, visa, comparaison, liaison MEP, conflits) ; connecteur Revit natif honnetement NOT_TESTED.
 - INC-15 : Actifs/GMAO (passeports a origine tracee depuis la mise en service, preventif idempotent, tickets -> OT, temps RH et pieces du grand livre de stock, cloture gardee en base, MTBF/MTTR/disponibilite sur historique reel).
 - INC-16 : Smart Building (passerelles a jeton, ingestion idempotente avec conflits, alarmes au seuil fige, consignes confirmees par relecture, cinq niveaux de connectivite, simulateur jamais preuve) ; pilotes protocolaires natifs NOT_TESTED.
+- INC-17 : Energie (compteurs, intervalles idempotents par passerelle ou import, tarifs historises, bilans avec couverture, autonomie uniquement sur donnees suffisantes, alertes figees).
 - Correctif : le catalogue `ALL_PERMISSIONS` est desormais indexe par la cle de permission (une fusion d'objets ecrasait les constantes homonymes READ/MANAGE de modules differents) ; test de non-regression.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
@@ -35,4 +36,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-17 Energie (compteurs, intervalles idempotents, autonomie sur donnees reelles), puis INC-18 a INC-24.
+INC-18 Parc (vehicules/engins), INC-19 Sous-traitants, INC-20 Portails, INC-21 Workflow, INC-22 Copilote IA, INC-23 Analytics/API publique, INC-24 PWA et rapport de livraison.

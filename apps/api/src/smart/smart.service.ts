@@ -108,6 +108,7 @@ export class SmartService {
         address: building.address,
         projectId: building.projectId,
         projectCode: projects.find((project) => project.id === building.projectId)?.code ?? null,
+        floorAreaM2: num(building.floorAreaM2),
         gateways: building.gateways.length,
         points: points.filter((row) => ids.has(row.gatewayId)).reduce((sum, row) => sum + row._count._all, 0),
         activeAlarms: alarms.filter((alarm) => ids.has(alarmPoints.find((point) => point.id === alarm.pointId)?.gatewayId ?? "")).length,
@@ -123,9 +124,34 @@ export class SmartService {
       if (projectId && !(await tx.project.findFirst({ where: { id: projectId, ...scope }, select: { id: true } }))) throw new NotFoundException("Project not found");
       if (await tx.smartBuilding.findFirst({ where: { companyId: scope.companyId, code: buildingCode } })) throw new ConflictException(`Building ${buildingCode} already exists`);
       const building = await tx.smartBuilding.create({
-        data: { ...scope, code: buildingCode, name: requiredText(input.name, "name", 200), address: optionalText(input.address, "address", 300), projectId, createdByUserId: actorUserId },
+        data: {
+          ...scope,
+          code: buildingCode,
+          name: requiredText(input.name, "name", 200),
+          address: optionalText(input.address, "address", 300),
+          projectId,
+          floorAreaM2: optionalDecimal(input.floorAreaM2, "floorAreaM2", { positive: true }),
+          createdByUserId: actorUserId,
+        },
       });
       await writeAudit(tx, scope, actorUserId, "smart.building.created", "SmartBuilding", building.id, { code: buildingCode });
+    });
+    return this.listBuildings(scope);
+  }
+
+  async updateBuilding(scope: CompanyScope, buildingId: string, body: unknown, actorUserId: string) {
+    const input = assertBody(body);
+    await this.prisma.$transaction(async (tx) => {
+      if (!(await tx.smartBuilding.findFirst({ where: { id: buildingId, ...scope }, select: { id: true } }))) throw new NotFoundException("Building not found");
+      await tx.smartBuilding.update({
+        where: { id: buildingId },
+        data: {
+          ...(input.name !== undefined ? { name: requiredText(input.name, "name", 200) } : {}),
+          ...(input.address !== undefined ? { address: optionalText(input.address, "address", 300) } : {}),
+          ...(input.floorAreaM2 !== undefined ? { floorAreaM2: optionalDecimal(input.floorAreaM2, "floorAreaM2", { positive: true }) } : {}),
+        },
+      });
+      await writeAudit(tx, scope, actorUserId, "smart.building.updated", "SmartBuilding", buildingId, { floorAreaM2: input.floorAreaM2 });
     });
     return this.listBuildings(scope);
   }

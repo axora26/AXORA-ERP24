@@ -180,6 +180,14 @@ export const SMART_PERMISSIONS = {
   GATEWAY_TEST: "smart.gateway.test",
 } as const;
 
+/** INC-17 — Energie. L'import d'intervalles est une permission distincte de la configuration. */
+export const ENERGY_PERMISSIONS = {
+  READ: "energy.meter.read",
+  MANAGE: "energy.meter.manage",
+  IMPORT: "energy.interval.import",
+  ALERT_ACK: "energy.alert.acknowledge",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -209,6 +217,7 @@ export const PERMISSION_GROUPS = [
   BIM_PERMISSIONS,
   ASSETS_PERMISSIONS,
   SMART_PERMISSIONS,
+  ENERGY_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

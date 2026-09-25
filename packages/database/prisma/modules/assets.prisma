@@ -78,10 +78,11 @@ model Asset {
   createdByUserId         String
   createdAt               DateTime         @default(now())
 
-  equipment   MepEquipment?     @relation(fields: [equipmentId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
-  plans       MaintenancePlan[]
-  workOrders  WorkOrder[]
-  smartPoints SmartPoint[]
+  equipment    MepEquipment?     @relation(fields: [equipmentId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  plans        MaintenancePlan[]
+  workOrders   WorkOrder[]
+  smartPoints  SmartPoint[]
+  energyMeters EnergyMeter[]
 
   @@unique([companyId, code])
   @@unique([equipmentId, organizationId, companyId])
