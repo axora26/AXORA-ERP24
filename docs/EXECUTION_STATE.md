@@ -18,6 +18,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-07 : stock (grand livre append-only et soldes non negatifs garantis en base, cout moyen pondere, sorties chantier, transferts, inventaires) ; devise de reference par entreprise.
 - INC-08 : finance (facturation client et situations, 3-way match, validation par un tiers, paiements anti-doublon, tresorerie, facture PDF).
 - INC-09 : RH (employes, badges, pointages append-only, feuilles de temps validees par un tiers et imputees aux projets, conges, preparation de paie sans retenue legale presumee).
+- INC-10 : GED (fichiers immuables par empreinte, revisions immuables, visa par un tiers) et chantier (journal signe, preuves horodatees, reserves levees sur preuve verifiee, synchronisation hors ligne avec conflits explicites) — ADR-0009.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
 ## Bloque (externe)
@@ -27,4 +28,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-10 — Chantier (journal de chantier, avancement physique, reserves) + GED (documents versionnes, revisions, visas), puis INC-11 QHSE (incidents, non-conformites, actions correctives, inspections).
+INC-11 — QHSE (inspections avec checklists, non-conformites immuables, actions correctives avec responsable et echeance, cloture par un tiers, incidents et KPI), puis INC-12 a INC-17.

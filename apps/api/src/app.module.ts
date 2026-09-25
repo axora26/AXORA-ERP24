@@ -13,8 +13,11 @@ import { ProcurementModule } from "./procurement/procurement.module.js";
 import { InventoryModule } from "./inventory/inventory.module.js";
 import { FinanceModule } from "./finance/finance.module.js";
 import { HrModule } from "./hr/hr.module.js";
+import { FilesModule } from "./files/files.module.js";
+import { DocumentsModule } from "./documents/documents.module.js";
+import { FieldModule } from "./field/field.module.js";
 
 @Module({
-  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule],
 })
 export class AppModule {}

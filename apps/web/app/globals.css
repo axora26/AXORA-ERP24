@@ -640,3 +640,48 @@ a.btn { text-decoration: none; }
 .entry-editor td { vertical-align: middle; }
 .entry-editor .inline-select { max-width: 220px; width: 100%; }
 .entry-editor .inline-select.narrow { max-width: 80px; text-align: right; }
+
+/* INC-10 — Chantier (synchronisation terrain, preuves) et GED */
+.toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 16px; }
+.toolbar .field { margin: 0; min-width: 220px; }
+.toolbar > .btn { height: 38px; }
+.net-state { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.net-state.on { color: #067647; background: #ecfdf3; }
+.net-state.off { color: #b42318; background: #fef3f2; }
+.sync-body { padding: 0 0 12px; }
+.queue-list { margin: 0; padding: 0 21px; list-style: none; display: grid; gap: 6px; font-size: 12px; }
+.queue-list li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.queue-list small { color: #667085; }
+.conflict-card { display: flex; justify-content: space-between; gap: 16px; margin: 10px 21px 0; padding: 12px 14px; border-radius: 10px; border: 1px solid #fcd9a4; background: #fffaf0; font-size: 12px; }
+.conflict-card.rejected { border-color: #fecdca; background: #fef3f2; }
+.conflict-card p { margin: 6px 0 0; }
+.conflict-card strong { margin-left: 8px; }
+.conflict-card .server-state { color: #344054; }
+.conflict-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; justify-content: center; }
+.evidence-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; padding: 16px 21px 20px; }
+.evidence-card { margin: 0; border: 1px solid #e4e7ec; border-radius: 10px; overflow: hidden; background: #fff; }
+.evidence-card img, .evidence-note { width: 100%; height: 140px; object-fit: cover; display: block; background: #f2f4f7; }
+.evidence-note { padding: 12px; font-size: 12px; color: #344054; overflow: hidden; }
+.evidence-card figcaption { display: grid; gap: 2px; padding: 8px 10px 10px; font-size: 11px; }
+.evidence-card figcaption span, .evidence-card figcaption small { color: #667085; }
+.evidence-card.kind-correction { border-color: #abefc6; }
+.evidence-timeline { list-style: none; margin: 0; padding: 12px 21px 18px; display: grid; gap: 12px; }
+.evidence-timeline li { display: flex; gap: 14px; align-items: flex-start; padding-bottom: 12px; border-bottom: 1px solid #f2f4f7; }
+.evidence-timeline img { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid #e4e7ec; }
+.evidence-timeline p { margin: 6px 0 4px; font-size: 13px; }
+.evidence-timeline small { color: #667085; font-size: 11px; }
+.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 420px; }
+.prose { margin: 0; padding: 14px 21px 18px; white-space: pre-line; font-size: 13px; line-height: 1.6; color: #344054; }
+.prose-title { margin: 0; padding: 0 21px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #667085; }
+.ged-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+.folder-tree { list-style: none; margin: 0; padding: 8px 8px 12px; display: grid; gap: 2px; }
+.folder-tree button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 12px; border: 0; border-radius: 7px; background: transparent; color: #344054; font: 500 12px Inter, sans-serif; text-align: left; cursor: pointer; }
+.folder-tree button:hover { background: #f2f4f7; }
+.folder-tree button.active { background: #eaf1ff; color: var(--blue-600); }
+.folder-tree button span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-tree small { color: #98a2b3; }
+@media (max-width: 900px) {
+  .ged-layout { grid-template-columns: minmax(0, 1fr); }
+  .conflict-card { flex-direction: column; }
+  .conflict-actions { align-items: stretch; }
+}

@@ -92,6 +92,23 @@ const LABELS: Record<string, string> = {
   "hr.payroll.prepared": "Paie préparée",
   "hr.payroll.adjusted": "Élément variable de paie saisi",
   "hr.payroll.closed": "Paie clôturée",
+  "documents.file.uploaded": "Fichier déposé",
+  "documents.folder.created": "Dossier GED créé",
+  "documents.document.created": "Document créé",
+  "documents.version.added": "Nouvelle révision déposée",
+  "documents.version.submitted": "Révision soumise au visa",
+  "documents.version.approved": "Révision approuvée",
+  "documents.version.rejected": "Révision refusée",
+  "documents.document.archived": "Document archivé",
+  "field.zone.created": "Zone de chantier créée",
+  "field.log.created": "Journal de chantier créé",
+  "field.log.updated": "Journal de chantier complété",
+  "field.log.signed": "Journal de chantier signé",
+  "field.issue.created": "Réserve créée",
+  "field.evidence.recorded": "Preuve horodatée enregistrée",
+  "field.issue.correction_submitted": "Correction de réserve déclarée",
+  "field.issue.reopened": "Correction de réserve refusée",
+  "field.issue.closed": "Réserve levée",
 };
 
 export function describeAudit(action: string): string {

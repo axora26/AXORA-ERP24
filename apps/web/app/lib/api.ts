@@ -60,6 +60,12 @@ function withCompany(path: string): string {
   return `${path}${path.includes("?") ? "&" : "?"}companyId=${encodeURIComponent(activeCompanyId)}`;
 }
 
+/** URL d'un contenu servi par l'API (fichier, photo) dans l'entreprise active. */
+export function assetUrl(url: string): string {
+  if (!activeCompanyId || /[?&]companyId=/.test(url)) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}companyId=${encodeURIComponent(activeCompanyId)}`;
+}
+
 function bodyWithCompany(body: unknown): unknown {
   if (!activeCompanyId || body === null || typeof body !== "object" || Array.isArray(body)) return body;
   return "companyId" in body ? body : { ...body, companyId: activeCompanyId };
@@ -71,7 +77,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     response = await fetch(`${API_URL}${withCompany(path)}`, {
       ...init,
       credentials: "include",
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+      // FormData : le navigateur fixe lui-meme le Content-Type multipart (avec sa frontiere).
+      headers: init?.body instanceof FormData ? { ...(init?.headers ?? {}) } : { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
   } catch {
     throw new ApiError(0, "L'API AXORA est momentanement injoignable.");
@@ -101,6 +108,11 @@ export const api = {
   put: <T>(path: string, body: unknown = {}) =>
     call<T>(path, { method: "PUT", body: JSON.stringify(bodyWithCompany(body)) }),
   delete: <T>(path: string) => call<T>(path, { method: "DELETE" }),
+  upload: <T>(path: string, file: Blob, filename: string) => {
+    const form = new FormData();
+    form.append("file", file, filename);
+    return call<T>(path, { method: "POST", body: form });
+  },
 };
 
 export const crmApi = {

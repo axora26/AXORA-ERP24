@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   UserCog,
   IdCard,
+  HardHat,
+  FileStack,
   UsersRound,
 } from "lucide-react";
 
@@ -53,6 +55,8 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Projets & chantiers",
     items: [
       { href: "/projects", label: "Projets", icon: FolderKanban, permission: "projects.project.read", keywords: "wbs budget planning gantt avenants affaires" },
+      { href: "/field", label: "Chantier", icon: HardHat, permission: "field.site.read", keywords: "journal reserves photos terrain hors ligne punch list" },
+      { href: "/documents", label: "Documents (GED)", icon: FileStack, permission: "documents.document.read", keywords: "ged plans visa revisions indices fichiers" },
     ],
   },
   {

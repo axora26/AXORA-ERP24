@@ -1,0 +1,180 @@
+// ---------------------------------------------------------------------------
+// INC-10 — Field / Chantier (docs/foundation/02-domain-model.md BC-09)
+//
+// INVARIANTS :
+// 1. Toute preuve (photo, observation) est horodatee et liee explicitement a
+//    une reserve, une tache, une zone ou un journal (CHECK en base) ; elle est
+//    append-only (trigger).
+// 2. Une reserve porte un responsable et une echeance ; elle ne se ferme
+//    qu'apres une correction prouvee par photo, verifiee par une personne
+//    distincte de celle qui a declare la correction.
+// 3. Hors ligne : chaque creation porte un identifiant client unique
+//    (idempotence a la resynchronisation) ; chaque modification porte la
+//    version lue (verrou optimiste) — un ecart produit un CONFLIT explicite,
+//    jamais un ecrasement silencieux.
+// 4. Un journal de chantier signe est fige (trigger).
+// ---------------------------------------------------------------------------
+
+enum SiteLogStatus {
+  DRAFT
+  SIGNED
+}
+
+enum SiteIssueStatus {
+  OPEN
+  CORRECTION_SUBMITTED
+  CLOSED
+}
+
+enum SiteIssueCategory {
+  QUALITY
+  SAFETY
+  ENVIRONMENT
+  PROGRESS
+  OTHER
+}
+
+enum SiteIssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum SiteEvidenceKind {
+  PHOTO
+  OBSERVATION
+  CORRECTION
+}
+
+model SiteZone {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  projectId      String
+  code           String
+  name           String
+  createdAt      DateTime @default(now())
+
+  @@unique([projectId, code])
+  @@unique([id, organizationId, companyId])
+  @@map("site_zones")
+}
+
+model SiteDailyLog {
+  id              String        @id @default(cuid())
+  organizationId  String
+  companyId       String
+  projectId       String
+  logDate         DateTime      @db.Date
+  weather         String?
+  temperature     String?
+  /// Effectif declare par le chef de chantier (les pointages RH sont affiches en regard).
+  workforceCount  Int
+  summary         String
+  safetyNotes     String?
+  status          SiteLogStatus @default(DRAFT)
+  /// Verrou optimiste pour la synchronisation hors ligne.
+  version         Int           @default(1)
+  clientId        String?
+  createdByUserId String
+  signedByUserId  String?
+  signedAt        DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  evidence SiteEvidence[]
+
+  @@unique([projectId, logDate])
+  @@unique([companyId, clientId])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId, logDate])
+  @@map("site_daily_logs")
+}
+
+model SiteIssue {
+  id                          String            @id @default(cuid())
+  organizationId              String
+  companyId                   String
+  projectId                   String
+  code                        String
+  title                       String
+  description                 String
+  category                    SiteIssueCategory
+  severity                    SiteIssueSeverity
+  zoneId                      String?
+  taskId                      String?
+  assigneeName                String
+  assigneeUserId              String?
+  dueDate                     DateTime
+  status                      SiteIssueStatus   @default(OPEN)
+  version                     Int               @default(1)
+  clientId                    String?
+  createdByUserId             String
+  correctionSubmittedByUserId String?
+  correctionSubmittedAt       DateTime?
+  correctionNote              String?
+  closedByUserId              String?
+  closedAt                    DateTime?
+  closureNote                 String?
+  /// Derniere correction refusee : une nouvelle preuve posterieure est exigee.
+  reopenedAt                  DateTime?
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
+
+  evidence SiteEvidence[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, clientId])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId, status])
+  @@map("site_issues")
+}
+
+/// Preuve horodatee (photo, observation, preuve de correction), append-only.
+model SiteEvidence {
+  id              String           @id @default(cuid())
+  organizationId  String
+  companyId       String
+  projectId       String
+  kind            SiteEvidenceKind
+  note            String?
+  fileId          String?
+  /// Instant de prise de vue declare par l'appareil (peut preceder l'envoi hors ligne).
+  takenAt         DateTime
+  /// Instant d'enregistrement serveur.
+  recordedAt      DateTime         @default(now())
+  latitude        Decimal?         @db.Decimal(9, 6)
+  longitude       Decimal?         @db.Decimal(9, 6)
+  issueId         String?
+  taskId          String?
+  zoneId          String?
+  dailyLogId      String?
+  clientId        String?
+  createdByUserId String
+
+  file     StoredFile?   @relation(fields: [fileId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  issue    SiteIssue?    @relation(fields: [issueId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  dailyLog SiteDailyLog? @relation(fields: [dailyLogId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([companyId, clientId])
+  @@index([organizationId, companyId, projectId, takenAt])
+  @@index([issueId])
+  @@index([taskId])
+  @@map("site_evidence")
+}
+
+/// Journal des operations hors ligne appliquees (idempotence des modifications).
+model FieldSyncOperation {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  clientId       String
+  type           String
+  entityId       String
+  userId         String
+  appliedAt      DateTime @default(now())
+
+  @@unique([companyId, clientId])
+  @@map("field_sync_operations")
+}

@@ -1,0 +1,140 @@
+// ---------------------------------------------------------------------------
+// INC-10 — GED, fondation (docs/foundation/02-domain-model.md BC-10)
+//
+// INVARIANTS :
+// 1. Un fichier stocke est immuable et adresse par son empreinte SHA-256
+//    (dedoublonnage par entreprise => televersement idempotent). Trigger
+//    append-only en base.
+// 2. Une version de document ne change jamais de contenu : une revision cree
+//    une nouvelle DocumentVersion (trigger refusant la modification du
+//    fichier, du numero ou de la revision, et toute suppression).
+// 3. Le statut (brouillon/soumis/approuve/rejete/archive) est applique cote
+//    serveur ; l'approbation revient a une personne distincte de l'auteur
+//    de la version et de celui qui l'a soumise.
+// ---------------------------------------------------------------------------
+
+enum DocumentStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum DocumentVersionStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+enum DocumentCategory {
+  PLAN
+  SPECIFICATION
+  TECHNICAL_SHEET
+  REPORT
+  MINUTES
+  CONTRACT
+  PHOTO
+  DOE
+  CERTIFICATE
+  OTHER
+}
+
+/// Fichier binaire immuable (photo, plan, PDF...). Le contenu vit dans le
+/// stockage objet ; seule son empreinte et ses metadonnees sont en base.
+model StoredFile {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  sha256           String   @db.Char(64)
+  size             Int
+  /// Type detecte a partir du contenu (signature binaire), jamais celui annonce par le client.
+  mimeType         String
+  originalName     String
+  storageKey       String
+  uploadedByUserId String
+  createdAt        DateTime @default(now())
+
+  documentVersions DocumentVersion[]
+  siteEvidence     SiteEvidence[]
+
+  @@unique([companyId, sha256])
+  @@unique([id, organizationId, companyId])
+  @@map("stored_files")
+}
+
+model DocumentFolder {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  projectId      String?
+  parentId       String?
+  name           String
+  createdAt      DateTime @default(now())
+
+  parent    DocumentFolder?   @relation("DocumentFolderTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  DocumentFolder[]  @relation("DocumentFolderTree")
+  documents ManagedDocument[]
+
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId])
+  @@map("document_folders")
+}
+
+model ManagedDocument {
+  id                   String           @id @default(cuid())
+  organizationId       String
+  companyId            String
+  code                 String
+  title                String
+  category             DocumentCategory
+  projectId            String?
+  folderId             String?
+  keywords             String?
+  /// Statut de la derniere version (ou ARCHIVED).
+  status               DocumentStatus   @default(DRAFT)
+  currentVersionNumber Int              @default(1)
+  createdByUserId      String
+  archivedByUserId     String?
+  archivedAt           DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  folder   DocumentFolder?   @relation(fields: [folderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  versions DocumentVersion[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId, status])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id                String                @id @default(cuid())
+  organizationId    String
+  companyId         String
+  documentId        String
+  versionNumber     Int
+  /// Indice de revision lisible (A, B, C...).
+  revision          String
+  fileId            String
+  fileName          String
+  changeNote        String?
+  status            DocumentVersionStatus @default(DRAFT)
+  uploadedByUserId  String
+  submittedByUserId String?
+  submittedAt       DateTime?
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  createdAt         DateTime              @default(now())
+
+  document ManagedDocument @relation(fields: [documentId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  file     StoredFile      @relation(fields: [fileId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([documentId, versionNumber])
+  @@index([organizationId, companyId, status])
+  @@map("document_versions")
+}

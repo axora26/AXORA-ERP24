@@ -108,6 +108,24 @@ export const HR_PERMISSIONS = {
   PAYROLL_MANAGE: "hr.payroll.manage",
 } as const;
 
+/** INC-10 — GED : documents versionnes, approbation par un tiers, fichiers immuables. */
+export const DOCUMENTS_PERMISSIONS = {
+  DOCUMENT_READ: "documents.document.read",
+  DOCUMENT_MANAGE: "documents.document.manage",
+  DOCUMENT_APPROVE: "documents.document.approve",
+  FILE_UPLOAD: "documents.file.upload",
+} as const;
+
+/** INC-10 — Chantier : journal, preuves horodatees, reserves, synchronisation hors ligne. */
+export const FIELD_PERMISSIONS = {
+  SITE_READ: "field.site.read",
+  LOG_MANAGE: "field.log.manage",
+  LOG_SIGN: "field.log.sign",
+  EVIDENCE_CREATE: "field.evidence.create",
+  ISSUE_MANAGE: "field.issue.manage",
+  ISSUE_CLOSE: "field.issue.close",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -128,6 +146,8 @@ export const ALL_PERMISSIONS = {
   ...INVENTORY_PERMISSIONS,
   ...FINANCE_PERMISSIONS,
   ...HR_PERMISSIONS,
+  ...DOCUMENTS_PERMISSIONS,
+  ...FIELD_PERMISSIONS,
   ...DASHBOARD_PERMISSIONS,
 } as const;
 

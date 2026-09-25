@@ -76,3 +76,18 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 **Decision** : (1) contrainte `CHECK (quantity >= 0 AND value >= 0)` sur `stock_balances` ; (2) trigger `axora_forbid_mutation` refusant tout `UPDATE`/`DELETE` sur `stock_movements` et `audit_logs`. Toute ecriture de stock passe par `StockLedgerService` (verrou `SELECT ... FOR UPDATE` sur la ligne de solde, cout moyen pondere). Le stock est valorise dans la devise de reference de l'entreprise (`companies.currency`) ; une reception d'article stocke dans une autre devise est refusee (pas de conversion implicite).
 **Consequence** : la suppression d'une organisation n'est plus possible tant que ses traces d'audit existent (comportement voulu : aucune route ne le permet).
 **Reversible** : oui par migration explicite, jamais silencieusement.
+
+## ADR-0009 — Fichiers immuables adresses par empreinte et synchronisation terrain hors ligne
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-10 introduit les premiers fichiers binaires (plans, PV, photos de chantier) et une saisie terrain devant fonctionner sans reseau sans jamais perdre ni ecraser silencieusement une donnee (BC-09, BC-10).
+**Decision** :
+- Un fichier est stocke une seule fois par entreprise sous la cle de son empreinte SHA-256 : le televersement est idempotent, l'objet n'est jamais reecrit, la ligne `stored_files` est append-only (trigger). Le type est detecte sur la signature binaire (liste blanche : JPEG, PNG, WebP, PDF, Office, ZIP, IFC, DWG) ; le type annonce par le client est ignore, aucun HTML/SVG n'est servi. Le contenu est servi avec `nosniff`, sur la meme origine, apres controle de permission (`RequireAnyPermission` : GED ou chantier).
+- Pilote de stockage local (`FILE_STORAGE_DIR`) derriere l'interface `FileStorage` ; le pilote compatible S3 prevu par l'architecture n'est pas livre (NOT_TESTED).
+- Une version de document ne change jamais de contenu (trigger `document_versions_immutable`) ; une revision cree une nouvelle version, l'approbation revient a une personne distincte de l'auteur et du soumetteur.
+- Toute saisie terrain (reserve, preuve, correction, journal) passe par `POST /field/sync`, en ligne comme hors ligne : un seul chemin. Chaque operation porte un identifiant genere sur l'appareil (rejeu = `DUPLICATE`, jamais un doublon) ; toute modification porte la version lue (verrou optimiste) : un ecart renvoie `CONFLICT` avec l'etat serveur, et l'utilisateur tranche explicitement (reappliquer sur la version affichee, ou abandonner). Cote navigateur, la file et les photos sont persistees dans IndexedDB et ne quittent la file que sur accuse serveur.
+- Preuves de chantier append-only et toujours rattachees a un contexte (CHECK) ; reserve levee uniquement apres photo de correction posterieure au dernier refus, verifiee par une autre personne que le declarant (CHECK en base).
+**Limite connue** : sans service worker (INC-24), l'application doit etre ouverte avant la coupure reseau ; la file survit a la fermeture de l'onglet.
+**Reversible** : oui (ajout d'un pilote S3 sans changement de contrat HTTP).
+

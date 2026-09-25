@@ -75,6 +75,12 @@ const RESOURCE_LABELS: Record<string, string> = {
   timesheet: "les feuilles de temps",
   leave: "les congés",
   payroll: "la paie",
+  document: "les documents",
+  file: "les fichiers",
+  site: "le chantier",
+  log: "les journaux de chantier",
+  evidence: "les photos et observations",
+  issue: "les réserves",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -93,6 +99,8 @@ const ACTION_LABELS: Record<string, string> = {
   post: "Comptabiliser",
   submit: "Soumettre",
   request: "Demander",
+  sign: "Signer",
+  upload: "Téléverser",
 };
 
 export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {};

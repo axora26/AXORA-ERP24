@@ -7,10 +7,11 @@ export function createClient(baseUrl) {
   let cookie = "";
 
   async function call(method, path, body) {
+    const multipart = body instanceof FormData;
     const response = await fetch(`${baseUrl}${path}`, {
       method,
-      headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: { ...(multipart ? {} : { "Content-Type": "application/json" }), ...(cookie ? { Cookie: cookie } : {}) },
+      body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
     });
     const setCookie = response.headers.get("set-cookie");
     if (setCookie) cookie = setCookie.split(";")[0];
@@ -32,6 +33,12 @@ export function createClient(baseUrl) {
     patch: (path, body = {}) => call("PATCH", path, body),
     put: (path, body = {}) => call("PUT", path, body),
     delete: (path) => call("DELETE", path),
+    /** Televersement multipart reel (meme chemin que le navigateur). */
+    upload: (content, filename, contentType = "application/octet-stream") => {
+      const form = new FormData();
+      form.append("file", new Blob([content], { type: contentType }), filename);
+      return call("POST", "/files", form);
+    },
     hasSession: () => cookie !== "",
   };
 }

@@ -26,6 +26,8 @@ test-results/
 *.sqlite-journal
 *.db
 uploads/
+# Stockage objet local des fichiers (GED, preuves chantier) : jamais versionne
+.data/
 
 # Prisma generated client (regenere via pnpm db:generate)
 packages/database/prisma/migrations/**/migration.sql.bak
