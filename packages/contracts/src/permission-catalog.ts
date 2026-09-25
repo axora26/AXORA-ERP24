@@ -151,6 +151,9 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "workflow.approval.decide": "Décider les approbations de workflow (rôle désigné)",
   "ai.copilot.use": "Interroger le copilote (dans la limite de ses propres droits de lecture)",
   "ai.evidence.read": "Auditer les preuves d'inférence du copilote",
+  "analytics.report.read": "Consulter les analyses (dans la limite des droits de lecture de chaque module)",
+  "analytics.snapshot.manage": "Figer des instantanés analytiques mensuels",
+  "analytics.dashboard.manage": "Créer et partager des tableaux de bord analytiques",
 };
 
 export function registerResourceLabels(labels: Record<string, string>): void {

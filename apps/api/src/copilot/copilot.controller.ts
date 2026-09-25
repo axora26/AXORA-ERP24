@@ -1,19 +1,11 @@
-import { Body, Controller, ExecutionContext, Get, Param, Post, Query, createParamDecorator } from "@nestjs/common";
-import type { Request } from "express";
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { AI_PERMISSIONS as AI } from "@axora24/contracts";
 import { RequirePermission } from "../auth/require-permission.decorator.js";
 import type { AuthenticatedUser } from "../auth/session.guard.js";
 import { CurrentUser, Scope, ScopedController } from "../common/scope.guard.js";
+import { EffectivePermissions } from "../common/effective-permissions.decorator.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { CopilotService } from "./copilot.service.js";
-
-/**
- * Permissions effectives de la session, telles que resolues par la garde RBAC
- * pour CETTE requete (jamais transmises par le client).
- */
-const EffectivePermissions = createParamDecorator((_data: unknown, context: ExecutionContext): Set<string> => {
-  return context.switchToHttp().getRequest<Request>().axoraPermissions ?? new Set<string>();
-});
 
 /** INC-22 — Copilote : lecture augmentee, strictement bornee par le RBAC de l'appelant. */
 @Controller("copilot")

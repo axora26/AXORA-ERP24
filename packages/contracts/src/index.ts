@@ -35,3 +35,4 @@ export * from "./subcontracting.js";
 export * from "./portal.js";
 export * from "./workflow.js";
 export * from "./ai.js";
+export * from "./analytics.js";

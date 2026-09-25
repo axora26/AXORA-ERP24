@@ -32,6 +32,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-21 : Workflow (evenements en outbox transactionnelle, definitions versionnees, executions idempotentes journalisees, approbations a quatre yeux avec escalade et barriere fail-closed sur achats/factures/situations, webhooks HMAC re-signes, notifications). Demo locale : daf@axora-erp24.local / Controle2026! (une approbation en attente).
 - INC-22 : Copilote IA (reponses ancrees et citees, strictement bornees par le RBAC de l'appelant, preuve d'inference append-only a empreinte verifiee en base ; aucun modele generatif appele). Demo : la DAF voit ses demandes d'achat et un refus QHSE trace.
 - Incident d'environnement : le conteneur a redemarre (PostgreSQL, API et web arretes) ; base relancee sans perte (29 migrations, donnees demo intactes), serveurs relances.
+- INC-23 (partie 1) : Analytique (indicateurs mensuels sur donnees reelles, RBAC par indicateur, instantanes figes, export CSV, tableaux de bord partages).
 - Correctif : le catalogue `ALL_PERMISSIONS` est desormais indexe par la cle de permission (une fusion d'objets ecrasait les constantes homonymes READ/MANAGE de modules differents) ; test de non-regression.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 

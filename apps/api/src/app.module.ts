@@ -28,8 +28,9 @@ import { SubcontractingModule } from "./subcontracting/subcontracting.module.js"
 import { PortalModule } from "./portal/portal.module.js";
 import { WorkflowModule } from "./workflow/workflow.module.js";
 import { CopilotModule } from "./copilot/copilot.module.js";
+import { AnalyticsModule } from "./analytics/analytics.module.js";
 
 @Module({
-  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule, BimModule, AssetsModule, SmartModule, EnergyModule, FleetModule, SubcontractingModule, PortalModule, WorkflowModule, CopilotModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule, BimModule, AssetsModule, SmartModule, EnergyModule, FleetModule, SubcontractingModule, PortalModule, WorkflowModule, CopilotModule, AnalyticsModule],
 })
 export class AppModule {}

@@ -221,6 +221,10 @@ const LABELS: Record<string, string> = {
   "workflow.approval.rejected": "Approbation de workflow refusée",
   "workflow.approval.escalated": "Approbation de workflow escaladée (délai dépassé)",
   "workflow.webhook.retried": "Webhook relancé manuellement",
+  "analytics.snapshot.captured": "Instantané analytique figé",
+  "analytics.dashboard.created": "Tableau de bord analytique créé",
+  "analytics.dashboard.updated": "Tableau de bord analytique modifié",
+  "analytics.dashboard.deleted": "Tableau de bord analytique supprimé",
 };
 
 export function describeAudit(action: string): string {

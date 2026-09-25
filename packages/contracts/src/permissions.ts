@@ -230,6 +230,16 @@ export const AI_PERMISSIONS = {
   AUDIT: "ai.evidence.read",
 } as const;
 
+/**
+ * INC-23 — Analytique. Lire un rapport exige EN PLUS la permission de lecture
+ * du module source de chaque indicateur (deny-by-default par indicateur).
+ */
+export const ANALYTICS_PERMISSIONS = {
+  READ: "analytics.report.read",
+  SNAPSHOT: "analytics.snapshot.manage",
+  DASHBOARD: "analytics.dashboard.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -265,6 +275,7 @@ export const PERMISSION_GROUPS = [
   PORTAL_PERMISSIONS,
   WORKFLOW_PERMISSIONS,
   AI_PERMISSIONS,
+  ANALYTICS_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

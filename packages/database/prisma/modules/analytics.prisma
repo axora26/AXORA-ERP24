@@ -1,0 +1,49 @@
+// ---------------------------------------------------------------------------
+// INC-23 — Analytique / BI (docs/foundation/02-domain-model.md BC-23)
+//
+// INVARIANTS :
+// 1. Un instantane reference explicitement sa fenetre (mois) et son perimetre
+//    (organisation / societe) ; jamais d'agregat melangeant des tenants.
+// 2. Chaque valeur provient des donnees reelles du module source ; le nombre
+//    d'enregistrements lus est conserve. Les donnees simulees sont exclues.
+// 3. Un instantane est fige (append-only) ; une nouvelle capture du meme mois
+//    cree une nouvelle version. Il porte le marquage DEMO de son organisation.
+// ---------------------------------------------------------------------------
+
+model AnalyticsSnapshot {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  /// Mois fige, format AAAA-MM.
+  period           String
+  periodStart      DateTime
+  periodEnd        DateTime
+  version          Int
+  isDemo           Boolean
+  /// [{metric, label, unit, series: [{key, label, value}], sourceRows}]
+  metrics          Json
+  /// Indicateurs non figes faute de permission du capteur.
+  excludedMetrics  String[]
+  capturedByUserId String
+  capturedAt       DateTime @default(now())
+
+  @@unique([companyId, period, version])
+  @@index([organizationId, companyId, period])
+  @@map("analytics_snapshots")
+}
+
+model AnalyticsDashboard {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  ownerUserId    String
+  name           String
+  /// Cles d'indicateurs, dans l'ordre d'affichage (filtrees par permission a la lecture).
+  metrics        String[]
+  shared         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, companyId, ownerUserId])
+  @@map("analytics_dashboards")
+}

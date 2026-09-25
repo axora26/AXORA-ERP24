@@ -934,3 +934,42 @@ a.btn { text-decoration: none; }
   .copilot-sessions { max-height: 180px; }
   .copilot-question, .copilot-answer { max-width: 100%; }
 }
+
+/* INC-23 — Analyses & BI */
+.analytics-period { display: inline-flex; align-items: center; gap: 6px; color: #475467; font: 500 12px Inter, sans-serif; }
+.analytics-period select { height: 34px; border: 1px solid #d6dae2; border-radius: 8px; padding: 0 8px; background: #fff; color: #182230; font: 500 12px Inter, sans-serif; }
+.analytics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.analytics-grid.in-panel { padding: 0 16px 16px; }
+.analytics-card { display: grid; gap: 10px; padding: 0 16px 14px; }
+.analytics-currency { margin: 0; color: #475467; font: 600 11px Inter, sans-serif; letter-spacing: .04em; }
+.analytics-empty { margin: 8px 0; color: #667085; font-size: 13px; }
+.analytics-trace { margin: 0; color: #667085; font-size: 12px; }
+.analytics-denied { display: flex; align-items: center; gap: 6px; margin: 0; color: #667085; font-size: 12px; }
+.analytics-locked { display: flex; align-items: center; gap: 8px; padding: 16px; border: 1px dashed #d0d5dd; border-radius: 10px; color: #667085; font-size: 13px; }
+.analytics-boards { display: flex; flex-wrap: wrap; gap: 10px; }
+.analytics-boards button { display: grid; gap: 2px; min-width: 200px; padding: 10px 12px; border: 1px solid #e4e7ec; border-radius: 10px; background: #fff; text-align: left; cursor: pointer; font: 400 12px Inter, sans-serif; color: #475467; }
+.analytics-boards button strong { color: #101828; font-size: 13px; }
+.analytics-boards button.active { border-color: var(--blue-600); box-shadow: 0 0 0 3px rgba(37, 99, 235, .1); }
+.analytics-boards .analytics-new { display: inline-flex; align-items: center; gap: 6px; color: var(--blue-600); font-weight: 600; border-style: dashed; }
+.analytics-snapshot { width: 100%; border-collapse: collapse; font-size: 13px; }
+.analytics-snapshot th, .analytics-snapshot td { padding: 8px 6px; border-bottom: 1px solid #eef0f4; text-align: left; vertical-align: top; }
+.analytics-snapshot td:last-child { color: #667085; white-space: nowrap; }
+.monthly-chart { position: relative; display: grid; gap: 6px; }
+.monthly-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; padding: 0; list-style: none; color: #344054; font-size: 12px; }
+.monthly-legend i, .monthly-tooltip i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.monthly-plot { position: relative; }
+.monthly-plot svg { display: block; width: 100%; height: auto; }
+.monthly-plot text { fill: #667085; font: 400 10px Inter, sans-serif; }
+.monthly-plot line.grid { stroke: #eef0f4; stroke-width: 1; }
+.monthly-plot line.baseline { stroke: #98a2b3; stroke-width: 1; }
+.monthly-plot .hover-band { fill: #f2f4f7; }
+.monthly-plot rect[tabindex]:focus { outline: none; }
+.monthly-plot rect[tabindex]:focus-visible { outline: 2px solid var(--blue-600); }
+.monthly-tooltip { position: absolute; top: 4px; transform: translateX(-50%); display: grid; gap: 2px; min-width: 150px; padding: 8px 10px; border: 1px solid #e4e7ec; border-radius: 8px; background: #fff; box-shadow: 0 8px 20px rgba(16, 24, 40, .12); color: #344054; font-size: 12px; pointer-events: none; white-space: nowrap; }
+.monthly-tooltip strong { color: #101828; }
+.monthly-toggle { justify-self: end; border: 0; background: none; color: var(--blue-600); font: 600 11px Inter, sans-serif; cursor: pointer; }
+.monthly-table { max-height: 260px; overflow: auto; }
+.monthly-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.monthly-table th, .monthly-table td { padding: 5px 6px; border-bottom: 1px solid #eef0f4; text-align: right; }
+.monthly-table th:first-child { text-align: left; }
+@media (max-width: 1100px) { .analytics-grid { grid-template-columns: minmax(0, 1fr); } }
