@@ -4,7 +4,7 @@ import { CRM_PERMISSIONS } from "@axora24/contracts";
 import { SessionGuard } from "../auth/session.guard.js";
 import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequirePermission } from "../auth/require-permission.decorator.js";
-import { CompanyScopeService } from "./company-scope.service.js";
+import { CompanyScopeService } from "../common/company-scope.service.js";
 import { CrmService } from "./crm.service.js";
 import type {
   ConvertLeadDto,

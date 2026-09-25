@@ -1,0 +1,17 @@
+// Services transverses de la plateforme (numerotation automatique, ...).
+
+/// Compteur de numerotation automatique par entreprise et par cle
+/// (`<PREFIXE>-<ANNEE>`). Incremente atomiquement par NumberingService
+/// (INSERT ... ON CONFLICT DO UPDATE ... RETURNING).
+model NumberSequence {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  key            String
+  value          Int
+  updatedAt      DateTime @updatedAt
+
+  @@unique([companyId, key])
+  @@index([organizationId])
+  @@map("number_sequences")
+}

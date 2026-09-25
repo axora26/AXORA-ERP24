@@ -15,6 +15,7 @@ import {
   Send,
 } from "lucide-react";
 import { ApiError, estimationApi, salesApi } from "../lib/api";
+import { formatMoney, formatQuantity } from "../lib/format";
 
 interface SalesData {
   finalizedDqes: DqeSummaryView[];
@@ -320,7 +321,7 @@ export function SalesWorkspace(): React.ReactElement {
                   <div>
                     <span className="record-code">{quote.code}</span>
                     <strong>{quote.title}</strong>
-                    <small>{quote.subtotal} {quote.currency}</small>
+                    <small>{formatMoney(quote.subtotal, quote.currency)}</small>
                   </div>
                   <div>
                     <span className={`status-chip status-${quote.status.toLowerCase()}`}>
@@ -350,8 +351,7 @@ export function SalesWorkspace(): React.ReactElement {
               <span className="record-code">{selectedQuote.code}</span>
               <h2>{selectedQuote.title}</h2>
               <p>
-                Source DQE {selectedQuote.source.dqeCode || selectedQuote.source.dqeId} · {selectedQuote.subtotal}{" "}
-                {selectedQuote.currency}
+                Source DQE {selectedQuote.source.dqeCode || selectedQuote.source.dqeId} · {formatMoney(selectedQuote.subtotal, selectedQuote.currency)}
               </p>
             </div>
             <span className={`status-chip status-${selectedQuote.status.toLowerCase()}`}>
@@ -382,9 +382,9 @@ export function SalesWorkspace(): React.ReactElement {
                       <td><strong>{line.reference ?? "—"}</strong></td>
                       <td>{line.designation}</td>
                       <td>{line.unitCode}</td>
-                      <td className="numeric-cell">{line.quantity}</td>
-                      <td className="numeric-cell">{line.unitPrice}</td>
-                      <td className="numeric-cell">{line.lineTotal}</td>
+                      <td className="numeric-cell">{formatQuantity(line.quantity, 3)}</td>
+                      <td className="numeric-cell">{formatMoney(line.unitPrice)}</td>
+                      <td className="numeric-cell">{formatMoney(line.lineTotal)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -507,7 +507,7 @@ export function SalesWorkspace(): React.ReactElement {
                     </td>
                     <td>{contract.lines.length}</td>
                     <td className="numeric-cell">
-                      {contract.subtotal} {contract.currency}
+                      {formatMoney(contract.subtotal, contract.currency)}
                     </td>
                     <td>{contract.source.quoteCode || contract.source.quoteId}</td>
                   </tr>

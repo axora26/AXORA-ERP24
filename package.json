@@ -2,7 +2,7 @@
   "name": "axora-erp24",
   "private": true,
   "version": "0.1.0",
-  "description": "AXORA-ERP24 — plateforme entreprise integree (ERP/CRM/Construction/BIM/Smart Building/IA)",
+  "description": "AXORA-ERP24 \u2014 plateforme entreprise integree (ERP/CRM/Construction/BIM/Smart Building/IA)",
   "engines": {
     "node": ">=20.0.0"
   },
@@ -20,9 +20,10 @@
     "db:validate": "pnpm --filter @axora24/database validate",
     "db:format": "pnpm --filter @axora24/database format",
     "db:migrate": "pnpm --filter @axora24/database migrate:dev",
-    "db:seed": "pnpm --filter @axora24/database seed",
     "clean": "pnpm -r exec rm -rf dist .next node_modules/.cache",
-    "db:migrate:deploy": "pnpm --filter @axora24/database migrate:deploy"
+    "db:migrate:deploy": "pnpm --filter @axora24/database migrate:deploy",
+    "demo:seed": "pnpm --filter @axora24/database seed:demo",
+    "local": "node scripts/local.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

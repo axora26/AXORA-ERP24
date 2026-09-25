@@ -49,3 +49,21 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 - ne jamais stocker de mot de passe, jeton en clair ou cookie dans les metadonnees d'audit.
 
 **Raison** : un compteur en memoire ne resiste ni aux redemarrages ni au scale-out. Les evenements d'authentification doivent rester fiables et auditables sans exposer de secret.
+
+## ADR-0007 — Socle de plateforme pour la livraison des modules INC-05 a INC-24
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : 20 increments restent a livrer. Chaque module reimplementait la resolution du perimetre entreprise, instanciait son propre `PrismaService` (un pool de connexions PostgreSQL par module) et l'interface web etait une page unique a vues commutees (aucune URL partageable, retour arriere inoperant).
+**Decision** :
+- `CommonModule` global : une seule instance `PrismaService`, `CompanyScopeService`, `NumberingService`.
+- `@ScopedController()` = `SessionGuard` + `PermissionGuard` (deny-by-default) + `CompanyScopeGuard` ; le perimetre entreprise est injecte par `@Scope()` et reste revalide contre les appartenances de la session.
+- Validateurs communs (`common/validation.ts`) : montants en chaines decimales exactes uniquement (un nombre JSON est refuse), dates ISO, enums normalises.
+- `writeAudit(tx, ...)` : audit ecrit dans la transaction de la mutation.
+- Numerotation automatique `PREFIXE-ANNEE-NNNN` par entreprise, atomique (`INSERT ... ON CONFLICT DO UPDATE ... RETURNING`), testee sous concurrence.
+- Schema Prisma multi-fichiers (`prisma/modules/*.prisma`, GA depuis Prisma 6.7) : un fichier par module.
+- Web : App Router avec une route par module, shell authentifie commun (`AppShell`) alimente par `GET /auth/context` (entreprises + permissions effectives — indication d'interface uniquement, le serveur reste seul juge), palette de commandes Ctrl K, kit UI partage.
+- L'API est relayee sur la meme origine que l'interface (`/api/v1` -> port 4000) : cookie de session first-party, une seule URL a ouvrir.
+- Formatage des montants par arithmetique sur chaines (aucune conversion flottante, testee au-dela de 2^53).
+- Jeu de donnees DEMO cree via l'API HTTP reelle (regles metier, RBAC, audit appliques), organisation marquee `isDemo`, bandeau permanent dans l'interface.
+**Reversible** : oui (refactorisation interne, aucun changement de contrat HTTP existant ; `/auth/me` inchange).

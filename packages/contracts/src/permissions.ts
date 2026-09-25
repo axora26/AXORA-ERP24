@@ -53,6 +53,11 @@ export const SALES_PERMISSIONS = {
   CONTRACT_MANAGE: "sales.contract.manage",
 } as const;
 
+/** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
+export const DASHBOARD_PERMISSIONS = {
+  OVERVIEW_READ: "dashboard.overview.read",
+} as const;
+
 /**
  * Toutes les permissions connues du produit. Le role systeme OWNER cree au
  * bootstrap d'une organisation les recoit toutes ; les autres roles sont
@@ -63,6 +68,7 @@ export const ALL_PERMISSIONS = {
   ...CRM_PERMISSIONS,
   ...ESTIMATION_PERMISSIONS,
   ...SALES_PERMISSIONS,
+  ...DASHBOARD_PERMISSIONS,
 } as const;
 
 export type CorePermissionKey =

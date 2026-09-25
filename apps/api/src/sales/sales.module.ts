@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module.js";
 import { CrmModule } from "../crm/crm.module.js";
-import { PrismaService } from "../core/prisma.service.js";
 import { SalesController } from "./sales.controller.js";
 import { SalesService } from "./sales.service.js";
 
@@ -9,6 +8,6 @@ import { SalesService } from "./sales.service.js";
 @Module({
   imports: [AuthModule, CrmModule],
   controllers: [SalesController],
-  providers: [SalesService, PrismaService],
+  providers: [SalesService],
 })
 export class SalesModule {}

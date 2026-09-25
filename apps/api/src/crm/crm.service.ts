@@ -10,7 +10,7 @@ import type {
   CrmPipelineStageView,
 } from "@axora24/contracts";
 import { PrismaService } from "../core/prisma.service.js";
-import type { CompanyScope } from "./company-scope.service.js";
+import type { CompanyScope } from "../common/company-scope.service.js";
 import {
   boundedInteger,
   currencyCode,

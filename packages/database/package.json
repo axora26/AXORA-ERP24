@@ -11,11 +11,11 @@
     "format": "node ../../scripts/with-env.mjs prisma format",
     "migrate:dev": "node ../../scripts/with-env.mjs prisma migrate dev",
     "migrate:deploy": "node ../../scripts/with-env.mjs prisma migrate deploy",
-    "seed": "node ../../scripts/with-env.mjs tsx prisma/seed.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src prisma --ext .ts",
-    "test": "vitest run --passWithNoTests"
+    "lint": "eslint src demo",
+    "test": "vitest run --passWithNoTests",
+    "seed:demo": "node ../../scripts/with-env.mjs node demo/seed-demo.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1"
@@ -27,6 +27,6 @@
     "vitest": "^2.1.8"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "schema": "prisma"
   }
 }

@@ -4,7 +4,7 @@ import { ESTIMATION_PERMISSIONS } from "@axora24/contracts";
 import { SessionGuard } from "../auth/session.guard.js";
 import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequirePermission } from "../auth/require-permission.decorator.js";
-import { CompanyScopeService } from "../crm/company-scope.service.js";
+import { CompanyScopeService } from "../common/company-scope.service.js";
 import { EstimationService } from "./estimation.service.js";
 import type {
   CreateDqeDto,

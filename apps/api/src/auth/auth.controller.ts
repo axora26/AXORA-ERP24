@@ -56,6 +56,18 @@ export class AuthController {
   async me(@Req() request: Request) {
     return { user: request.axoraUser };
   }
+
+  /**
+   * Contexte de travail de la session : organisation, entreprises accessibles
+   * et cles de permission effectives. Sert UNIQUEMENT a adapter l'interface
+   * (masquer un module inaccessible) : chaque route reste protegee cote
+   * serveur par PermissionGuard, independamment de ce que l'UI affiche.
+   */
+  @Get("context")
+  @UseGuards(SessionGuard)
+  async context(@Req() request: Request) {
+    return this.authService.context(request.axoraUser!);
+  }
 }
 
 function setSessionCookie(response: Response, plainToken: string, expiresAt: Date): void {

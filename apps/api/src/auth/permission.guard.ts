@@ -18,6 +18,13 @@ import { PERMISSION_KEY } from "./require-permission.decorator.js";
  * Les grants sont resolus EXCLUSIVEMENT depuis la base de donnees a partir de
  * l'utilisateur de la session — jamais depuis un champ transmis par le client.
  */
+declare module "express" {
+  interface Request {
+    /** Cles de permission effectives de la session (resolues serveur). */
+    axoraPermissions?: Set<string>;
+  }
+}
+
 @Injectable()
 export class PermissionGuard implements CanActivate {
   constructor(
@@ -54,6 +61,10 @@ export class PermissionGuard implements CanActivate {
         companyId: assignment.companyId ?? undefined,
         projectId: assignment.projectId ?? undefined,
       })),
+    );
+
+    request.axoraPermissions = new Set(
+      grants.filter((grant) => grant.organizationId === user.organizationId).map((grant) => grant.permissionKey),
     );
 
     const authorized = isAuthorized(
