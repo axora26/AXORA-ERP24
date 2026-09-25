@@ -54,7 +54,7 @@ export class BimService {
       interoperability: {
         format: "IFC (ISO 10303-21)",
         schemas: ["IFC2X3", "IFC4", "IFC4X3_ADD2"],
-        state: "TESTED",
+        state: "IMPLEMENTED_NOT_VERIFIED",
         evidence: "Lecture vérifiée par la suite de tests sur des fichiers réels buildingSMART (IFC2X3, IFC4, IFC4X3_ADD2) ; import par empreinte testé de bout en bout.",
       },
     };

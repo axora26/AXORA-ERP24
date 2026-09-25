@@ -60,13 +60,13 @@ describe("Sous-traitants (e2e)", () => {
   const api = () => as(harness, owner);
 
   it("qualification : fournisseur Achats existant, pieces de vigilance, decision par une autre personne", async () => {
-    expect((await api().post("/subcontracting/packages", { purchaseOrderId: orderId, wbsItemId: leafId, title: "Lot électricité", scope: "CFO" })).body.message).toMatch(/not registered as a subcontractor/);
+    expect((await api().post("/subcontracting/packages", { purchaseOrderId: orderId, wbsItemId: leafId, title: "Lot électricité", scope: "CFO" })).body.message).toMatch(/pas enregistré comme sous-traitant/);
     const created = await api().post("/subcontracting/subcontractors", { supplierId, trades: "Électricité CFO/CFA", workforce: 18 });
     expect(created.status).toBe(201);
     profileId = created.body.id;
     expect(created.body).toMatchObject({ status: "PENDING", supplierName: "Elec Katanga SARL", compliant: false });
     expect((await api().post("/subcontracting/subcontractors", { supplierId, trades: "x" })).status).toBe(409);
-    expect((await api().post(`/subcontracting/subcontractors/${profileId}/decision`, { decision: "QUALIFIED", note: "ok" })).body.message).toMatch(/someone other than the creator/);
+    expect((await api().post(`/subcontracting/subcontractors/${profileId}/decision`, { decision: "QUALIFIED", note: "ok" })).body.message).toMatch(/autre personne que celle qui a créé la fiche/);
     const missing = await as(harness, qualifier).post(`/subcontracting/subcontractors/${profileId}/decision`, { decision: "QUALIFIED", note: "ok" });
     expect(missing.body.message).toMatch(/RCCM absente, attestation fiscale absente/);
     for (const kind of ["RCCM", "TAX_CERTIFICATE", "SOCIAL_CERTIFICATE", "LIABILITY_INSURANCE"]) {
@@ -86,12 +86,12 @@ describe("Sous-traitants (e2e)", () => {
     expect(created.body.code).toMatch(/^SST-\d{4}-\d{4}$/);
     expect((await api().post("/subcontracting/packages", { purchaseOrderId: orderId, wbsItemId: leafId, title: "x", scope: "x" })).status).toBe(409);
     const order = await api().get(`/procurement/orders/${orderId}`);
-    expect((await api().post(`/procurement/orders/${orderId}/receipts`, { idempotencyKey: "rcpt-sst", lines: [{ orderLineId: order.body.lines[0].id, quantity: "1" }] })).body.message).toMatch(/certified through statements/);
-    expect((await api().post(`/procurement/orders/${orderId}/cancel`, { reason: "x" })).body.message).toMatch(/terminate the package/);
+    expect((await api().post(`/procurement/orders/${orderId}/receipts`, { idempotencyKey: "rcpt-sst", lines: [{ orderLineId: order.body.lines[0].id, quantity: "1" }] })).body.message).toMatch(/certifié par situations/);
+    expect((await api().post(`/procurement/orders/${orderId}/cancel`, { reason: "x" })).body.message).toMatch(/résiliez plutôt le lot/);
   });
 
   it("situation : avancement derive des taches terminees (jamais saisi), montants figes, approbation a 4 yeux", async () => {
-    expect((await api().post(`/subcontracting/packages/${packageId}/statements`, { periodEnd: iso(0) })).body.message).toMatch(/No new progress/);
+    expect((await api().post(`/subcontracting/packages/${packageId}/statements`, { periodEnd: iso(0) })).body.message).toMatch(/Aucun nouvel avancement/);
     await api().patch(`/projects/${projectId}/tasks/${tasks[0]}/status`, { status: "DONE" });
     const prepared = await api().post(`/subcontracting/packages/${packageId}/statements`, { periodEnd: iso(0), cumulativePercent: "90" });
     expect(prepared.status).toBe(201);
@@ -99,7 +99,7 @@ describe("Sous-traitants (e2e)", () => {
     // Poids 2 / 4 : 50 % — la valeur saisie par le client est ignoree.
     expect(prepared.body).toMatchObject({ number: 1, cumulativePercent: "50.00", previousPercent: "0.00", doneTasks: 1, totalTasks: 3, grossAmount: "24000.00", retentionAmount: "1200.00", netAmount: "22800.00", status: "DRAFT" });
     expect((await api().post(`/subcontracting/packages/${packageId}/statements`, { periodEnd: iso(0) })).status).toBe(409);
-    expect((await api().post(`/subcontracting/statements/${statementId}/decision`, { decision: "APPROVED" })).body.message).toMatch(/someone other than its preparer/);
+    expect((await api().post(`/subcontracting/statements/${statementId}/decision`, { decision: "APPROVED" })).body.message).toMatch(/autre personne que celle qui l'a préparée/);
     expect((await as(harness, qualifier).post(`/subcontracting/statements/${statementId}/decision`, { decision: "APPROVED" })).status).toBe(403);
     await expect(harness.prisma.subcontractStatement.update({ where: { id: statementId }, data: { grossAmount: "30000.00", netAmount: "28800.00" } })).rejects.toThrow(/frozen/);
     const approved = await as(harness, approver).post(`/subcontracting/statements/${statementId}/decision`, { decision: "APPROVED", note: "Constat contradictoire du 25/09" });
@@ -130,7 +130,7 @@ describe("Sous-traitants (e2e)", () => {
     await as(harness, approver).post(`/subcontracting/statements/${second.body.id}/decision`, { decision: "APPROVED" });
 
     const retention = (await api().get(`/subcontracting/retentions?packageId=${packageId}`)).body.find((row: { amount: string }) => row.amount === "1200.00");
-    expect((await api().post(`/subcontracting/retentions/${retention.id}/release`, { note: "Anticipation", supplierReference: "FAC-RG-01", invoiceDate: iso(0) })).body.message).toMatch(/bank guarantee/);
+    expect((await api().post(`/subcontracting/retentions/${retention.id}/release`, { note: "Anticipation", supplierReference: "FAC-RG-01", invoiceDate: iso(0) })).body.message).toMatch(/caution bancaire/);
     const released = await api().post(`/subcontracting/retentions/${retention.id}/release`, { note: "Caution bancaire reçue", guaranteeReference: "CAUT-RAW-2026-0091", supplierReference: "FAC-RG-01", invoiceDate: iso(0) });
     expect(released.body).toMatchObject({ status: "RELEASED", guaranteeReference: "CAUT-RAW-2026-0091", releaseInvoiceCode: expect.stringMatching(/^FF-/) });
     await expect(harness.prisma.subcontractRetention.update({ where: { id: retention.id }, data: { releaseNote: "x" } })).rejects.toThrow(/already released/);

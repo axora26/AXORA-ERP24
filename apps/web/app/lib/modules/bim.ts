@@ -45,7 +45,7 @@ export const BIM_DISCIPLINE_LABEL: Record<string, string> = {
 export const VERSION_STATUS_LABEL: Record<string, string> = { IMPORTED: "Importée", APPROVED: "Approuvée", REJECTED: "Refusée", SUPERSEDED: "Remplacée" };
 export const VERSION_STATUS_CHIP: Record<string, string> = { IMPORTED: "pending", APPROVED: "approved", REJECTED: "rejected", SUPERSEDED: "closed" };
 export const CLASH_STATUS_LABEL: Record<string, string> = { OPEN: "Ouvert", RESOLUTION_PROPOSED: "Résolution proposée", RESOLVED: "Résolu" };
-export const CONNECTOR_STATE_LABEL: Record<string, string> = { AVAILABLE: "Disponible", NOT_AVAILABLE: "Non disponible", NOT_TESTED: "Non testé", TESTED: "Testé", FAILED: "En échec" };
+export const CONNECTOR_STATE_LABEL: Record<string, string> = { AVAILABLE: "Disponible", NOT_AVAILABLE: "Non disponible", NOT_TESTED: "Non testé", IMPLEMENTED_NOT_VERIFIED: "Vérifié en local (CI indisponible)", FAILED: "En échec" };
 export const CONNECTOR_STEPS: Array<{ key: "connectorAvailable" | "revitDetected" | "connectionEstablished" | "documentOpen" | "readTested" | "writeTested"; label: string }> = [
   { key: "connectorAvailable", label: "Connecteur disponible" },
   { key: "revitDetected", label: "Revit détecté" },

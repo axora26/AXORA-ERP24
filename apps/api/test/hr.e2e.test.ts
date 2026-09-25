@@ -191,7 +191,7 @@ describe("Ressources humaines (e2e)", () => {
   it("paie : refusee tant qu'une feuille de la periode n'est pas validee, aucune retenue legale presumee", async () => {
     const blocked = await api().post("/hr/payroll", { period: "2026-09" });
     expect(blocked.status).toBe(400);
-    expect(blocked.body.message).toContain("not validated");
+    expect(blocked.body.message).toContain("non validée");
     expect((await api().post("/hr/payroll", { period: "2026-13" })).status).toBe(400);
 
     await api().put(`/hr/timesheets/${sheetB}/entries`, { entries: [{ workDate: "2026-09-16", hours: "4", projectId: project.projectId }] });

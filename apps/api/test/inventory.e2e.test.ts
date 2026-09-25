@@ -79,7 +79,7 @@ describe("Stock & Logistique (e2e)", () => {
       lines: [{ itemId: cement, quantity: "15.001" }],
     });
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain("Insufficient stock");
+    expect(response.body.message).toContain("Stock insuffisant");
     // La base elle-meme refuse un solde negatif (contrainte CHECK).
     await expect(
       harness.prisma.stockBalance.updateMany({ where: { itemId: cement, warehouseId: central }, data: { quantity: -1 } }),
@@ -170,7 +170,7 @@ describe("Stock & Logistique (e2e)", () => {
     // Magasin gele pendant l'inventaire.
     const frozen = await api().post("/inventory/adjustments", { warehouseId: central, itemId: rebar, quantityDelta: "1", unitCost: "1000.00", reason: "X" });
     expect(frozen.status).toBe(400);
-    expect(frozen.body.message).toContain("frozen");
+    expect(frozen.body.message).toContain("gelé");
 
     expect((await api().post(`/inventory/counts/${opened.body.id}/close`)).status).toBe(400);
     await api().put(`/inventory/counts/${opened.body.id}/lines`, { itemId: rebar, countedQuantity: "2.300" });

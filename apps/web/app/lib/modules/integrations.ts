@@ -17,8 +17,8 @@ export const integrationsApi = {
 
 export const KEY_STATUS_LABEL: Record<string, string> = { ACTIVE: "Active", REVOKED: "Révoquée", EXPIRED: "Expirée" };
 export const KEY_STATUS_CHIP: Record<string, string> = { ACTIVE: "active", REVOKED: "blocked", EXPIRED: "archived" };
-export const CONNECTOR_STATUS_LABEL: Record<string, string> = { TESTED: "Testé", NOT_TESTED: "NOT_TESTED", NOT_IMPLEMENTED: "Non développé" };
-export const CONNECTOR_STATUS_CHIP: Record<string, string> = { TESTED: "done", NOT_TESTED: "pending", NOT_IMPLEMENTED: "archived" };
+export const CONNECTOR_STATUS_LABEL: Record<string, string> = { IMPLEMENTED_NOT_VERIFIED: "Vérifié en local", NOT_TESTED: "NOT_TESTED", NOT_IMPLEMENTED: "Non développé" };
+export const CONNECTOR_STATUS_CHIP: Record<string, string> = { IMPLEMENTED_NOT_VERIFIED: "done", NOT_TESTED: "pending", NOT_IMPLEMENTED: "archived" };
 export const PERMISSION_LABEL: Record<string, string> = {
   "projects.project.read": "Projets (lecture)",
   "finance.invoice.read": "Factures clients (lecture)",

@@ -173,7 +173,7 @@ export default function IntegrationsPage(): React.ReactElement {
           )}
 
           {tab === "connectors" && (
-            <Panel title="Registre des connecteurs" subtitle="Grille de vérité : un connecteur n'est « Testé » que si aucun système externe n'est en jeu ou s'il a réellement été atteint. Tout le reste est NOT_TESTED ou non développé — jamais présenté comme fonctionnel.">
+            <Panel title="Registre des connecteurs" subtitle="Grille de vérité : un connecteur n'est « vérifié en local » que si aucun système externe n'est en jeu ou s'il a réellement été atteint (et jamais « testé » tant qu'aucun run CI n'a abouti). Tout le reste est NOT_TESTED ou non développé — jamais présenté comme fonctionnel.">
               <DataTable
                 rows={connectors.map((connector) => ({ ...connector, id: connector.key }))}
                 empty={<Empty icon={<Cable size={22} />} title="Registre vide" body="Aucun connecteur déclaré." />}

@@ -88,7 +88,7 @@ export default function BimPage(): React.ReactElement {
                   <span>
                     <Unplug size={13} aria-hidden="true" /> {step.label}
                   </span>
-                  <StatusChip status={revit.data![step.key].state === "TESTED" ? "passed" : revit.data![step.key].state === "NOT_AVAILABLE" ? "blocked" : "not_tested"} label={CONNECTOR_STATE_LABEL[revit.data![step.key].state]} />
+                  <StatusChip status={revit.data![step.key].state === "IMPLEMENTED_NOT_VERIFIED" ? "passed" : revit.data![step.key].state === "NOT_AVAILABLE" ? "blocked" : "not_tested"} label={CONNECTOR_STATE_LABEL[revit.data![step.key].state]} />
                   <small>{revit.data![step.key].evidence}</small>
                 </li>
               ))}

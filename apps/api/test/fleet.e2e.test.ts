@@ -61,7 +61,7 @@ describe("Gestion de parc (e2e)", () => {
     expect(asset.body).toMatchObject({ origin: "MANUAL", status: "IN_SERVICE" });
     expect(asset.body.originJustification).toContain(created.body.code);
     expect((await api().post("/fleet/vehicles", { ...base, registration: "4521-AB-07" })).status).toBe(409);
-    expect((await api().post("/fleet/vehicles", { ...base, registration: "9999-ZZ-01", initialReadingAt: "2023-01-01" })).body.message).toMatch(/initialReadingAt/);
+    expect((await api().post("/fleet/vehicles", { ...base, registration: "9999-ZZ-01", initialReadingAt: "2023-01-01" })).body.message).toMatch(/relevé initial/);
     excavator = (await api().post("/fleet/vehicles", { ...base, kind: "ENGINE", category: "Pelle sur chenilles 20 t", make: "Caterpillar", model: "320", usageUnit: "HOURS", initialReading: "3120.5" })).body.id;
     expect((await as(harness, reader).post("/fleet/vehicles", base)).status).toBe(403);
   });
@@ -69,16 +69,16 @@ describe("Gestion de parc (e2e)", () => {
   it("affectation : vehicule en regle, chauffeur actif et habilite, releve coherent — sinon refus explicite", async () => {
     const refused = await api().post("/fleet/assignments", { vehicleId: truck, employeeId: driver, purpose: "Approvisionnement chantier", startReading: "45210" });
     expect(refused.status).toBe(400);
-    expect(refused.body.message).toMatch(/not compliant: assurance absente, carte grise absente/);
+    expect(refused.body.message).toMatch(/non conforme : assurance absente, carte grise absente/);
     for (const kind of ["INSURANCE", "REGISTRATION", "INSPECTION"]) {
       await api().post(`/fleet/vehicles/${truck}/documents`, { kind, reference: `${kind}-1`, issuer: "SONAS", validFrom: iso(-30), validUntil: iso(kind === "INSPECTION" ? 20 : 335), cost: kind === "INSURANCE" ? "2400.00" : undefined });
     }
     const vehicle = await api().get(`/fleet/vehicles/${truck}`);
     expect(vehicle.body.compliance.find((item: { kind: string }) => item.kind === "INSPECTION").state).toBe("EXPIRING");
 
-    expect((await api().post("/fleet/assignments", { vehicleId: truck, employeeId: unlicensed, purpose: "x", startReading: "45210" })).body.message).toMatch(/does not hold the required licence « Permis C »/);
-    expect((await api().post("/fleet/assignments", { vehicleId: truck, employeeId: expired, purpose: "x", startReading: "45210" })).body.message).toMatch(/expired/);
-    expect((await api().post("/fleet/assignments", { vehicleId: truck, employeeId: driver, purpose: "x", startReading: "45100" })).body.message).toMatch(/never goes back/);
+    expect((await api().post("/fleet/assignments", { vehicleId: truck, employeeId: unlicensed, purpose: "x", startReading: "45210" })).body.message).toMatch(/ne détient pas le permis requis « Permis C »/);
+    expect((await api().post("/fleet/assignments", { vehicleId: truck, employeeId: expired, purpose: "x", startReading: "45210" })).body.message).toMatch(/a expiré/);
+    expect((await api().post("/fleet/assignments", { vehicleId: truck, employeeId: driver, purpose: "x", startReading: "45100" })).body.message).toMatch(/ne recule jamais/);
     expect((await as(harness, reader).post("/fleet/assignments", { vehicleId: truck, employeeId: driver, purpose: "x", startReading: "45210" })).status).toBe(403);
 
     const opened = await api().post("/fleet/assignments", { vehicleId: truck, employeeId: driver, projectId, purpose: "Approvisionnement chantier", startReading: "45215" });
@@ -102,7 +102,7 @@ describe("Gestion de parc (e2e)", () => {
     const logs = await api().post("/fleet/fuel", { vehicleId: truck, filledAt: now(), liters: "95.5", unitPrice: "1.55", reading: "45800", fullTank: true });
     expect(logs.status).toBe(201);
     expect(logs.body[0]).toMatchObject({ liters: "95.5", totalCost: "148.03", projectCode: expect.any(String) });
-    expect((await api().post("/fleet/fuel", { vehicleId: truck, filledAt: now(), liters: "10", unitPrice: "1.55", reading: "45700", fullTank: false })).body.message).toMatch(/never goes back/);
+    expect((await api().post("/fleet/fuel", { vehicleId: truck, filledAt: now(), liters: "10", unitPrice: "1.55", reading: "45700", fullTank: false })).body.message).toMatch(/ne recule jamais/);
     await expect(
       harness.prisma.fleetMeterReading.create({ data: { organizationId: owner.organizationId, companyId: owner.companyId, vehicleId: truck, readAt: new Date(), value: "45000", source: "MANUAL", recordedByUserId: owner.userId } }),
     ).rejects.toThrow(/never goes back/);
@@ -149,7 +149,7 @@ describe("Gestion de parc (e2e)", () => {
     expect(detail.body.costs12m.perUnit).toBe("5.378");
     const disposal = await api().post(`/fleet/vehicles/${truck}/status`, { status: "DISPOSED", reason: "Revente" });
     expect(disposal.status).toBe(400);
-    expect(disposal.body.message).toMatch(/work orders/);
+    expect(disposal.body.message).toMatch(/ordres de travail/);
     const active = await api().post(`/fleet/vehicles/${truck}/status`, { status: "ACTIVE", reason: "Réparé" });
     expect(active.body.status).toBe("ACTIVE");
   });

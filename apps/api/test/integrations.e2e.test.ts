@@ -241,7 +241,7 @@ describe("INC-23 API publique & integrations (e2e)", () => {
     expect((await as(harness, other).post(`/integrations/api-keys/${keyId}/revoke`, { reason: "x" })).status).toBe(404);
     expect((await as(harness, other).get(`/integrations/api-keys/${keyId}/requests`)).status).toBe(404);
     const connectors = (await as(harness, owner).get("/integrations/connectors")).body as Array<{ key: string; status: string }>;
-    expect(connectors.find((connector) => connector.key === "public-api")?.status).toBe("TESTED");
+    expect(connectors.find((connector) => connector.key === "public-api")?.status).toBe("IMPLEMENTED_NOT_VERIFIED");
     expect(connectors.find((connector) => connector.key === "webhook-out")?.status).toBe("NOT_TESTED");
     expect(connectors.find((connector) => connector.key === "bacnet")?.status).toBe("NOT_IMPLEMENTED");
     expect((await as(harness, integrator).get("/integrations/delegable")).body).toEqual(expect.arrayContaining([{ permission: "finance.invoice.read", granted: false }, { permission: "projects.project.read", granted: true }]));

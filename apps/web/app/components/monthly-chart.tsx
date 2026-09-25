@@ -101,7 +101,7 @@ export function MonthlyChart({ months, series, unit, ariaLabel }: { months: stri
         </div>
       ) : (
         <div className="monthly-plot" onMouseLeave={() => setHover(null)}>
-          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={ariaLabel}>
+          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="group" aria-label={ariaLabel}>
             {ticks.map((tick) => (
               <g key={tick}>
                 <line x1={PAD.left} x2={WIDTH - PAD.right} y1={y(tick)} y2={y(tick)} className={tick === 0 ? "baseline" : "grid"} />
@@ -125,7 +125,7 @@ export function MonthlyChart({ months, series, unit, ariaLabel }: { months: stri
                       {monthLabel(month)}
                     </text>
                   )}
-                  <rect x={PAD.left + index * column} y={PAD.top} width={column} height={plotHeight} fill="transparent" onMouseEnter={() => setHover(index)} onFocus={() => setHover(index)} tabIndex={0} aria-label={`${monthLabel(month)} : ${shown.map((serie, serieIndex) => `${serie.label} ${formatValue(numbers[serieIndex]![index]!, unit)}`).join(", ")}`} />
+                  <rect x={PAD.left + index * column} y={PAD.top} width={column} height={plotHeight} fill="transparent" onMouseEnter={() => setHover(index)} onFocus={() => setHover(index)} tabIndex={0} role="img" aria-label={`${monthLabel(month)} : ${shown.map((serie, serieIndex) => `${serie.label} ${formatValue(numbers[serieIndex]![index]!, unit)}`).join(", ")}`} />
                 </g>
               );
             })}

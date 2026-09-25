@@ -95,7 +95,7 @@ export interface BimClashView {
   comments: Array<{ id: string; authorName: string; body: string; createdAt: string }>;
 }
 
-export type ConnectorState = "AVAILABLE" | "NOT_AVAILABLE" | "NOT_TESTED" | "TESTED" | "FAILED";
+export type ConnectorState = "AVAILABLE" | "NOT_AVAILABLE" | "NOT_TESTED" | "IMPLEMENTED_NOT_VERIFIED" | "FAILED";
 
 /** Six etats distincts, jamais fusionnes en un statut optimiste (docs/foundation BC-14). */
 export interface RevitConnectorStatusView {

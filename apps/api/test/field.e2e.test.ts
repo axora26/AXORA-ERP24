@@ -85,7 +85,7 @@ describe("Chantier (e2e)", () => {
     const first = await sync(worker, batch);
     expect(first.status).toBe(201);
     expect(first.body.results.map((result: { status: string }) => result.status)).toEqual(["APPLIED", "APPLIED", "APPLIED", "REJECTED", "REJECTED", "REJECTED"]);
-    expect(first.body.results[3].message).toContain("linked");
+    expect(first.body.results[3].message).toContain("rattachée");
     issueId = first.body.results[0].entityId;
 
     // Reprise reseau instable : le meme lot est renvoye. Aucun doublon.
@@ -113,10 +113,10 @@ describe("Chantier (e2e)", () => {
       ])
     ).body.results;
     expect(results.map((result: { status: string }) => result.status)).toEqual(["REJECTED", "REJECTED", "REJECTED"]);
-    expect(results[1].message).toContain("must be a photo");
+    expect(results[1].message).toContain("doit être une photo");
 
     const denied = await sync(conductor, [{ clientId: `op-${randomUUID()}`, type: "issue.create", payload: { projectId } }]);
-    expect(denied.body.results[0]).toMatchObject({ status: "REJECTED", message: "Missing permission: field.issue.manage" });
+    expect(denied.body.results[0]).toMatchObject({ status: "REJECTED", message: "Permission manquante : field.issue.manage" });
   });
 
   it("garanties en base : preuves append-only et toujours rattachees a un contexte", async () => {
@@ -133,7 +133,7 @@ describe("Chantier (e2e)", () => {
   it("correction : preuve photo exigee, puis conflit explicite pour un appareil reste sur une version perimee", async () => {
     const noProof = await sync(worker, [{ clientId: `op-${randomUUID()}`, type: "issue.submitCorrection", baseVersion: 1, payload: { issueId, note: "Isolant posé" } }]);
     expect(noProof.body.results[0].status).toBe("REJECTED");
-    expect(noProof.body.results[0].message).toContain("correction photo");
+    expect(noProof.body.results[0].message).toContain("photo de correction");
 
     const fix = await upload(harness, worker, jpeg(`fix-${randomUUID()}`), "correction.jpg");
     const deviceA = await sync(worker, [

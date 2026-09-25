@@ -5,6 +5,7 @@ import request from "supertest";
 import { expect } from "vitest";
 import { AppModule } from "../../src/app.module.js";
 import { PrismaService } from "../../src/core/prisma.service.js";
+import { applySecurityHeaders } from "../../src/common/security-headers.js";
 
 /**
  * Harnais e2e partage : application NestJS complete (memes guards, meme
@@ -20,6 +21,7 @@ export interface Harness {
 export async function createHarness(): Promise<Harness> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
   const app = moduleRef.createNestApplication({ rawBody: true });
+  applySecurityHeaders(app);
   app.use(cookieParser());
   app.setGlobalPrefix("api/v1", { exclude: ["health"] });
   await app.init();

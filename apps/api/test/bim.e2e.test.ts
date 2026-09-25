@@ -46,7 +46,7 @@ describe("BIM / IFC (e2e)", () => {
     const states = ["connectorAvailable", "revitDetected", "connectionEstablished", "documentOpen", "readTested", "writeTested"].map((key) => status[key].state);
     expect(states).toEqual(["NOT_AVAILABLE", "NOT_TESTED", "NOT_TESTED", "NOT_TESTED", "NOT_TESTED", "NOT_TESTED"]);
     for (const key of ["connectorAvailable", "revitDetected", "connectionEstablished", "documentOpen", "readTested", "writeTested"]) expect(status[key].evidence.length).toBeGreaterThan(10);
-    expect(status.interoperability).toMatchObject({ state: "TESTED", schemas: expect.arrayContaining(["IFC2X3", "IFC4"]) });
+    expect(status.interoperability).toMatchObject({ state: "IMPLEMENTED_NOT_VERIFIED", schemas: expect.arrayContaining(["IFC2X3", "IFC4"]) });
   });
 
   it("fichiers IFC reels : type detecte sur le contenu, empreinte identique a la reference", async () => {

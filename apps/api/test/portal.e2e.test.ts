@@ -106,8 +106,8 @@ describe("Portails externes (e2e)", () => {
     const empty = await portal(clientCookie).get("/home");
     expect(empty.status).toBe(200);
     expect(empty.body).toMatchObject({ projects: [], customerInvoices: [], documents: [], orders: [], supplierInvoices: [] });
-    expect((await api().post(`/portal-admin/principals/${clientId}/grants`, { resourceType: "PROJECT", resourceId: foreignProjectId })).body.message).toMatch(/does not belong/);
-    expect((await api().post(`/portal-admin/principals/${clientId}/grants`, { resourceType: "PURCHASE_ORDER", resourceId: orderId })).body.message).toMatch(/cannot expose/);
+    expect((await api().post(`/portal-admin/principals/${clientId}/grants`, { resourceType: "PROJECT", resourceId: foreignProjectId })).body.message).toMatch(/n'appartient pas au compte du portail/);
+    expect((await api().post(`/portal-admin/principals/${clientId}/grants`, { resourceType: "PURCHASE_ORDER", resourceId: orderId })).body.message).toMatch(/ne peut pas exposer/);
     const candidates = await api().get(`/portal-admin/principals/${clientId}/candidates`);
     expect(candidates.body.map((row: { resourceType: string }) => row.resourceType).sort()).toEqual(["CUSTOMER_INVOICE", "DOCUMENT", "PROJECT"]);
     for (const row of candidates.body) expect((await api().post(`/portal-admin/principals/${clientId}/grants`, { resourceType: row.resourceType, resourceId: row.resourceId })).status).toBe(201);

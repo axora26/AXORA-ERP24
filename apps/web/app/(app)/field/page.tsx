@@ -9,6 +9,7 @@ import { CATEGORY_LABEL, ISSUE_STATUS_LABEL, SEVERITY_LABEL, ISSUE_STATUS_CHIP, 
 import { assetUrl } from "../../lib/api";
 import { formatDate, formatDateTime } from "../../lib/format";
 import { useResource } from "../../lib/hooks";
+import { cachedLoad } from "../../lib/offline-cache";
 import { useSession } from "../../lib/session";
 import { SyncPanel, useFieldQueue } from "../../components/field-sync";
 import {
@@ -39,7 +40,8 @@ const PROJECT_KEY = "axora.field.project";
 export default function FieldPage(): React.ReactElement {
   const session = useSession();
   const router = useRouter();
-  const projects = useResource(() => projectsApi.list());
+  // Derniere consultation reutilisee sans reseau (voir lib/offline-cache).
+  const projects = useResource(() => cachedLoad("field.projects", () => projectsApi.list()));
   const [projectId, setProjectId] = useState("");
   const [tab, setTab] = useState<TabId>("issues");
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -61,7 +63,7 @@ export default function FieldPage(): React.ReactElement {
   const data = useResource(
     () =>
       projectId
-        ? Promise.all([fieldApi.issues(projectId), fieldApi.logs(projectId), fieldApi.evidence(projectId), fieldApi.zones(projectId), projectsApi.detail(projectId)])
+        ? cachedLoad(`field.project.${projectId}`, () => Promise.all([fieldApi.issues(projectId), fieldApi.logs(projectId), fieldApi.evidence(projectId), fieldApi.zones(projectId), projectsApi.detail(projectId)]))
         : Promise.resolve(null),
     [projectId],
   );

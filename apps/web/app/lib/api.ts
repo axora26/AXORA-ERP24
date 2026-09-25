@@ -81,7 +81,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
       headers: init?.body instanceof FormData ? { ...(init?.headers ?? {}) } : { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
   } catch {
-    throw new ApiError(0, "L'API AXORA est momentanement injoignable.");
+    throw new ApiError(0, "L'API AXORA est momentanément injoignable (réseau indisponible ?).");
   }
 
   if (!response.ok) {

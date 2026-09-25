@@ -2,7 +2,7 @@
   "name": "axora-erp24",
   "private": true,
   "version": "0.1.0",
-  "description": "AXORA-ERP24 \u2014 plateforme entreprise integree (ERP/CRM/Construction/BIM/Smart Building/IA)",
+  "description": "AXORA-ERP24 — plateforme entreprise integree (ERP/CRM/Construction/BIM/Smart Building/IA)",
   "engines": {
     "node": ">=20.0.0"
   },
@@ -33,5 +33,12 @@
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.70.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "multer": "^2.3.0",
+      "postcss@<8.5.23": "^8.5.23",
+      "deepmerge-ts@<8.0.0": "^8.0.0"
+    }
   }
 }

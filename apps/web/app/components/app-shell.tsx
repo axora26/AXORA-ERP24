@@ -3,12 +3,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, Building2, LogOut, Menu, Search, X } from "lucide-react";
+import { AlertTriangle, Building2, LogOut, Menu, Search, WifiOff, X } from "lucide-react";
 import { api, ApiError, setActiveCompanyId } from "../lib/api";
 import { isActive, visibleGroups, type NavItem } from "../lib/navigation";
 import { SessionContext, type SessionApi, type SessionContextValue } from "../lib/session";
 import { Brand } from "./brand";
 import { NotificationBell } from "./notification-bell";
+import { purgeOfflinePages } from "./sw-register";
+import { purgeOfflineData, readContext, saveContext, setOfflineScope } from "../lib/offline-cache";
 
 const COMPANY_STORAGE_KEY = "axora.activeCompanyId";
 
@@ -44,23 +46,36 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
   const [failure, setFailure] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [offline, setOffline] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    const open = (context: ContextResponse) => {
+      const stored = readStoredCompany();
+      const active =
+        context.companies.find((company) => company.id === stored)?.id ?? context.companies[0]?.id ?? null;
+      setActiveCompanyId(context.companies.length > 1 ? active : null);
+      setOfflineScope(context.user.id, active);
+      setSession({ ...context, activeCompanyId: active });
+    };
     api
       .get<ContextResponse>("/auth/context")
       .then((context) => {
         if (cancelled) return;
-        const stored = readStoredCompany();
-        const active =
-          context.companies.find((company) => company.id === stored)?.id ?? context.companies[0]?.id ?? null;
-        setActiveCompanyId(context.companies.length > 1 ? active : null);
-        setSession({ ...context, activeCompanyId: active });
+        saveContext(context);
+        open(context);
       })
       .catch((caught: unknown) => {
         if (cancelled) return;
         if (caught instanceof ApiError && caught.status === 401) {
           router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+          return;
+        }
+        // Sans reseau seulement : derniere session connue (aucune donnee metier), pour ouvrir le chantier hors ligne.
+        const cached = caught instanceof ApiError && caught.status === 0 ? readContext<ContextResponse>() : null;
+        if (cached) {
+          setOffline(true);
+          open(cached);
         } else {
           setFailure(caught instanceof ApiError ? caught.message : "L'API AXORA est momentanément injoignable.");
         }
@@ -69,6 +84,17 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
       cancelled = true;
     };
     // Le contexte n'est charge qu'une fois par montage du shell.
+  }, []);
+
+  useEffect(() => {
+    const goOffline = () => setOffline(true);
+    const goOnline = () => setOffline(false);
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
+    };
   }, []);
 
   useEffect(() => {
@@ -84,6 +110,8 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
 
   const logout = useCallback(async () => {
     await api.post("/auth/logout").catch(() => undefined);
+    purgeOfflineData();
+    await purgeOfflinePages();
     setActiveCompanyId(null);
     router.replace("/login");
   }, [router]);
@@ -101,6 +129,7 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
           // stockage indisponible : le choix vaut pour la session d'onglet
         }
         setActiveCompanyId(companyId);
+        setOfflineScope(session.user.id, companyId);
         setSession((current) => (current ? { ...current, activeCompanyId: companyId } : current));
       },
       logout,
@@ -221,6 +250,12 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
             </div>
           </header>
 
+          {offline && (
+            <div className="offline-strip" role="status">
+              <WifiOff size={14} aria-hidden="true" />
+              Hors ligne — dernière session connue. Les saisies de chantier sont mises en file et synchronisées au retour du réseau ; les autres écrans attendent la connexion.
+            </div>
+          )}
           {sessionApi.organization?.isDemo && (
             <div className="demo-strip" role="note">
               <AlertTriangle size={14} aria-hidden="true" />

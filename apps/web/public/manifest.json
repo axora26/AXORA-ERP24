@@ -1,10 +1,24 @@
 {
+  "id": "/",
   "name": "AXORA-ERP24",
-  "short_name": "AXORA-ERP24",
-  "description": "Plateforme entreprise integree AXORA-ERP24",
+  "short_name": "AXORA",
+  "description": "Plateforme entreprise intégrée AXORA-ERP24 : ERP, chantier, maintenance, bâtiment intelligent.",
+  "lang": "fr",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#FFFFFF",
   "theme_color": "#1E3A8A",
-  "icons": []
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Chantier (saisies hors ligne)", "url": "/field", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Copilote", "url": "/copilot", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
 }

@@ -31,12 +31,13 @@ describe("API publique — contrat documenté", () => {
     for (const permission of PUBLIC_API_PERMISSIONS) expect(Object.values(ALL_PERMISSIONS) as string[], permission).toContain(permission);
   });
 
-  it("registre des connecteurs : jamais TESTED sans système externe réellement atteint", () => {
+  it("registre des connecteurs : jamais vérifié sans système externe réellement atteint, jamais « TESTED »", () => {
     for (const connector of CONNECTORS) {
-      if (connector.externalReached === false) expect(connector.status, connector.key).not.toBe("TESTED");
+      if (connector.externalReached === false) expect(connector.status, connector.key).not.toBe("IMPLEMENTED_NOT_VERIFIED");
       if (!connector.implemented) expect(connector.status, connector.key).toBe("NOT_IMPLEMENTED");
-      if (connector.status === "TESTED") expect(connector.implemented && (connector.readTested || connector.writeTested)).toBe(true);
+      if (connector.status === "IMPLEMENTED_NOT_VERIFIED") expect(connector.implemented && (connector.readTested || connector.writeTested)).toBe(true);
     }
     expect(new Set(CONNECTORS.map((connector) => connector.key)).size).toBe(CONNECTORS.length);
+    expect(CONNECTORS.map((connector) => connector.status as string)).not.toContain("TESTED");
   });
 });

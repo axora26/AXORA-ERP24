@@ -12,6 +12,7 @@ import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
+import { translateMessage } from "../common/i18n/translate.js";
 import { dec, qty } from "../common/decimal.js";
 import { fileView } from "../files/files.service.js";
 import { isImage } from "../files/file-type.js";
@@ -281,11 +282,11 @@ export class FieldService {
   private async applyOperation(scope: CompanyScope, raw: unknown, actorUserId: string, permissions: Set<string>): Promise<FieldSyncResult> {
     const operation = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
     const clientId = typeof operation.clientId === "string" ? operation.clientId : "";
-    if (!CLIENT_ID.test(clientId)) return { clientId, status: "REJECTED", message: "clientId must be 8-100 characters [A-Za-z0-9_-]" };
+    if (!CLIENT_ID.test(clientId)) return { clientId, status: "REJECTED", message: "Identifiant client invalide (8 à 100 caractères [A-Za-z0-9_-])" };
     const type = OPERATION_TYPES.find((candidate) => candidate === operation.type);
-    if (!type) return { clientId, status: "REJECTED", message: "Unknown operation type" };
+    if (!type) return { clientId, status: "REJECTED", message: "Type d'opération inconnu" };
     const required = { "issue.create": F.ISSUE_MANAGE, "issue.submitCorrection": F.ISSUE_MANAGE, "evidence.create": F.EVIDENCE_CREATE, "log.save": F.LOG_MANAGE }[type];
-    if (!permissions.has(required)) return { clientId, status: "REJECTED", message: `Missing permission: ${required}` };
+    if (!permissions.has(required)) return { clientId, status: "REJECTED", message: `Permission manquante : ${required}` };
 
     const already = await this.prisma.fieldSyncOperation.findFirst({ where: { companyId: scope.companyId, clientId } });
     if (already) return { clientId, status: "DUPLICATE", entityId: already.entityId };
@@ -304,12 +305,13 @@ export class FieldService {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         const winner = await this.prisma.fieldSyncOperation.findFirst({ where: { companyId: scope.companyId, clientId } });
         if (winner) return { clientId, status: "DUPLICATE", entityId: winner.entityId };
-        return { clientId, status: "REJECTED", message: "Duplicate business key" };
+        return { clientId, status: "REJECTED", message: "Doublon : cet élément existe déjà" };
       }
       if (error instanceof BadRequestException || error instanceof NotFoundException || error instanceof ForbiddenException || error instanceof ConflictException) {
         const response = error.getResponse();
         const message = typeof response === "object" && response && "message" in response ? String((response as { message: unknown }).message) : error.message;
-        return { clientId, status: "REJECTED", message };
+        // Meme catalogue que le filtre global : la file hors ligne affiche des motifs en francais.
+        return { clientId, status: "REJECTED", message: translateMessage(message) ?? message };
       }
       throw error;
     }
@@ -421,8 +423,8 @@ export class FieldService {
     if (issue.version !== baseVersion || issue.status !== "OPEN") {
       throw new SyncConflict(
         issue.status !== "OPEN"
-          ? `Issue ${issue.code} is now ${issue.status}: your correction was not applied`
-          : `Issue ${issue.code} changed (version ${issue.version}, you read ${baseVersion}): confirm again on the current version`,
+          ? `La réserve ${issue.code} est désormais au statut ${issue.status} : votre correction n'a pas été appliquée`
+          : `La réserve ${issue.code} a changé (version ${issue.version}, vous aviez lu la ${baseVersion}) : confirmez à nouveau sur la version actuelle`,
         await this.issueSnapshot(tx, scope, issue.id),
       );
     }
@@ -478,10 +480,10 @@ export class FieldService {
     if (existing.status === "SIGNED" || baseVersion !== existing.version) {
       throw new SyncConflict(
         existing.status === "SIGNED"
-          ? "The site log of this day is already signed: your changes were not applied"
+          ? "Le journal de ce jour est déjà signé : vos modifications n'ont pas été appliquées"
           : baseVersion === undefined
-            ? "A site log already exists for this day: merge your entry with it explicitly"
-            : `The site log changed (version ${existing.version}, you read ${baseVersion}): merge your entry explicitly`,
+            ? "Un journal existe déjà pour ce jour : fusionnez explicitement votre saisie"
+            : `Le journal a changé (version ${existing.version}, vous aviez lu la ${baseVersion}) : fusionnez explicitement votre saisie`,
         await this.logSnapshot(scope, existing.id),
       );
     }
