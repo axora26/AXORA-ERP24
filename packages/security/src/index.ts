@@ -11,3 +11,5 @@ export * from "./password.js";
 export * from "./authorization.js";
 export * from "./session.js";
 export * from "./throttle.js";
+export * from "./totp.js";
+export * from "./secret-box.js";

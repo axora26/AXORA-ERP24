@@ -1,5 +1,6 @@
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
-import { hashPassword, verifyPassword, createSessionToken } from "@axora24/security";
+import { ConflictException, Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
+import { hashPassword, verifyPassword, createSessionToken, parseEncryptionKey } from "@axora24/security";
+import { AccountService } from "./account.service.js";
 import { ALL_PERMISSIONS } from "@axora24/contracts";
 import { DEFAULT_PIPELINE_STAGES } from "../crm/pipeline.defaults.js";
 import { PrismaService } from "../core/prisma.service.js";
@@ -15,6 +16,11 @@ export interface SessionResult {
   user: { id: string; email: string; fullName: string; organizationId: string };
 }
 
+export interface MfaChallengeResult {
+  mfaRequired: true;
+  challengeToken: string;
+}
+
 export interface RequestMetadata {
   ipAddress: string;
   userAgent: string;
@@ -25,6 +31,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly loginThrottle: LoginThrottleService,
+    private readonly account: AccountService,
   ) {}
 
   /**
@@ -139,7 +146,7 @@ export class AuthService {
     };
   }
 
-  async login(input: LoginDto, metadata: RequestMetadata): Promise<SessionResult> {
+  async login(input: LoginDto, metadata: RequestMetadata): Promise<SessionResult | MfaChallengeResult> {
     const normalizedEmail = input.email.trim().toLowerCase();
     await this.loginThrottle.enforce(normalizedEmail, metadata.ipAddress);
 
@@ -162,6 +169,16 @@ export class AuthService {
     }
 
     await this.loginThrottle.recordSuccess(normalizedEmail, metadata.ipAddress);
+
+    if (user.mfaEnabled) {
+      // Mot de passe valide mais second facteur requis : aucun cookie de
+      // session n'est emis avant la verification du code TOTP.
+      if (!parseEncryptionKey(process.env.MFA_ENCRYPTION_KEY)) {
+        throw new ServiceUnavailableException("MFA is required for this account but not configured on this server");
+      }
+      return { mfaRequired: true, challengeToken: await this.account.issueChallenge(user.id, metadata) };
+    }
+
     const session = await this.createAuditedLoginSession(user, metadata);
 
     return {

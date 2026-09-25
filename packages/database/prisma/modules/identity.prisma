@@ -1,0 +1,20 @@
+// Identite — MFA (docs/foundation/03-security.md §3).
+
+/// Defi MFA emis apres un mot de passe valide pour un compte MFA active.
+/// Le jeton n'est stocke que haché ; usage unique, 5 minutes, 5 essais.
+model MfaChallenge {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("mfa_challenges")
+}

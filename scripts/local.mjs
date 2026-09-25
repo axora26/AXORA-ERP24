@@ -15,7 +15,8 @@
  * Options : --no-demo (sans donnees de demonstration).
  */
 import { spawn, spawnSync } from "node:child_process";
-import { copyFileSync, existsSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -62,8 +63,12 @@ async function waitFor(url, timeoutMs) {
 }
 
 if (!existsSync(resolve(root, ".env"))) {
-  copyFileSync(resolve(root, ".env.example"), resolve(root, ".env"));
-  console.log("Fichier .env cree depuis .env.example");
+  // Cle MFA propre a cette machine (jamais committee) : la MFA TOTP est
+  // ainsi utilisable immediatement en local.
+  const example = readFileSync(resolve(root, ".env.example"), "utf8");
+  const key = randomBytes(32).toString("base64");
+  writeFileSync(resolve(root, ".env"), example.replace(/^MFA_ENCRYPTION_KEY=.*$/m, `MFA_ENCRYPTION_KEY="${key}"`));
+  console.log("Fichier .env cree depuis .env.example (cle MFA locale generee)");
 }
 
 run("Generation du client Prisma", ["db:generate"]);

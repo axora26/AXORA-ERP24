@@ -7,7 +7,7 @@ Aucun module n'est marque `VERIFIED` sans preuve CI reelle (numero de run + SHA 
 | ID | Module | Statut | Preuve locale | Reste a faire |
 |---|---|---|---|---|
 | INC-00 | Socle technique + Design System + Shell | `IMPLEMENTED_NOT_VERIFIED` | Monorepo pnpm, CI ecrite, shell web a routes par module, palette Ctrl K, kit UI partage, demarrage `pnpm local`, builds API/web de production OK. | Run CI distant ; theme sombre ; service worker PWA (INC-24). |
-| INC-01 | Core — Identity / RBAC / Audit | `IMPLEMENTED_NOT_VERIFIED` | Sessions opaques, RBAC deny-by-default, limitation des connexions, audit login/logout, `/auth/context`, garde de perimetre entreprise, numerotation automatique atomique (test de concurrence). | Administration utilisateurs/roles dans l'UI, consultation du journal d'audit, MFA TOTP. |
+| INC-01 | Core — Identity / RBAC / Audit / MFA | `IMPLEMENTED_NOT_VERIFIED` | Sessions opaques, RBAC deny-by-default, limitation des connexions, `/auth/context`, garde de perimetre entreprise, numerotation atomique. Administration : utilisateurs, roles personnalises (matrice de permissions), entreprises, journal d'audit filtrable en lecture seule, garde du dernier OWNER, desactivation = revocation des sessions (16 tests e2e). Mot de passe en libre-service (revocation des autres sessions). MFA TOTP RFC 6238 : secret chiffre AES-256-GCM, anti-rejeu, defi a usage unique limite a 5 essais (6 tests e2e + 9 tests unitaires dont vecteurs RFC), parcours verifie dans Chromium. | Delegations temporaires, roles a portee projet, MFA imposee par politique d'organisation, "step-up" MFA sur actions critiques. |
 | INC-02 | CRM — prospects / opportunites / pipeline | `IMPLEMENTED_NOT_VERIFIED` | 16 tests e2e CRM, parcours prospect -> opportunite verifie en navigateur. | Edition/suppression comptes et contacts, pagination, reorganisation du pipeline. |
 | INC-03 | Etudes / DQE / BPU | `IMPLEMENTED_NOT_VERIFIED` | Tests e2e estimation (DQE finalise immuable, decimales exactes), interface Etudes & DQE. | Bibliotheque d'ouvrages, variantes, export Excel/PDF. |
 | INC-04 | Devis -> Contrat | `IMPLEMENTED_NOT_VERIFIED` | 8 tests e2e (devis uniquement depuis DQE finalise, contrat uniquement depuis devis accepte, lignes figees). | Versions de devis, archivage de contrat. |
@@ -34,4 +34,4 @@ Aucun module n'est marque `VERIFIED` sans preuve CI reelle (numero de run + SHA 
 
 ## Gates locaux (derniere execution)
 
-2026-09-25 — `pnpm typecheck` OK · `pnpm lint` OK · `pnpm test` 48 tests PASS · `pnpm test:e2e` 45 tests PASS (PostgreSQL 16 local) · `nest build` + `next build` OK · `pnpm local` + `pnpm demo:seed` executes (chaine commerciale complete creee via l'API reelle).
+2026-09-25 — `pnpm typecheck` OK · `pnpm lint` OK · `pnpm test` 57 tests PASS · `pnpm test:e2e` 67 tests PASS (PostgreSQL 16 local) · `nest build` + `next build` OK · parcours navigateur (Chromium) : 9 ecrans sans erreur console, parcours MFA complet.

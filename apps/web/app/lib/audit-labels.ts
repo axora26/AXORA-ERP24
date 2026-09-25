@@ -18,6 +18,17 @@ const LABELS: Record<string, string> = {
   "sales.quote.accepted": "Devis accepté",
   "sales.quote.rejected": "Devis rejeté",
   "sales.contract.created": "Contrat créé",
+  "auth.password.changed": "Mot de passe modifié",
+  "auth.mfa.enabled": "Double authentification activée",
+  "auth.mfa.disabled": "Double authentification désactivée",
+  "auth.mfa.failed": "Code MFA invalide",
+  "auth.login.failed": "Échec de connexion",
+  "core.user.created": "Utilisateur créé",
+  "core.user.updated": "Utilisateur modifié",
+  "core.role.created": "Rôle créé",
+  "core.role.permissions_changed": "Permissions d'un rôle modifiées",
+  "core.role.deleted": "Rôle supprimé",
+  "core.company.created": "Entreprise créée",
 };
 
 export function describeAudit(action: string): string {

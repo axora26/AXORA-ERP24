@@ -22,6 +22,8 @@ function LoginForm(): React.ReactElement {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     // Session deja ouverte : inutile de se reconnecter.
@@ -36,7 +38,14 @@ function LoginForm(): React.ReactElement {
     setLoading(true);
     setError("");
     try {
-      await api.post("/auth/login", { email, password });
+      const result = await api.post<{ mfaRequired?: boolean; challengeToken?: string }>("/auth/login", {
+        email,
+        password,
+      });
+      if (result.mfaRequired && result.challengeToken) {
+        setChallengeToken(result.challengeToken);
+        return;
+      }
       router.replace(safeNext(params.get("next")));
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 429) {
@@ -49,6 +58,76 @@ function LoginForm(): React.ReactElement {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function verify(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      await api.post("/auth/mfa/verify", { challengeToken, code });
+      router.replace(safeNext(params.get("next")));
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 429) {
+        setError("Trop de codes invalides. Reconnectez-vous.");
+        setChallengeToken(null);
+      } else if (caught instanceof ApiError && caught.status === 401 && /expired|invalid/i.test(caught.message) && !/code/i.test(caught.message)) {
+        setError("La vérification a expiré. Reconnectez-vous.");
+        setChallengeToken(null);
+      } else {
+        setError("Code invalide.");
+      }
+      setCode("");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (challengeToken) {
+    return (
+      <div className="login-card">
+        <span className="eyebrow">
+          <ShieldCheck size={15} /> Double authentification
+        </span>
+        <h2>Code de vérification</h2>
+        <p className="login-intro">Saisissez le code à 6 chiffres de votre application d&apos;authentification.</p>
+        <form onSubmit={verify}>
+          <label htmlFor="mfa-code">Code</label>
+          <input
+            id="mfa-code"
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9 ]{6,7}"
+            value={code}
+            onChange={(event) => setCode(event.currentTarget.value)}
+            placeholder="123 456"
+            autoFocus
+            required
+          />
+          {error && (
+            <div className="form-error" role="alert">
+              {error}
+            </div>
+          )}
+          <button className="primary-button" type="submit" disabled={loading}>
+            {loading ? "Vérification…" : "Vérifier"}
+          </button>
+          <button
+            type="button"
+            className="link-button"
+            style={{ marginTop: 14 }}
+            onClick={() => {
+              setChallengeToken(null);
+              setCode("");
+              setError("");
+            }}
+          >
+            Revenir à la connexion
+          </button>
+        </form>
+      </div>
+    );
   }
 
   return (

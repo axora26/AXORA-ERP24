@@ -14,3 +14,5 @@ export * from "./crm.js";
 export * from "./estimation.js";
 export * from "./sales.js";
 export * from "./dashboard.js";
+export * from "./admin.js";
+export * from "./permission-catalog.js";

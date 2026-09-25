@@ -498,3 +498,63 @@ export function Button({
     </button>
   );
 }
+
+export function CheckboxGroup({
+  label,
+  options,
+  selected,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  options: Array<{ value: string; label: string; hint?: string }>;
+  selected: string[];
+  onChange: (values: string[]) => void;
+  disabled?: boolean;
+}): React.ReactElement {
+  return (
+    <fieldset className="field wide checkbox-group" disabled={disabled}>
+      <legend>{label}</legend>
+      <div>
+        {options.map((option) => {
+          const checked = selected.includes(option.value);
+          return (
+            <label key={option.value} className={checked ? "checked" : ""}>
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() =>
+                  onChange(checked ? selected.filter((value) => value !== option.value) : [...selected, option.value])
+                }
+              />
+              <span>
+                {option.label}
+                {option.hint && <small>{option.hint}</small>}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+export function Toggle({
+  label,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  disabled?: boolean;
+}): React.ReactElement {
+  return (
+    <label className="toggle">
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.currentTarget.checked)} />
+      <span aria-hidden="true" />
+      {label}
+    </label>
+  );
+}

@@ -212,13 +212,13 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
               <button className="icon-button" aria-label="Notifications" type="button">
                 <Bell size={19} />
               </button>
-              <div className="user-menu">
+              <Link className="user-menu" href="/account" title="Mon compte">
                 <span>{initialsOf(sessionApi.user.fullName)}</span>
                 <div>
                   <strong>{sessionApi.user.fullName || sessionApi.user.email}</strong>
                   <small>{sessionApi.roles.join(", ") || "Aucun rôle"}</small>
                 </div>
-              </div>
+              </Link>
             </div>
           </header>
 

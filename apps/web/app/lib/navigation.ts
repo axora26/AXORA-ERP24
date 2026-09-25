@@ -1,8 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Building2,
   Calculator,
+  KeyRound,
   LayoutDashboard,
   Receipt,
+  ScrollText,
+  ShieldCheck,
+  UserCog,
   UsersRound,
 } from "lucide-react";
 
@@ -37,6 +42,16 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/crm", label: "CRM & Pipeline", icon: UsersRound, permission: "crm.opportunity.read", keywords: "prospects leads opportunites clients" },
       { href: "/estimation", label: "Études & DQE", icon: Calculator, permission: "estimation.dqe.read", keywords: "bpu boq chiffrage estimation" },
       { href: "/sales", label: "Devis & Contrats", icon: Receipt, permission: "sales.quote.read", keywords: "offres contrats ventes" },
+    ],
+  },
+  {
+    label: "Administration",
+    items: [
+      { href: "/admin/users", label: "Utilisateurs", icon: UserCog, permission: "core.user.manage", keywords: "comptes acces" },
+      { href: "/admin/roles", label: "Rôles & permissions", icon: ShieldCheck, permission: "core.role.manage", keywords: "rbac droits matrice" },
+      { href: "/admin/companies", label: "Entreprises", icon: Building2, permission: "core.company.manage", keywords: "filiales societes" },
+      { href: "/admin/audit", label: "Journal d'audit", icon: ScrollText, permission: "core.audit.read", keywords: "traces historique" },
+      { href: "/account", label: "Mon compte", icon: KeyRound, keywords: "mot de passe mfa securite profil" },
     ],
   },
 ];

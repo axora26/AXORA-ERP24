@@ -7,8 +7,9 @@ import { CrmModule } from "./crm/crm.module.js";
 import { EstimationModule } from "./estimation/estimation.module.js";
 import { SalesModule } from "./sales/sales.module.js";
 import { DashboardModule } from "./dashboard/dashboard.module.js";
+import { AdminModule } from "./admin/admin.module.js";
 
 @Module({
-  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule],
 })
 export class AppModule {}
