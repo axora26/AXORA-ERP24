@@ -14,6 +14,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - Socle plateforme (ADR-0007) : module commun, garde de perimetre, numerotation, tableau de bord reel, shell web a routes, kit UI, `pnpm local`, jeu DEMO via l'API.
 - INC-01 complete : administration utilisateurs / roles / entreprises / audit, mot de passe, MFA TOTP.
 - INC-05 : projets (contrat -> projet, WBS, budget par feuilles, baseline, avenants, taches, Gantt, jalons, risques).
+- INC-06 : achats (DA, approbation par un tiers, comparatif fournisseurs, commandes, receptions partielles idempotentes, engagement projet).
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
 ## Bloque (externe)
@@ -23,4 +24,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-06 — Achats (demande -> validation -> consultation -> commande -> reception partielle), engagement visible dans le cockpit projet.
+INC-07 — Stock & Logistique (articles, magasins, ledger de mouvements append-only non negatif, reception achats -> entree stock, sortie chantier affectee au projet).

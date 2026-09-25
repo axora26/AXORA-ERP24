@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Receipt,
   ScrollText,
+  ShoppingCart,
   ShieldCheck,
   UserCog,
   UsersRound,
@@ -49,6 +50,12 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Projets & chantiers",
     items: [
       { href: "/projects", label: "Projets", icon: FolderKanban, permission: "projects.project.read", keywords: "wbs budget planning gantt avenants affaires" },
+    ],
+  },
+  {
+    label: "Supply chain",
+    items: [
+      { href: "/procurement", label: "Achats", icon: ShoppingCart, permission: "procurement.request.read", keywords: "demandes commandes fournisseurs receptions" },
     ],
   },
   {

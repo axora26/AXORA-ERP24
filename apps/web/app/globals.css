@@ -568,3 +568,16 @@ a.user-menu:hover strong { color: var(--blue-600); }
 .gantt-bar.status-done { background: var(--success); }
 .gantt-bar.status-blocked { background: #d92d20; }
 .gantt-today { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #f79009; }
+
+/* --- INC-06 : achats ----------------------------------------------------- */
+.line-editor { display: flex; flex-direction: column; gap: 8px; }
+.line-editor-row { display: grid; grid-template-columns: minmax(160px, 2.2fr) 70px 90px 110px minmax(120px, 1.4fr) 38px; gap: 8px; align-items: center; }
+.line-editor-row input, .line-editor-row select { width: 100%; min-width: 0; height: 36px; border: 1px solid #d6dae2; border-radius: 8px; padding: 0 9px; color: #182230; background: #fff; font: 400 12px Inter, sans-serif; outline: none; }
+.line-editor-row input:focus, .line-editor-row select:focus { border-color: var(--blue-600); box-shadow: 0 0 0 3px rgba(37, 99, 235, .1); }
+.line-editor-row .icon-button { width: 36px; height: 36px; }
+.compare-table td.best { background: #edfaf3; font-weight: 700; color: #0c6b3f; }
+.compare-table td.selected-col, .compare-table th.selected-col { box-shadow: inset 0 0 0 2px var(--blue-600); }
+@media (max-width: 760px) {
+  .line-editor-row { grid-template-columns: 1fr 1fr; }
+  .line-editor-row input:first-child { grid-column: 1 / -1; }
+}

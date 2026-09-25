@@ -46,7 +46,8 @@ describe("Projets & Construction (e2e)", () => {
     expect(response.body.contractAmount).toBe("50000.00");
     expect(response.body.status).toBe("PLANNED");
     expect(response.body.wbs.map((node: { code: string }) => node.code)).toEqual(["GO-01", "CVC-01"]);
-    expect(response.body.cockpit.committed.available).toBe(false);
+    expect(response.body.cockpit.committed).toMatchObject({ available: true, amount: "0.00" });
+    expect(response.body.cockpit.invoiced.available).toBe(false);
   });
 
   it("un contrat ne peut engendrer qu'un seul projet racine", async () => {

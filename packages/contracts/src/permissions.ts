@@ -62,6 +62,18 @@ export const PROJECT_PERMISSIONS = {
   TASK_MANAGE: "projects.task.manage",
 } as const;
 
+/** INC-06 — Achats. L'approbation des demandes est separee de leur saisie. */
+export const PROCUREMENT_PERMISSIONS = {
+  SUPPLIER_READ: "procurement.supplier.read",
+  SUPPLIER_MANAGE: "procurement.supplier.manage",
+  REQUEST_READ: "procurement.request.read",
+  REQUEST_CREATE: "procurement.request.create",
+  REQUEST_APPROVE: "procurement.request.approve",
+  ORDER_READ: "procurement.order.read",
+  ORDER_MANAGE: "procurement.order.manage",
+  RECEIPT_CREATE: "procurement.receipt.create",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -78,6 +90,7 @@ export const ALL_PERMISSIONS = {
   ...ESTIMATION_PERMISSIONS,
   ...SALES_PERMISSIONS,
   ...PROJECT_PERMISSIONS,
+  ...PROCUREMENT_PERMISSIONS,
   ...DASHBOARD_PERMISSIONS,
 } as const;
 

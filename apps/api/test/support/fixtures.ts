@@ -81,3 +81,23 @@ export async function createUserWith(
     cookie: login.headers["set-cookie"] as unknown as string[],
   };
 }
+
+/** Projet demarre (baseline figee) avec une feuille WBS, pret a recevoir des achats. */
+export async function createStartedProject(
+  harness: Harness,
+  tenant: Tenant,
+): Promise<{ projectId: string; leafId: string; parentId: string; currency: string }> {
+  const { contractId } = await createActiveContract(harness, tenant);
+  const api = as(harness, tenant);
+  let project = await api.post("/projects", { contractId, name: "Projet achats" });
+  expect(project.status).toBe(201);
+  const projectId = project.body.id;
+  project = await api.post(`/projects/${projectId}/wbs`, { code: "LOT-A", name: "Lot A", kind: "LOT" });
+  const parentId = project.body.wbs.find((node: { code: string }) => node.code === "LOT-A").id;
+  project = await api.post(`/projects/${projectId}/wbs`, { code: "LOT-A1", name: "Lot A1", parentId });
+  const leafId = project.body.wbs.find((node: { code: string }) => node.code === "LOT-A1").id;
+  await api.post(`/projects/${projectId}/budget-lines`, { wbsItemId: leafId, category: "MATERIAL", description: "Budget", amount: "40000.00" });
+  expect((await api.post(`/projects/${projectId}/baseline`)).status).toBe(201);
+  expect((await api.post(`/projects/${projectId}/status`, { status: "IN_PROGRESS" })).status).toBe(201);
+  return { projectId, leafId, parentId, currency: project.body.currency };
+}

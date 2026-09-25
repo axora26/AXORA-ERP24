@@ -44,6 +44,18 @@ const LABELS: Record<string, string> = {
   "projects.milestone.achieved": "Jalon atteint",
   "projects.risk.created": "Risque enregistré",
   "projects.risk.updated": "Risque mis à jour",
+  "procurement.supplier.created": "Fournisseur créé",
+  "procurement.supplier.updated": "Fournisseur modifié",
+  "procurement.supplier.evaluated": "Fournisseur évalué",
+  "procurement.request.created": "Demande d'achat créée",
+  "procurement.request.submitted": "Demande d'achat soumise",
+  "procurement.request.approved": "Demande d'achat approuvée",
+  "procurement.request.rejected": "Demande d'achat rejetée",
+  "procurement.quote.recorded": "Offre fournisseur enregistrée",
+  "procurement.order.created": "Commande créée",
+  "procurement.order.issued": "Commande émise",
+  "procurement.order.cancelled": "Commande annulée",
+  "procurement.receipt.created": "Réception enregistrée",
 };
 
 export function describeAudit(action: string): string {

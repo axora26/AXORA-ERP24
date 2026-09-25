@@ -57,6 +57,10 @@ const RESOURCE_LABELS: Record<string, string> = {
   budget: "les budgets",
   changeorder: "les avenants",
   task: "les tâches",
+  supplier: "les fournisseurs",
+  request: "les demandes d'achat",
+  order: "les commandes",
+  receipt: "les réceptions",
 };
 
 const ACTION_LABELS: Record<string, string> = {
