@@ -146,3 +146,16 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 **Consequences** : comprehension limitee aux formulations prevues ; un futur branchement LLM devra se limiter a reformuler les faits deja sources et renseigner `modelProvider` (NOT_TESTED tant qu'aucun fournisseur n'est configure).
 **Reversible** : oui (ajout d'outils ou d'un reformulateur sans changer la preuve).
 
+## ADR-0014 — API publique : cles bornees par leur createur, webhooks entrants signes, verite des connecteurs
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-23 ouvre l'ERP a des systemes tiers (BC-24, 03-security §11) : une cle ne doit jamais donner un acces total ni plus que les droits d'une personne ; un webhook entrant ne doit rien traiter avant verification ; aucune integration non testee ne doit paraitre fonctionnelle.
+**Decision** :
+- Cle d'API = secret aleatoire de 32 octets (prefixe `axk_`), montre une fois ; seule l'empreinte SHA-256 est stockee. Permissions explicites prises dans un catalogue public, bornees a l'emission par celles de l'emetteur ; a chaque requete, permissions effectives = permissions de la cle ∩ permissions actuelles du createur (createur inactif ou sorti de l'entreprise = cle suspendue). Permissions figees et revocation definitive (triggers).
+- Limitation par minute et quota journalier par cle via compteurs atomiques (`INSERT … ON CONFLICT … RETURNING`) ; toute requete authentifiee compte, refus compris ; liste d'IP optionnelle ; limiteur d'essais invalides par IP. Journal append-only des requetes.
+- Webhook entrant : corps brut conserve par le serveur (`rawBody`), signature HMAC-SHA256 de `horodatage.corps` verifiee avant toute lecture, tolerance 5 min, schema strict, idempotence par `(point d'entree, id d'evenement)` unique en base ; l'effet metier (prospect CRM, meme regle que l'interface) et la trace sont ecrits dans la meme transaction. Limiteur de signatures invalides par point d'entree.
+- Registre des connecteurs a grille de verite ; `TESTED` interdit des qu'un systeme externe n'a pas ete reellement atteint (invariant teste).
+- Tests : les valeurs d'environnement propres aux tests sont fixees avant le chargement du `.env` de developpement (le planificateur d'automatisation active en developpement rendait un test dependant du timing).
+**Reversible** : oui (nouvelles routes et types d'evenements entrants sans changer le modele).
+

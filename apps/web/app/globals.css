@@ -973,3 +973,6 @@ a.btn { text-decoration: none; }
 .monthly-table th, .monthly-table td { padding: 5px 6px; border-bottom: 1px solid #eef0f4; text-align: right; }
 .monthly-table th:first-child { text-align: left; }
 @media (max-width: 1100px) { .analytics-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* INC-23 — API & integrations */
+.wrap-cell { display: block; max-width: 360px; white-space: normal; }

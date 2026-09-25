@@ -240,6 +240,16 @@ export const ANALYTICS_PERMISSIONS = {
   DASHBOARD: "analytics.dashboard.manage",
 } as const;
 
+/**
+ * INC-23 — API publique & integrations. Une cle d'API ne recoit jamais plus
+ * que les permissions de son createur, limitees au catalogue public.
+ */
+export const INTEGRATIONS_PERMISSIONS = {
+  READ: "integrations.apikey.read",
+  MANAGE: "integrations.apikey.manage",
+  INBOUND: "integrations.inbound.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -276,6 +286,7 @@ export const PERMISSION_GROUPS = [
   WORKFLOW_PERMISSIONS,
   AI_PERMISSIONS,
   ANALYTICS_PERMISSIONS,
+  INTEGRATIONS_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

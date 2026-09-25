@@ -33,6 +33,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-22 : Copilote IA (reponses ancrees et citees, strictement bornees par le RBAC de l'appelant, preuve d'inference append-only a empreinte verifiee en base ; aucun modele generatif appele). Demo : la DAF voit ses demandes d'achat et un refus QHSE trace.
 - Incident d'environnement : le conteneur a redemarre (PostgreSQL, API et web arretes) ; base relancee sans perte (29 migrations, donnees demo intactes), serveurs relances.
 - INC-23 (partie 1) : Analytique (indicateurs mensuels sur donnees reelles, RBAC par indicateur, instantanes figes, export CSV, tableaux de bord partages).
+- INC-23 (partie 2) : API publique v1 (cles bornees par leur createur et re-verifiees a chaque requete, debit, quota, IP, journal, OpenAPI), webhook entrant signe et idempotent vers le CRM, registre des connecteurs a grille de verite (`NOT_TESTED` explicites). Correctif tests : defauts d'environnement de test prioritaires sur le `.env` de developpement.
 - Correctif : le catalogue `ALL_PERMISSIONS` est desormais indexe par la cle de permission (une fusion d'objets ecrasait les constantes homonymes READ/MANAGE de modules differents) ; test de non-regression.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
@@ -43,4 +44,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-23 Analytics/API publique, INC-24 PWA et rapport de livraison.
+INC-24 PWA, durcissement transverse et rapport de livraison.

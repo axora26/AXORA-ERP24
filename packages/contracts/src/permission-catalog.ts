@@ -154,6 +154,9 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "analytics.report.read": "Consulter les analyses (dans la limite des droits de lecture de chaque module)",
   "analytics.snapshot.manage": "Figer des instantanés analytiques mensuels",
   "analytics.dashboard.manage": "Créer et partager des tableaux de bord analytiques",
+  "integrations.apikey.read": "Consulter les clés d'API, leur journal et le registre des connecteurs",
+  "integrations.apikey.manage": "Émettre et révoquer des clés d'API (jamais plus que ses propres droits)",
+  "integrations.inbound.manage": "Configurer les webhooks entrants signés",
 };
 
 export function registerResourceLabels(labels: Record<string, string>): void {

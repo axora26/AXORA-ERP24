@@ -225,6 +225,13 @@ const LABELS: Record<string, string> = {
   "analytics.dashboard.created": "Tableau de bord analytique créé",
   "analytics.dashboard.updated": "Tableau de bord analytique modifié",
   "analytics.dashboard.deleted": "Tableau de bord analytique supprimé",
+  "integrations.apikey.issued": "Clé d'API émise",
+  "integrations.apikey.revoked": "Clé d'API révoquée",
+  "integrations.api.lead.created": "Prospect créé par l'API publique",
+  "integrations.inbound.created": "Webhook entrant créé",
+  "integrations.inbound.activated": "Webhook entrant activé",
+  "integrations.inbound.deactivated": "Webhook entrant désactivé",
+  "integrations.inbound.lead.created": "Prospect reçu par webhook entrant",
 };
 
 export function describeAudit(action: string): string {

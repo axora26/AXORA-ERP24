@@ -11,5 +11,6 @@ import { AuthModule } from "../auth/auth.module.js";
   imports: [AuthModule],
   controllers: [CrmController],
   providers: [CrmService],
+  exports: [CrmService],
 })
 export class CrmModule {}
