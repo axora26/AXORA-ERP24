@@ -46,3 +46,6 @@ Thumbs.db
 
 # Hermes transient orchestration
 .hermes/
+
+# Sessions de test navigateur (Playwright) : jamais versionnees
+apps/web/e2e/.auth/

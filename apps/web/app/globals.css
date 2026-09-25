@@ -34,6 +34,9 @@ button:disabled { cursor: not-allowed; }
 .brand-copy { display: flex; align-items: baseline; gap: 6px; letter-spacing: -.02em; }
 .brand-copy strong { font: 800 20px Montserrat, sans-serif; }
 .brand-copy small { font: 700 10px Montserrat, sans-serif; letter-spacing: .16em; color: #7aa5ff; }
+/* Marque posee sur fond clair (ecrans de chargement et hors ligne, connexion mobile) : contraste AA. */
+.loading-screen .brand-copy strong, .mobile-brand .brand-copy strong { color: var(--ink); }
+.loading-screen .brand-copy small, .mobile-brand .brand-copy small { color: var(--blue-700); }
 
 .login-page { min-height: 100vh; display: grid; grid-template-columns: minmax(420px, .95fr) minmax(480px, 1.05fr); background: var(--white); }
 .login-story { position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 44px 7vw 34px; color: #fff; background: radial-gradient(circle at 75% 25%, rgba(70, 128, 255, .36), transparent 32%), linear-gradient(145deg, #07182f 0%, #102f66 64%, #174b9e 100%); }
@@ -190,6 +193,7 @@ td:first-child small { color: #667085; font-size: 9px; }
 
 .pipeline-panel { margin-top: 16px; overflow: hidden; }
 .pipeline-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: 12px; padding: 18px 21px; overflow-x: auto; }
+.pipeline-track:focus-visible { outline: 2px solid var(--blue-600); outline-offset: -2px; }
 .pipeline-stage { display: flex; flex-direction: column; gap: 6px; border: 1px solid #e6e9ef; border-top: 3px solid var(--blue-600); border-radius: 10px; padding: 13px 14px; background: #fbfcfe; }
 .pipeline-stage header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .pipeline-stage strong { color: #182230; font-size: 11px; font-weight: 600; }

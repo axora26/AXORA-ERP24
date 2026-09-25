@@ -74,6 +74,14 @@ pnpm typecheck
 pnpm test
 pnpm build
 pnpm test:e2e
+pnpm test:browser   # instance lancee (pnpm local) ; E2E_BASE_URL pour une autre adresse
 ```
 
-Aucun statut `PASS` n'est annonce sans execution reelle de ces commandes.
+`pnpm test:browser` (Playwright) parcourt les 30 ecrans avec le compte DEMO : erreurs JavaScript et console,
+accessibilite axe-core WCAG 2.1 AA, absence de defilement horizontal a 390 et 768 px, securite. Le parcours
+hors ligne (service worker) s'execute contre un build de production :
+`E2E_BASE_URL=http://localhost:3200` apres `next build && next start -p 3200` dans `apps/web`. Un Chromium
+deja installe peut etre designe par `PLAYWRIGHT_CHROMIUM_EXECUTABLE`, sinon `pnpm --filter @axora24/web exec playwright install chromium`.
+
+Aucun statut `PASS` n'est annonce sans execution reelle de ces commandes. Preuves datees par SHA :
+`docs/AXORA-ERP24_TEST_EVIDENCE.md` ; rapport de livraison : `docs/AXORA-ERP24_FINAL_DELIVERY_REPORT.md`.
