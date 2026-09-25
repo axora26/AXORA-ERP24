@@ -745,3 +745,31 @@ a.btn { text-decoration: none; }
 .checks .ko { color: #b42318; }
 .measure-row { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
 .measure-row .inline-select { max-width: 180px; }
+
+/* INC-14 — BIM */
+.hash { font: 500 11px "JetBrains Mono", ui-monospace, monospace; color: #475467; word-break: break-all; }
+.toolbar.inner { margin: 0; padding: 12px 21px 0; }
+.connector-states { list-style: none; margin: 0; padding: 8px 21px 18px; display: grid; gap: 10px; }
+.connector-states li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding-bottom: 10px; border-bottom: 1px solid #f2f4f7; font-size: 12px; }
+.connector-states li small { grid-column: 1 / -1; color: #667085; }
+.connector-states li span { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #344054; }
+.connector-states li.interop { border-bottom: 0; background: #f6fef9; padding: 10px; border-radius: 8px; }
+.spatial-tree { list-style: none; margin: 0; padding: 10px 21px 18px; display: grid; gap: 6px; font-size: 12px; }
+.spatial-tree small { color: #98a2b3; }
+.type-counts { list-style: none; margin: 0; padding: 8px 21px 18px; display: grid; gap: 4px; font-size: 12px; }
+.type-counts li { display: flex; justify-content: space-between; border-bottom: 1px dashed #eaecf0; padding: 4px 0; }
+.diff-list { list-style: none; margin: 0; padding: 4px 21px 16px; display: grid; gap: 4px; font-size: 12px; }
+.diff-list .added { color: #067647; }
+.diff-list .removed { color: #b42318; }
+.diff-list .changed { color: #b54708; }
+.diff-list small { color: #667085; }
+.clash-list { list-style: none; margin: 0; padding: 8px 21px 18px; display: grid; gap: 12px; }
+.clash-list > li { padding: 12px 14px; border: 1px solid #fecdca; border-radius: 10px; background: #fffbfa; font-size: 12px; }
+.clash-list > li.resolved { border-color: #e4e7ec; background: #fafbfc; }
+.clash-list > li.resolution_proposed { border-color: #fcd9a4; background: #fffaf0; }
+.clash-list header { display: flex; align-items: center; gap: 10px; }
+.clash-list header small { margin-left: auto; color: #667085; }
+.clash-list p { margin: 8px 0 0; }
+.clash-elements small { color: #667085; }
+.clash-comment { color: #344054; }
+.clash-comment small { color: #98a2b3; margin-left: 6px; }

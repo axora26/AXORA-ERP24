@@ -19,8 +19,9 @@ import { FieldModule } from "./field/field.module.js";
 import { QhseModule } from "./qhse/qhse.module.js";
 import { MepModule } from "./mep/mep.module.js";
 import { CommissioningModule } from "./commissioning/commissioning.module.js";
+import { BimModule } from "./bim/bim.module.js";
 
 @Module({
-  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule, BimModule],
 })
 export class AppModule {}

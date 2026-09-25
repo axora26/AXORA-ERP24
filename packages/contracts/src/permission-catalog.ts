@@ -89,6 +89,8 @@ const RESOURCE_LABELS: Record<string, string> = {
   toolbox: "les quarts d'heure sécurité",
   system: "les systèmes et équipements techniques",
   calculation: "les notes de calcul",
+  model: "les maquettes BIM",
+  clash: "les conflits de synthèse",
 };
 
 const ACTION_LABELS: Record<string, string> = {

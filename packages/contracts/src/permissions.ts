@@ -155,6 +155,14 @@ export const COMMISSIONING_PERMISSIONS = {
   ACCEPT: "commissioning.activity.accept",
 } as const;
 
+/** INC-14 — BIM : versions IFC verifiees par empreinte, visa et resolution de conflits par un tiers. */
+export const BIM_PERMISSIONS = {
+  MODEL_READ: "bim.model.read",
+  MODEL_MANAGE: "bim.model.manage",
+  MODEL_APPROVE: "bim.model.approve",
+  CLASH_MANAGE: "bim.clash.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -181,6 +189,7 @@ export const PERMISSION_GROUPS = [
   QHSE_PERMISSIONS,
   MEP_PERMISSIONS,
   COMMISSIONING_PERMISSIONS,
+  BIM_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

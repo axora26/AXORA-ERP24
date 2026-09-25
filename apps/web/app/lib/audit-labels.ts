@@ -138,6 +138,15 @@ const LABELS: Record<string, string> = {
   "commissioning.punch.corrected": "Anomalie de mise en service corrigée",
   "commissioning.activity.accepted": "Équipement réceptionné",
   "commissioning.activity.handed_over": "Installation remise au client (DOE)",
+  "bim.model.created": "Maquette BIM créée",
+  "bim.version.imported": "Version IFC importée (empreinte vérifiée)",
+  "bim.version.approved": "Version de maquette approuvée",
+  "bim.version.rejected": "Version de maquette refusée",
+  "bim.equipment.bound": "Équipement lié à un élément BIM",
+  "bim.clash.created": "Conflit de synthèse créé",
+  "bim.clash.proposed": "Résolution de conflit proposée",
+  "bim.clash.resolved": "Conflit de synthèse résolu",
+  "bim.clash.reopened": "Résolution de conflit refusée",
 };
 
 export function describeAudit(action: string): string {

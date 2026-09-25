@@ -18,6 +18,7 @@ import {
   ShieldPlus,
   Cpu,
   PlugZap,
+  Box,
   UsersRound,
 } from "lucide-react";
 
@@ -67,6 +68,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Ingénierie",
     items: [
       { href: "/mep", label: "MEP & calculs", icon: Cpu, permission: "mep.system.read", keywords: "cvc electricite plomberie incendie equipements notes de calcul" },
+      { href: "/bim", label: "BIM / IFC", icon: Box, permission: "bim.model.read", keywords: "maquette ifc revit clash synthese globalid" },
       { href: "/commissioning", label: "Mise en service", icon: PlugZap, permission: "commissioning.activity.read", keywords: "commissioning essais retest reception doe" },
     ],
   },
