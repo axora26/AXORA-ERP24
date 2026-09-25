@@ -45,6 +45,11 @@ export async function projectCostFigures(
       AND "companyId" = ${scope.companyId}
       AND "type"::text IN ('ISSUE', 'RETURN')
   `;
+  // Main d'oeuvre : uniquement les heures VALIDEES, valorisees au cout fige a la validation.
+  const labor = await prisma.timesheetEntry.aggregate({
+    where: { ...scope, projectId, timesheet: { status: "VALIDATED" } },
+    _sum: { costAmount: true },
+  });
   // Factures fournisseurs approuvees du projet : facture HT, et paye ramene au HT
   // (paye x HT / TTC) pour rester comparable au budget de couts (HT).
   const payables = await prisma.supplierInvoice.findMany({
@@ -63,7 +68,9 @@ export async function projectCostFigures(
     _sum: { total: true, paidAmount: true },
   });
   const totals = rows[0];
-  const consumed = new Prisma.Decimal(totals?.received ?? 0).plus(new Prisma.Decimal(stock[0]?.consumed ?? 0));
+  const consumed = new Prisma.Decimal(totals?.received ?? 0)
+    .plus(new Prisma.Decimal(stock[0]?.consumed ?? 0))
+    .plus(new Prisma.Decimal(labor._sum.costAmount ?? 0));
   return {
     committed: {
       amount: money(totals?.committed ?? 0),
@@ -73,7 +80,7 @@ export async function projectCostFigures(
     consumed: {
       amount: money(consumed),
       available: true,
-      source: "Réceptions directes chantier (Achats) + sorties de stock nettes des retours (Stock)",
+      source: "Réceptions directes chantier (Achats) + sorties de stock nettes des retours (Stock) + temps passés validés (RH)",
     },
     invoiced: { amount: money(invoiced), available: true, source: "Factures fournisseurs approuvées (HT)" },
     paid: { amount: money(paid), available: true, source: "Paiements fournisseurs, ramenés au HT" },

@@ -70,6 +70,11 @@ const RESOURCE_LABELS: Record<string, string> = {
   payment: "les paiements",
   bank: "les banques et caisses",
   settings: "les paramètres",
+  employee: "les employés",
+  attendance: "les pointages",
+  timesheet: "les feuilles de temps",
+  leave: "les congés",
+  payroll: "la paie",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -86,6 +91,8 @@ const ACTION_LABELS: Record<string, string> = {
   issue: "Émettre",
   receive: "Réceptionner",
   post: "Comptabiliser",
+  submit: "Soumettre",
+  request: "Demander",
 };
 
 export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {};

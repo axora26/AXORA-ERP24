@@ -123,12 +123,14 @@ button:disabled { cursor: not-allowed; }
 .metric-icon.green { color: var(--success); background: #e9f8f0; }
 .metric-icon.amber { color: var(--warning); background: #fff4e4; }
 .metric-icon.violet { color: var(--violet); background: #f0ecff; }
+.metric-icon.red { color: #c0352b; background: #fdecea; }
 .metric-label { color: #667085; font-size: 11px; }
 .metric-card > strong { grid-column: 2; font: 700 24px Montserrat, sans-serif; }
 .metric-card > small { grid-column: 1 / 3; margin-top: 15px; font-size: 10px; }
 .metric-card > small.blue, .metric-card > small.green { color: var(--success); }
 .metric-card > small.amber { color: var(--warning); }
 .metric-card > small.violet { color: var(--violet); }
+.metric-card > small.red { color: #c0352b; }
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(290px, .8fr); gap: 16px; margin-top: 16px; }
 .panel { border: 1px solid #e6e9ef; border-radius: 12px; background: #fff; box-shadow: 0 3px 12px rgba(18,38,72,.025); }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 19px 21px; border-bottom: 1px solid #edf0f4; }
@@ -625,3 +627,16 @@ a.btn { text-decoration: none; }
   .print-actions { display: none; }
   .print-sheet { box-shadow: none; min-height: auto; }
 }
+
+/* INC-09 — RH : borne de pointage, badge QR, saisie des temps */
+.terminal { display: grid; gap: 12px; padding: 16px 21px 20px; }
+.terminal .field { margin: 0; }
+.terminal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.terminal-actions .btn { justify-content: center; height: 44px; font-size: 14px; }
+.badge-card { display: grid; justify-items: center; gap: 6px; padding: 8px 0 4px; text-align: center; }
+.badge-card img { border: 1px solid #e4e7ec; border-radius: 10px; padding: 8px; background: #fff; }
+.badge-card span { color: #667085; font-size: 12px; }
+.table-scroll { overflow-x: auto; }
+.entry-editor td { vertical-align: middle; }
+.entry-editor .inline-select { max-width: 220px; width: 100%; }
+.entry-editor .inline-select.narrow { max-width: 80px; text-align: right; }

@@ -17,6 +17,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-06 : achats (DA, approbation par un tiers, comparatif fournisseurs, commandes, receptions partielles idempotentes, engagement projet).
 - INC-07 : stock (grand livre append-only et soldes non negatifs garantis en base, cout moyen pondere, sorties chantier, transferts, inventaires) ; devise de reference par entreprise.
 - INC-08 : finance (facturation client et situations, 3-way match, validation par un tiers, paiements anti-doublon, tresorerie, facture PDF).
+- INC-09 : RH (employes, badges, pointages append-only, feuilles de temps validees par un tiers et imputees aux projets, conges, preparation de paie sans retenue legale presumee).
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
 ## Bloque (externe)
@@ -26,4 +27,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-09 — Ressources humaines (employes, pointages, feuilles de temps validees par un responsable, conges ; paie sans regle fiscale presumee), puis INC-10 Chantier + GED et INC-11 QHSE.
+INC-10 — Chantier (journal de chantier, avancement physique, reserves) + GED (documents versionnes, revisions, visas), puis INC-11 QHSE (incidents, non-conformites, actions correctives, inspections).

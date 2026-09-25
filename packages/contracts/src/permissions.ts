@@ -95,6 +95,19 @@ export const FINANCE_PERMISSIONS = {
   SETTINGS_MANAGE: "finance.settings.manage",
 } as const;
 
+/** INC-09 — RH. Donnees salariales et paie derriere une permission distincte. */
+export const HR_PERMISSIONS = {
+  EMPLOYEE_READ: "hr.employee.read",
+  EMPLOYEE_MANAGE: "hr.employee.manage",
+  ATTENDANCE_CREATE: "hr.attendance.create",
+  TIMESHEET_MANAGE: "hr.timesheet.manage",
+  TIMESHEET_VALIDATE: "hr.timesheet.validate",
+  LEAVE_REQUEST: "hr.leave.request",
+  LEAVE_APPROVE: "hr.leave.approve",
+  PAYROLL_READ: "hr.payroll.read",
+  PAYROLL_MANAGE: "hr.payroll.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -114,6 +127,7 @@ export const ALL_PERMISSIONS = {
   ...PROCUREMENT_PERMISSIONS,
   ...INVENTORY_PERMISSIONS,
   ...FINANCE_PERMISSIONS,
+  ...HR_PERMISSIONS,
   ...DASHBOARD_PERMISSIONS,
 } as const;
 

@@ -75,6 +75,23 @@ const LABELS: Record<string, string> = {
   "finance.payable.rejected": "Facture fournisseur rejetée",
   "finance.payment.received": "Encaissement client",
   "finance.payment.sent": "Paiement fournisseur",
+  "hr.department.created": "Département créé",
+  "hr.employee.created": "Employé enregistré",
+  "hr.employee.updated": "Fiche employé modifiée",
+  "hr.skill.recorded": "Compétence / habilitation enregistrée",
+  "hr.attendance.recorded": "Pointage enregistré",
+  "hr.timesheet.created": "Feuille de temps ouverte",
+  "hr.timesheet.edited": "Feuille de temps saisie",
+  "hr.timesheet.submitted": "Feuille de temps soumise",
+  "hr.timesheet.validated": "Feuille de temps validée",
+  "hr.timesheet.rejected": "Feuille de temps rejetée",
+  "hr.leave.requested": "Congé demandé",
+  "hr.leave.approved": "Congé approuvé",
+  "hr.leave.rejected": "Congé refusé",
+  "hr.leave.cancelled": "Congé annulé",
+  "hr.payroll.prepared": "Paie préparée",
+  "hr.payroll.adjusted": "Élément variable de paie saisi",
+  "hr.payroll.closed": "Paie clôturée",
 };
 
 export function describeAudit(action: string): string {

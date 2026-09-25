@@ -12,6 +12,7 @@ import {
   Landmark,
   ShieldCheck,
   UserCog,
+  IdCard,
   UsersRound,
 } from "lucide-react";
 
@@ -65,6 +66,12 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Finance",
     items: [
       { href: "/finance", label: "Finance & trésorerie", icon: Landmark, permission: "finance.invoice.read", keywords: "factures paiements banques encaissements creances dettes" },
+    ],
+  },
+  {
+    label: "Ressources humaines",
+    items: [
+      { href: "/hr", label: "RH & temps", icon: IdCard, permission: "hr.employee.read", keywords: "employes pointage presence feuilles de temps conges paie badge" },
     ],
   },
   {
