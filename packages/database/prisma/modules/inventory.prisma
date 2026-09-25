@@ -19,6 +19,8 @@ enum StockMovementType {
   TRANSFER_IN
   ADJUSTMENT_IN
   ADJUSTMENT_OUT
+  /// Sortie de pieces pour un ordre de travail de maintenance (GMAO).
+  MAINTENANCE_ISSUE
 }
 
 enum WarehouseKind {

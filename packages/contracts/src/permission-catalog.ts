@@ -91,6 +91,9 @@ const RESOURCE_LABELS: Record<string, string> = {
   calculation: "les notes de calcul",
   model: "les maquettes BIM",
   clash: "les conflits de synthèse",
+  asset: "les équipements exploités",
+  ticket: "les demandes d'intervention",
+  workorder: "les ordres de travail",
 };
 
 const ACTION_LABELS: Record<string, string> = {

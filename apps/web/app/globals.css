@@ -773,3 +773,17 @@ a.btn { text-decoration: none; }
 .clash-elements small { color: #667085; }
 .clash-comment { color: #344054; }
 .clash-comment small { color: #98a2b3; margin-left: 6px; }
+
+/* INC-15 — GMAO */
+.row-actions { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.reliability-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.reliability-grid > div { border: 1px solid var(--line, #e4e7ec); border-radius: 10px; padding: 10px 12px; }
+.reliability-grid dt { font-size: 12px; color: #667085; }
+.reliability-grid dd { margin: 4px 0 0; font-size: 20px; font-weight: 700; }
+.formula-note { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #475467; background: #f8fafc; border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; }
+.cost-lines { display: grid; gap: 6px; }
+.evidence-list { list-style: none; margin: 0; padding: 14px 21px 18px; display: grid; gap: 8px; }
+.evidence-list li { display: flex; align-items: center; gap: 6px; }
+.prose-block { margin: 0; padding: 14px 21px; white-space: pre-wrap; line-height: 1.55; color: #344054; font-size: 13px; }
+.subhead { margin: 4px 21px 0; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #667085; }
+.detail-list dd small { display: block; margin-top: 3px; color: #667085; font-weight: 400; }

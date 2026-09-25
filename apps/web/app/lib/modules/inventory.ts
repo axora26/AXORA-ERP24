@@ -45,4 +45,5 @@ export const MOVEMENT_LABEL: Record<string, string> = {
   TRANSFER_IN: "Transfert entrant",
   ADJUSTMENT_IN: "Ajustement +",
   ADJUSTMENT_OUT: "Ajustement −",
+  MAINTENANCE_ISSUE: "Sortie maintenance (OT)",
 };

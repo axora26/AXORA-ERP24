@@ -163,6 +163,14 @@ export const BIM_PERMISSIONS = {
   CLASH_MANAGE: "bim.clash.manage",
 } as const;
 
+/** INC-15 — Actifs / GMAO : passeports, preventif, tickets, OT, MTBF/MTTR reels. */
+export const ASSETS_PERMISSIONS = {
+  ASSET_READ: "assets.asset.read",
+  ASSET_MANAGE: "assets.asset.manage",
+  TICKET_CREATE: "assets.ticket.create",
+  WORKORDER_MANAGE: "assets.workorder.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -190,6 +198,7 @@ export const PERMISSION_GROUPS = [
   MEP_PERMISSIONS,
   COMMISSIONING_PERMISSIONS,
   BIM_PERMISSIONS,
+  ASSETS_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

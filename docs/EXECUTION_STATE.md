@@ -23,6 +23,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-13 : MEP (systemes, equipements de reference, noyau de calcul transparent et versionne, notes de calcul revisionnees validees par un autre ingenieur).
 - INC-12 : mise en service (sequence precommissioning -> essai -> anomalie -> correction -> retest -> reception -> remise DOE, garantie en base).
 - INC-14 : BIM/IFC (lecteur IFC teste sur fichiers reels buildingSMART IFC2X3/IFC4/IFC4X3, versions verifiees par empreinte, visa, comparaison, liaison MEP, conflits) ; connecteur Revit natif honnetement NOT_TESTED.
+- INC-15 : Actifs/GMAO (passeports a origine tracee depuis la mise en service, preventif idempotent, tickets -> OT, temps RH et pieces du grand livre de stock, cloture gardee en base, MTBF/MTTR/disponibilite sur historique reel).
 - Correctif : le catalogue `ALL_PERMISSIONS` est desormais indexe par la cle de permission (une fusion d'objets ecrasait les constantes homonymes READ/MANAGE de modules differents) ; test de non-regression.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
@@ -33,4 +34,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-15 Actifs/GMAO (MTBF/MTTR sur historique reel), INC-16 Smart Building (connecteurs protocolaires NOT_TESTED), INC-17 Energie.
+INC-16 Smart Building (connecteurs protocolaires NOT_TESTED), INC-17 Energie.

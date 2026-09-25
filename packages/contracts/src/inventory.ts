@@ -7,7 +7,8 @@ export type StockMovementType =
   | "TRANSFER_OUT"
   | "TRANSFER_IN"
   | "ADJUSTMENT_IN"
-  | "ADJUSTMENT_OUT";
+  | "ADJUSTMENT_OUT"
+  | "MAINTENANCE_ISSUE";
 
 export interface InventoryItemView {
   id: string;

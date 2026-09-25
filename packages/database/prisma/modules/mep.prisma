@@ -75,6 +75,7 @@ model MepEquipment {
 
   system        MepSystem              @relation(fields: [systemId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
   commissioning CommissioningActivity?
+  asset         Asset?
 
   @@unique([projectId, tag])
   @@unique([id, organizationId, companyId])

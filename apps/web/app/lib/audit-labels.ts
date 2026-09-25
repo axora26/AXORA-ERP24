@@ -147,6 +147,18 @@ const LABELS: Record<string, string> = {
   "bim.clash.proposed": "Résolution de conflit proposée",
   "bim.clash.resolved": "Conflit de synthèse résolu",
   "bim.clash.reopened": "Résolution de conflit refusée",
+  "assets.asset.created": "Passeport d'actif créé",
+  "assets.asset.updated": "Actif modifié",
+  "assets.plan.created": "Plan préventif créé",
+  "assets.plan.generated": "OT préventifs générés",
+  "assets.ticket.created": "Ticket de maintenance signalé",
+  "assets.ticket.converted": "Ticket converti en OT correctif",
+  "assets.ticket.rejected": "Ticket de maintenance rejeté",
+  "assets.workorder.started": "Ordre de travail démarré",
+  "assets.workorder.labor": "Temps d'intervention saisi",
+  "assets.workorder.part": "Pièce consommée sur OT",
+  "assets.workorder.completed": "Ordre de travail clôturé",
+  "assets.workorder.cancelled": "Ordre de travail annulé",
 };
 
 export function describeAudit(action: string): string {

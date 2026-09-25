@@ -7,6 +7,7 @@ import { financeSection } from "./finance.js";
 import { hrSection } from "./hr.js";
 import { documentsSection, fieldSection } from "./field.js";
 import { qhseSection } from "./qhse.js";
+import { assetsSection } from "./assets.js";
 
 /** Ordre d'affichage des indicateurs de la vue d'ensemble. */
-export const DASHBOARD_SECTIONS: DashboardSection[] = [crmSection, salesSection, projectsSection, procurementSection, inventorySection, financeSection, hrSection, fieldSection, qhseSection, documentsSection];
+export const DASHBOARD_SECTIONS: DashboardSection[] = [crmSection, salesSection, projectsSection, procurementSection, inventorySection, financeSection, hrSection, fieldSection, qhseSection, assetsSection, documentsSection];
