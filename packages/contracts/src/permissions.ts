@@ -188,6 +188,15 @@ export const ENERGY_PERMISSIONS = {
   ALERT_ACK: "energy.alert.acknowledge",
 } as const;
 
+/** INC-18 — Parc. Affectation, carburant et incidents sont des permissions distinctes de la gestion du parc. */
+export const FLEET_PERMISSIONS = {
+  READ: "fleet.vehicle.read",
+  MANAGE: "fleet.vehicle.manage",
+  ASSIGN: "fleet.assignment.manage",
+  FUEL: "fleet.fuel.record",
+  INCIDENT: "fleet.incident.report",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -218,6 +227,7 @@ export const PERMISSION_GROUPS = [
   ASSETS_PERMISSIONS,
   SMART_PERMISSIONS,
   ENERGY_PERMISSIONS,
+  FLEET_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

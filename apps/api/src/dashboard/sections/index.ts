@@ -10,6 +10,7 @@ import { qhseSection } from "./qhse.js";
 import { assetsSection } from "./assets.js";
 import { smartSection } from "./smart.js";
 import { energySection } from "./energy.js";
+import { fleetSection } from "./fleet.js";
 
 /** Ordre d'affichage des indicateurs de la vue d'ensemble. */
-export const DASHBOARD_SECTIONS: DashboardSection[] = [crmSection, salesSection, projectsSection, procurementSection, inventorySection, financeSection, hrSection, fieldSection, qhseSection, assetsSection, smartSection, energySection, documentsSection];
+export const DASHBOARD_SECTIONS: DashboardSection[] = [crmSection, salesSection, projectsSection, procurementSection, inventorySection, financeSection, hrSection, fieldSection, qhseSection, assetsSection, smartSection, energySection, fleetSection, documentsSection];

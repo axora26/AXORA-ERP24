@@ -83,6 +83,7 @@ model Asset {
   workOrders   WorkOrder[]
   smartPoints  SmartPoint[]
   energyMeters EnergyMeter[]
+  fleetVehicle FleetVehicle?
 
   @@unique([companyId, code])
   @@unique([equipmentId, organizationId, companyId])

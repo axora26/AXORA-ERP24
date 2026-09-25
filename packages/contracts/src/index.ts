@@ -30,3 +30,4 @@ export * from "./bim.js";
 export * from "./assets.js";
 export * from "./smart.js";
 export * from "./energy.js";
+export * from "./fleet.js";

@@ -21,6 +21,7 @@ import {
   Wrench,
   RadioTower,
   Zap,
+  Truck,
   Box,
   UsersRound,
 } from "lucide-react";
@@ -81,6 +82,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/assets", label: "Actifs & GMAO", icon: Wrench, permission: "assets.asset.read", keywords: "maintenance preventif correctif ordres de travail tickets mtbf mttr" },
       { href: "/smart", label: "Smart Building", icon: RadioTower, permission: "smart.building.read", keywords: "gtb bms bacnet modbus knx mqtt iot telemetrie alarmes consignes capteurs" },
       { href: "/energy", label: "Énergie", icon: Zap, permission: "energy.meter.read", keywords: "compteurs consommation photovoltaique groupe electrogene batterie autonomie tarifs kwh" },
+      { href: "/fleet", label: "Parc véhicules & engins", icon: Truck, permission: "fleet.vehicle.read", keywords: "flotte vehicules engins chauffeurs affectation carburant assurance kilometrage" },
     ],
   },
   {

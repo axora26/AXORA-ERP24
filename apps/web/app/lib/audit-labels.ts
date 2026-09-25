@@ -182,6 +182,15 @@ const LABELS: Record<string, string> = {
   "energy.rule.updated": "Règle d'alerte énergie modifiée",
   "energy.alert.acknowledged": "Alerte énergie acquittée",
   "energy.storage.created": "Stockage d'énergie déclaré",
+  "fleet.vehicle.created": "Véhicule / engin mis au parc",
+  "fleet.vehicle.status": "État de véhicule modifié",
+  "fleet.reading.recorded": "Relevé compteur enregistré",
+  "fleet.document.recorded": "Pièce réglementaire enregistrée",
+  "fleet.assignment.opened": "Véhicule affecté",
+  "fleet.assignment.closed": "Véhicule restitué",
+  "fleet.fuel.recorded": "Plein de carburant enregistré",
+  "fleet.incident.reported": "Incident de parc déclaré",
+  "fleet.incident.closed": "Incident de parc clos",
 };
 
 export function describeAudit(action: string): string {

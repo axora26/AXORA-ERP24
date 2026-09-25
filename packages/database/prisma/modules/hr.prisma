@@ -108,10 +108,11 @@ model Employee {
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
 
-  department Department?     @relation(fields: [departmentId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
-  skills     EmployeeSkill[]
-  timesheets Timesheet[]
-  leaves     LeaveRequest[]
+  department       Department?       @relation(fields: [departmentId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  fleetAssignments FleetAssignment[]
+  skills           EmployeeSkill[]
+  timesheets       Timesheet[]
+  leaves           LeaveRequest[]
 
   @@unique([companyId, code])
   @@unique([companyId, badgeCode])

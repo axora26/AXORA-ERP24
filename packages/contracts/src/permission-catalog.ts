@@ -132,6 +132,11 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "energy.meter.manage": "Configurer compteurs, tarifs, stockages et alertes",
   "energy.interval.import": "Importer des relevés d'intervalles",
   "energy.alert.acknowledge": "Acquitter les alertes énergie",
+  "fleet.vehicle.read": "Consulter le parc (véhicules, engins, coûts)",
+  "fleet.vehicle.manage": "Gérer le parc (véhicules, documents, relevés)",
+  "fleet.assignment.manage": "Affecter véhicules et engins aux chauffeurs",
+  "fleet.fuel.record": "Enregistrer les pleins de carburant",
+  "fleet.incident.report": "Déclarer et clôturer les incidents de parc",
 };
 
 export function registerResourceLabels(labels: Record<string, string>): void {
