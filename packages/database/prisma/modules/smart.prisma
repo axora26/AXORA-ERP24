@@ -1,0 +1,271 @@
+// ---------------------------------------------------------------------------
+// INC-16 — Smart Building / GTB / BMS / IoT (docs/foundation/02-domain-model.md BC-16)
+//
+// INVARIANTS :
+// 1. Cinq niveaux jamais fusionnes : protocole supporte / connecteur
+//    developpe / reseau atteint / lecture reelle testee / ecriture reelle
+//    testee. Les deux derniers ne sont TESTED que par une attestation
+//    humaine d'un essai contre un equipement physique ; une passerelle
+//    declaree simulateur ne peut jamais en produire (CHECK).
+// 2. Les lectures sont une serie temporelle append-only : un meme instant
+//    rejoue avec la meme valeur est un doublon ignore ; une valeur
+//    differente pour le meme instant est un conflit refuse, jamais ecrase.
+// 3. Une alarme fige le point, la regle, le seuil et la lecture qui l'ont
+//    declenchee.
+// 4. Une consigne n'est jamais declaree appliquee sur la seule foi de la
+//    passerelle : seule une relecture du point la confirme.
+// ---------------------------------------------------------------------------
+
+enum SmartProtocol {
+  HTTP_API
+  MQTT
+  BACNET_IP
+  MODBUS_TCP
+  KNX_IP
+}
+
+enum SmartPointKind {
+  ANALOG
+  BINARY
+  MULTISTATE
+}
+
+enum SmartReadingQuality {
+  GOOD
+  UNCERTAIN
+  BAD
+}
+
+enum SmartAlarmCondition {
+  ABOVE
+  BELOW
+  EQUALS
+}
+
+enum SmartAlarmSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum SmartAlarmStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  CLEARED
+}
+
+enum SmartSetpointStatus {
+  REQUESTED
+  DISPATCHED
+  ACKNOWLEDGED
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
+enum SmartTestKind {
+  READ
+  WRITE
+}
+
+enum SmartTestOutcome {
+  PASS
+  FAIL
+}
+
+model SmartBuilding {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String
+  name            String
+  address         String?
+  projectId       String?
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  gateways SmartGateway[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@map("smart_buildings")
+}
+
+model SmartGateway {
+  id              String        @id @default(cuid())
+  organizationId  String
+  companyId       String
+  buildingId      String
+  code            String
+  name            String
+  protocol        SmartProtocol
+  /// Adresse declaree de l'equipement terrain (information, jamais une preuve d'accessibilite).
+  endpoint        String?
+  /// Passerelle de simulation (demo, recette) : aucune preuve physique possible.
+  simulated       Boolean       @default(false)
+  tokenHash       String        @unique
+  tokenPrefix     String
+  active          Boolean       @default(true)
+  lastSeenAt      DateTime?
+  lastSeenIp      String?
+  createdByUserId String
+  createdAt       DateTime      @default(now())
+
+  building SmartBuilding      @relation(fields: [buildingId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  points   SmartPoint[]
+  tests    SmartGatewayTest[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@map("smart_gateways")
+}
+
+model SmartPoint {
+  id              String         @id @default(cuid())
+  organizationId  String
+  companyId       String
+  gatewayId       String
+  /// Reference du point cote passerelle (objet BACnet, registre Modbus, topic MQTT, adresse de groupe KNX...).
+  externalRef     String
+  name            String
+  kind            SmartPointKind
+  unit            String?
+  assetId         String?
+  writable        Boolean        @default(false)
+  /// Ecart admis entre consigne et relecture pour confirmer une consigne.
+  writeTolerance  Decimal?       @db.Decimal(18, 6)
+  minPlausible    Decimal?       @db.Decimal(18, 6)
+  maxPlausible    Decimal?       @db.Decimal(18, 6)
+  lastValue       Decimal?       @db.Decimal(18, 6)
+  lastReadingAt   DateTime?
+  active          Boolean        @default(true)
+  createdByUserId String
+  createdAt       DateTime       @default(now())
+
+  gateway   SmartGateway     @relation(fields: [gatewayId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  asset     Asset?           @relation(fields: [assetId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  readings  SmartReading[]
+  rules     SmartAlarmRule[]
+  setpoints SmartSetpoint[]
+
+  @@unique([gatewayId, externalRef])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, active])
+  @@map("smart_points")
+}
+
+model SmartReading {
+  id             String              @id @default(cuid())
+  organizationId String
+  companyId      String
+  pointId        String
+  ts             DateTime
+  value          Decimal             @db.Decimal(18, 6)
+  quality        SmartReadingQuality @default(GOOD)
+  receivedAt     DateTime            @default(now())
+
+  point SmartPoint @relation(fields: [pointId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([pointId, ts])
+  @@index([organizationId, companyId, ts])
+  @@map("smart_readings")
+}
+
+model SmartAlarmRule {
+  id              String              @id @default(cuid())
+  organizationId  String
+  companyId       String
+  pointId         String
+  condition       SmartAlarmCondition
+  threshold       Decimal             @db.Decimal(18, 6)
+  severity        SmartAlarmSeverity  @default(WARNING)
+  message         String
+  active          Boolean             @default(true)
+  createdByUserId String
+  createdAt       DateTime            @default(now())
+
+  point  SmartPoint   @relation(fields: [pointId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  alarms SmartAlarm[]
+
+  @@unique([id, organizationId, companyId])
+  @@map("smart_alarm_rules")
+}
+
+model SmartAlarm {
+  id                   String              @id @default(cuid())
+  organizationId       String
+  companyId            String
+  ruleId               String
+  pointId              String
+  /// Copie figee de la regle au declenchement (la regle peut ensuite etre desactivee).
+  condition            SmartAlarmCondition
+  threshold            Decimal             @db.Decimal(18, 6)
+  severity             SmartAlarmSeverity
+  message              String
+  triggerValue         Decimal             @db.Decimal(18, 6)
+  triggerReadingAt     DateTime
+  raisedAt             DateTime            @default(now())
+  status               SmartAlarmStatus    @default(ACTIVE)
+  acknowledgedByUserId String?
+  acknowledgedAt       DateTime?
+  acknowledgeNote      String?
+  clearedAt            DateTime?
+  clearValue           Decimal?            @db.Decimal(18, 6)
+
+  rule SmartAlarmRule @relation(fields: [ruleId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([organizationId, companyId, status])
+  @@map("smart_alarms")
+}
+
+model SmartSetpoint {
+  id                String              @id @default(cuid())
+  organizationId    String
+  companyId         String
+  pointId           String
+  requestedValue    Decimal             @db.Decimal(18, 6)
+  reason            String
+  requestedByUserId String
+  requestedAt       DateTime            @default(now())
+  status            SmartSetpointStatus @default(REQUESTED)
+  dispatchedAt      DateTime?
+  acknowledgedAt    DateTime?
+  gatewayNote       String?
+  confirmedAt       DateTime?
+  confirmReadingAt  DateTime?
+  confirmValue      Decimal?            @db.Decimal(18, 6)
+  cancelledByUserId String?
+
+  point SmartPoint @relation(fields: [pointId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@map("smart_setpoints")
+}
+
+/**
+ * Attestation d'un essai reel (point-a-point) contre l'equipement physique. Append-only.
+ */
+model SmartGatewayTest {
+  id                String           @id @default(cuid())
+  organizationId    String
+  companyId         String
+  gatewayId         String
+  pointId           String
+  kind              SmartTestKind
+  /// Lecture : valeur de reference mesuree independamment (instrument etalonne).
+  referenceValue    Decimal?         @db.Decimal(18, 6)
+  tolerance         Decimal?         @db.Decimal(18, 6)
+  observedValue     Decimal          @db.Decimal(18, 6)
+  observedAt        DateTime
+  setpointId        String?
+  outcome           SmartTestOutcome
+  evidence          String
+  performedByUserId String
+  performedAt       DateTime         @default(now())
+
+  gateway SmartGateway @relation(fields: [gatewayId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([gatewayId, kind])
+  @@map("smart_gateway_tests")
+}

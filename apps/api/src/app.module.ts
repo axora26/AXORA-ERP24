@@ -21,8 +21,9 @@ import { MepModule } from "./mep/mep.module.js";
 import { CommissioningModule } from "./commissioning/commissioning.module.js";
 import { BimModule } from "./bim/bim.module.js";
 import { AssetsModule } from "./assets/assets.module.js";
+import { SmartModule } from "./smart/smart.module.js";
 
 @Module({
-  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule, BimModule, AssetsModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule, BimModule, AssetsModule, SmartModule],
 })
 export class AppModule {}

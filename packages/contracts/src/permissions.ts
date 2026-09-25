@@ -171,6 +171,15 @@ export const ASSETS_PERMISSIONS = {
   WORKORDER_MANAGE: "assets.workorder.manage",
 } as const;
 
+/** INC-16 — Smart Building. Les essais reels et les consignes sont des permissions distinctes. */
+export const SMART_PERMISSIONS = {
+  READ: "smart.building.read",
+  MANAGE: "smart.building.manage",
+  ALARM_ACK: "smart.alarm.acknowledge",
+  SETPOINT_REQUEST: "smart.setpoint.request",
+  GATEWAY_TEST: "smart.gateway.test",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -199,6 +208,7 @@ export const PERMISSION_GROUPS = [
   COMMISSIONING_PERMISSIONS,
   BIM_PERMISSIONS,
   ASSETS_PERMISSIONS,
+  SMART_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

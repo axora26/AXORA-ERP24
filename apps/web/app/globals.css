@@ -787,3 +787,29 @@ a.btn { text-decoration: none; }
 .prose-block { margin: 0; padding: 14px 21px; white-space: pre-wrap; line-height: 1.55; color: #344054; font-size: 13px; }
 .subhead { margin: 4px 21px 0; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #667085; }
 .detail-list dd small { display: block; margin-top: 3px; color: #667085; font-weight: 400; }
+
+/* INC-16 — Smart Building */
+.trend-chart { width: 100%; height: 240px; display: block; padding: 8px 12px 4px; }
+.trend-chart text { font-size: 10px; fill: #667085; }
+.trend-chart .grid { stroke: #eef1f5; stroke-width: 1; }
+.trend-chart .line { fill: none; stroke: #2563eb; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.trend-chart .band { fill: rgba(37, 99, 235, .12); stroke: none; }
+.trend-chart .dot { fill: #2563eb; }
+.trend-chart .threshold { stroke-dasharray: 5 4; stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.trend-chart .threshold.red { stroke: #d92d20; }
+.trend-chart .threshold.amber { stroke: #dc6803; }
+.trend-chart .threshold.blue { stroke: #1849a9; }
+.trend-chart .threshold-label.red { fill: #b42318; }
+.trend-chart .threshold-label.amber { fill: #b54708; }
+.trend-empty { padding: 42px 21px; text-align: center; color: #98a2b3; font-size: 13px; }
+.range-switch { display: inline-flex; gap: 4px; }
+.range-switch button { border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 4px 9px; font-size: 12px; cursor: pointer; }
+.range-switch button[aria-pressed="true"] { background: #1849a9; border-color: #1849a9; color: #fff; }
+.live-value { display: flex; align-items: baseline; gap: 8px; padding: 16px 21px 4px; }
+.live-value strong { font-size: 34px; letter-spacing: -.02em; }
+.live-value small { color: #667085; }
+.token-box { display: grid; gap: 8px; }
+.token-box code { display: block; padding: 10px 12px; border-radius: 8px; background: #101828; color: #d1fadf; font-size: 12px; word-break: break-all; }
+.code-sample { margin: 0 21px 18px; padding: 12px 14px; border-radius: 8px; background: #101828; color: #e4e7ec; font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-x: auto; }
+.connector-states li.simulated { background: #fffaeb; border-radius: 8px; padding: 10px; }
+.panel.compact .data-table, .panel.compact table { min-width: 0; }

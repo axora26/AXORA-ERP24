@@ -159,6 +159,20 @@ const LABELS: Record<string, string> = {
   "assets.workorder.part": "Pièce consommée sur OT",
   "assets.workorder.completed": "Ordre de travail clôturé",
   "assets.workorder.cancelled": "Ordre de travail annulé",
+  "smart.building.created": "Bâtiment GTB créé",
+  "smart.gateway.created": "Passerelle GTB créée (jeton émis)",
+  "smart.gateway.updated": "Passerelle GTB modifiée",
+  "smart.gateway.token_rotated": "Jeton de passerelle renouvelé",
+  "smart.point.created": "Point de télémétrie créé",
+  "smart.point.updated": "Point de télémétrie modifié",
+  "smart.rule.created": "Règle d'alarme créée",
+  "smart.rule.updated": "Règle d'alarme modifiée",
+  "smart.alarm.acknowledged": "Alarme technique acquittée",
+  "smart.setpoint.requested": "Consigne demandée",
+  "smart.setpoint.cancelled": "Consigne annulée",
+  "smart.setpoint.acknowledged": "Consigne acquittée par la passerelle",
+  "smart.setpoint.failed": "Consigne refusée par la passerelle",
+  "smart.test.recorded": "Essai réel de communication attesté",
 };
 
 export function describeAudit(action: string): string {

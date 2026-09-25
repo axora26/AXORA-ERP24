@@ -187,6 +187,11 @@ export interface Column<T> {
   width?: string;
 }
 
+function fromControl(target: EventTarget, row: Element): boolean {
+  const control = target instanceof Element ? target.closest("button, a, input, select, textarea, label") : null;
+  return control !== null && row.contains(control);
+}
+
 export function DataTable<T extends { id: string }>({
   columns,
   rows,
@@ -221,11 +226,19 @@ export function DataTable<T extends { id: string }>({
             <tr
               key={row.id}
               className={`${onRowClick ? "clickable" : ""} ${selectedId === row.id ? "selected" : ""}`}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onClick={
+                onRowClick
+                  ? (event) => {
+                      // Un bouton ou un lien dans la ligne garde sa propre action (pas de navigation parasite).
+                      if (fromControl(event.target, event.currentTarget)) return;
+                      onRowClick(row);
+                    }
+                  : undefined
+              }
               onKeyDown={
                 onRowClick
                   ? (event) => {
-                      if (event.key === "Enter") onRowClick(row);
+                      if (event.key === "Enter" && !fromControl(event.target, event.currentTarget)) onRowClick(row);
                     }
                   : undefined
               }

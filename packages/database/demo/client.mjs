@@ -42,3 +42,22 @@ export function createClient(baseUrl) {
     hasSession: () => cookie !== "",
   };
 }
+
+/** Client machine d'une passerelle GTB (jeton porteur) : meme API que les passerelles de terrain. */
+export function createGatewayClient(baseUrl, token) {
+  async function call(method, path, body) {
+    const response = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(`${method} ${path} -> ${response.status} ${data?.message ?? ""}`);
+    return data;
+  }
+  return {
+    readings: (readings) => call("POST", "/smart/gateway/readings", { readings }),
+    setpoints: () => call("GET", "/smart/gateway/setpoints"),
+    ack: (id, body) => call("POST", `/smart/gateway/setpoints/${id}/ack`, body),
+  };
+}

@@ -91,3 +91,16 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 **Limite connue** : sans service worker (INC-24), l'application doit etre ouverte avant la coupure reseau ; la file survit a la fermeture de l'onglet.
 **Reversible** : oui (ajout d'un pilote S3 sans changement de contrat HTTP).
 
+
+## ADR-0010 — Passerelles GTB : jeton machine, ingestion unique, preuves physiques attestees
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-16 ouvre la plateforme a des emetteurs non humains (passerelles GTB/BMS/IoT) et exige de ne jamais confondre flux de donnees, simulateur et preuve de communication physique (BC-16, invariants 1 et 2).
+**Decision** :
+- Chaque passerelle recoit un jeton porteur opaque (`axgw_…`, 192 bits aleatoires) montre une seule fois ; seule son empreinte SHA-256 est stockee, le jeton est revocable par rotation ou desactivation. Les routes `/smart/gateway/*` n'acceptent que ce jeton (aucune session, aucun cookie) et ne voient que les points de leur passerelle ; le perimetre entreprise est porte par la passerelle.
+- Toute telemetrie entre par `POST /smart/gateway/readings` (lots de 1 000 lectures maximum, valeurs en chaines decimales). Ingestion serialisee par passerelle (verrou) : meme point + meme instant + meme valeur = doublon ignore ; valeur differente = conflit rapporte, jamais ecrase. Lectures append-only (trigger) ; hors plage plausible conservees en qualite `BAD` et non interpretees ; une lecture tardive enrichit l'historique sans piloter l'etat courant.
+- Aucun pilote natif BACnet/Modbus/KNX/MQTT n'est livre : ces protocoles sont modelises et s'integrent via une passerelle de terrain qui pousse vers l'API (niveau « connecteur developpe » = `NO` pour eux, affiche tel quel).
+- Les niveaux « lecture reelle » et « ecriture reelle » ne passent a `YES` que par une attestation humaine append-only d'un essai point-a-point (lecture comparee a une mesure de reference, verdict calcule par le serveur ; ecriture = consigne confirmee par relecture + constat sur site). Une passerelle declaree simulateur ne peut jamais en recevoir (trigger) ni etre requalifiee en passerelle physique.
+- Une consigne n'est jamais declaree appliquee sur l'acquit de la passerelle : seule une relecture du point dans la tolerance la confirme (CHECK en base).
+**Reversible** : oui (ajout ulterieur de pilotes natifs sans changement du modele de preuve).

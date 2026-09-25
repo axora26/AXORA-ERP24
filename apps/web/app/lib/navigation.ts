@@ -19,6 +19,7 @@ import {
   Cpu,
   PlugZap,
   Wrench,
+  RadioTower,
   Box,
   UsersRound,
 } from "lucide-react";
@@ -77,6 +78,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Exploitation",
     items: [
       { href: "/assets", label: "Actifs & GMAO", icon: Wrench, permission: "assets.asset.read", keywords: "maintenance preventif correctif ordres de travail tickets mtbf mttr" },
+      { href: "/smart", label: "Smart Building", icon: RadioTower, permission: "smart.building.read", keywords: "gtb bms bacnet modbus knx mqtt iot telemetrie alarmes consignes capteurs" },
     ],
   },
   {

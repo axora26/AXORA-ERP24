@@ -23,6 +23,7 @@ const MODULE_LABELS: Record<string, string> = {
   mep: "MEP",
   bim: "BIM",
   assets: "Actifs & GMAO",
+  smart: "Smart Building (GTB)",
   building: "Smart Building",
   energy: "Énergie",
   fleet: "Parc",
@@ -122,6 +123,11 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "commissioning.activity.read": "Consulter les mises en service",
   "commissioning.activity.manage": "Conduire les essais de mise en service",
   "commissioning.activity.accept": "Réceptionner et remettre les installations",
+  "smart.building.read": "Consulter la GTB (points, tendances, alarmes)",
+  "smart.building.manage": "Configurer bâtiments, passerelles et points",
+  "smart.alarm.acknowledge": "Acquitter les alarmes techniques",
+  "smart.setpoint.request": "Demander des consignes (écriture)",
+  "smart.gateway.test": "Attester les essais réels de communication",
 };
 
 export function registerResourceLabels(labels: Record<string, string>): void {
