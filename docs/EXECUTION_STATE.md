@@ -36,6 +36,8 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-23 (partie 2) : API publique v1 (cles bornees par leur createur et re-verifiees a chaque requete, debit, quota, IP, journal, OpenAPI), webhook entrant signe et idempotent vers le CRM, registre des connecteurs a grille de verite (`NOT_TESTED` explicites). Correctif tests : defauts d'environnement de test prioritaires sur le `.env` de developpement.
 - Correctif : le catalogue `ALL_PERMISSIONS` est desormais indexe par la cle de permission (une fusion d'objets ecrasait les constantes homonymes READ/MANAGE de modules differents) ; test de non-regression.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
+- INC-24 : PWA installable (manifeste, icones `any`/`maskable`, service worker sans cache d'API, page hors ligne), chantier utilisable hors ligne avec purge a la deconnexion, messages d'erreur en francais pour tous les clients (catalogue + test de couverture), en-tetes de securite API et web, contrastes AA et ARIA des graphiques, responsive 390/768 px, audit des dependances sans vulnerabilite, performances mesurees (ADR-0015). Emballages natifs Windows/Android/iOS `BLOCKED` (identites de signature absentes).
+- Qualification finale : suite navigateur versionnee (`pnpm test:browser`, Playwright : 30 ecrans, axe-core, responsive, PWA hors ligne, securite ; job CI `browser-tests`), deux defauts d'accessibilite trouves par la suite et corriges, installation neuve reproductible prouvee sur une base distincte, preuves dans `docs/AXORA-ERP24_TEST_EVIDENCE.md`, rapport `docs/AXORA-ERP24_FINAL_DELIVERY_REPORT.md`.
 
 ## Bloque (externe)
 
@@ -44,4 +46,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-24 PWA, durcissement transverse et rapport de livraison.
+Les 25 increments du backlog sont implementes. Restent, hors du code : faire aboutir un run CI (attribution de runner / facturation GitHub) pour promouvoir les modules en `VERIFIED` ; fournir les identites de signature pour les emballages natifs ; connecter les systemes externes reels (SMTP, SMS, S3, banque, LLM, equipements GTB) pour tester les connecteurs `NOT_TESTED`. Le reste a faire fonctionnel par module est liste dans `docs/MODULE_STATUS.md`.

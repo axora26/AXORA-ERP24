@@ -159,3 +159,18 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 - Tests : les valeurs d'environnement propres aux tests sont fixees avant le chargement du `.env` de developpement (le planificateur d'automatisation active en developpement rendait un test dependant du timing).
 **Reversible** : oui (nouvelles routes et types d'evenements entrants sans changer le modele).
 
+
+## ADR-0015 — PWA, travail terrain hors ligne, messages d'erreur en francais, en-tetes de securite
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-24 demande une application installable et utilisable sur chantier sans reseau, sans jamais exposer de donnees d'un autre utilisateur ni presenter une donnee perimee comme fraiche, et un durcissement transverse (messages comprehensibles, en-tetes, dependances). Aucun certificat de signature, compte Apple ni SDK Android n'est disponible dans l'environnement de livraison.
+**Decision** :
+- **Plateforme livree = PWA** (manifeste complet, icones `any` + `maskable` au trace de la marque, service worker). Chromium ne signale aucune erreur d'installabilite. Les emballages natifs Windows (MSIX), Android (TWA/AAB) et iOS sont `BLOCKED` : ils exigent des identites de signature absentes ; rien n'est simule.
+- **Service worker** : cache statique versionne (`axora-static-v1`, ressources immuables en cache d'abord), coquilles de pages en reseau d'abord (`axora-pages-v1`) avec page `/offline` en dernier recours. **Aucune reponse de `/api/*` n'est jamais mise en cache** : les donnees metier restent soumises au RBAC du serveur. Le cache des pages est purge a la deconnexion (message `PURGE`) ; `/sw.js` est servi sans cache pour qu'une nouvelle version soit prise immediatement.
+- **Hors ligne terrain** : seule une erreur reseau fait reutiliser le dernier contexte de session connu (un 401 renvoie toujours vers la connexion). Le module terrain conserve sa derniere lecture **par utilisateur et par entreprise** dans le stockage local, affichee avec un bandeau « hors ligne » ; les saisies passent par la file de synchronisation existante (ADR-0009, conflits explicites). Tout est efface a la deconnexion.
+- **Messages d'erreur** : un filtre global traduit les messages des exceptions HTTP via un catalogue francais couvrant tous les gabarits anglais du code ; un test echoue si un message litteral n'est pas traduit. Les codes HTTP et la structure des reponses ne changent pas.
+- **En-tetes** : API — `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-site`, `Cache-Control: no-store` par defaut (sauf reponse qui fixe sa propre politique), pas de `X-Powered-By` (meme configuration dans le harnais e2e). Web — CSP en production (tout en meme origine, `frame-ancestors 'none'`, `object-src 'none'` ; `'unsafe-inline'` reste necessaire aux scripts d'hydratation de Next.js), `Permissions-Policy` (camera et position en meme origine seulement), pas de `X-Powered-By`.
+- **Dependances** : `pnpm.overrides` releve `multer`, `postcss` et `deepmerge-ts` vers des versions corrigees ; `pnpm audit --prod` ne signale aucune vulnerabilite connue.
+**Consequences** : une CSP sans `'unsafe-inline'` demandera des nonces par requete (rendu dynamique) ; toute nouvelle page utilisable hors ligne doit passer par le cache par utilisateur et la purge a la deconnexion ; tout nouveau message d'erreur doit entrer au catalogue (le test l'impose).
+**Reversible** : oui (version du cache incrementee pour invalider les clients ; catalogue et en-tetes centralises).
