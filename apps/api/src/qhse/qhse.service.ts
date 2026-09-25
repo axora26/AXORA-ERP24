@@ -14,6 +14,7 @@ import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
+import { AutomationService } from "../workflow/automation.service.js";
 import { dec } from "../common/decimal.js";
 import { fileView } from "../files/files.service.js";
 import {
@@ -55,6 +56,7 @@ export class QhseService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly numbering: NumberingService,
+    private readonly automation: AutomationService,
   ) {}
 
   // -------------------------------------------------------------------
@@ -333,6 +335,7 @@ export class QhseService {
         data: { ...scope, code, projectId, category, severity, title, description, detectedAt, incidentId, createdByUserId: actorUserId },
       });
       await writeAudit(tx, scope, actorUserId, "qhse.finding.created", "QhseFinding", finding.id, { code, severity, incidentId, description });
+      await this.automation.emit(tx, scope, { type: "qhse.finding.created", resourceId: finding.id, actorUserId, link: `/qhse/findings/${finding.id}`, payload: { code, title, severity, domain: category } });
       return finding.id;
     });
     return this.getFinding(scope, id);

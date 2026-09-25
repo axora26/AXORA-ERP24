@@ -214,6 +214,13 @@ export const PORTAL_PERMISSIONS = {
   GRANT: "portal.grant.manage",
 } as const;
 
+/** INC-21 — Workflow & automatisation. Decider une approbation exige aussi le role approbateur designe. */
+export const WORKFLOW_PERMISSIONS = {
+  READ: "workflow.definition.read",
+  MANAGE: "workflow.definition.manage",
+  APPROVE: "workflow.approval.decide",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -247,6 +254,7 @@ export const PERMISSION_GROUPS = [
   FLEET_PERMISSIONS,
   SUBCONTRACTING_PERMISSIONS,
   PORTAL_PERMISSIONS,
+  WORKFLOW_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

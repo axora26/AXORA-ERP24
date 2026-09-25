@@ -13,6 +13,8 @@ import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
+import { AutomationService } from "../workflow/automation.service.js";
+import { WorkflowGate } from "../workflow/workflow-gate.service.js";
 import { dec, money, sumDecimals } from "../common/decimal.js";
 import { assertBody, optionalDecimal, optionalId, optionalInt, optionalText, requiredDate, requiredDecimal, requiredEnum, requiredId, requiredInt, requiredText } from "../common/validation.js";
 
@@ -63,6 +65,8 @@ export class SubcontractingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly numbering: NumberingService,
+    private readonly automation: AutomationService,
+    private readonly gate: WorkflowGate,
   ) {}
 
   async summary(scope: CompanyScope): Promise<SubcontractingSummaryView> {
@@ -298,6 +302,14 @@ export class SubcontractingService {
         },
       });
       await writeAudit(tx, scope, actorUserId, "subcontracting.statement.prepared", "SubcontractStatement", statement.id, { code, percent: progress.percent.toFixed(4), gross: money(gross) });
+      const supplier = await tx.supplier.findFirst({ where: { id: found.supplierId, ...scope }, select: { name: true } });
+      await this.automation.emit(tx, scope, {
+        type: "subcontracting.statement.prepared",
+        resourceId: statement.id,
+        actorUserId,
+        link: `/subcontracting/packages/${packageId}`,
+        payload: { code, supplierName: supplier?.name ?? null, grossAmount: money(gross), netAmount: money(gross.minus(retention)) },
+      });
       return statement.id;
     });
     return (await this.listStatements(scope, { packageId })).find((statement) => statement.id === id)!;
@@ -319,6 +331,7 @@ export class SubcontractingService {
         const missing = profile ? blocking(subcontractorCompliance(profile.documents, new Date())) : ["fiche sous-traitant absente"];
         if (missing.length) throw new BadRequestException(`Vigilance obligation: ${missing.join(", ")}`);
         if (profile?.status !== "QUALIFIED") throw new BadRequestException(`The subcontractor is ${profile?.status}`);
+        await this.gate.assertCleared(tx, scope, "SubcontractStatement", statementId);
       }
       await tx.subcontractStatement.update({ where: { id: statementId }, data: { status: decision, decidedByUserId: actorUserId, decidedAt: new Date(), decisionNote: note } });
       if (decision === "APPROVED" && dec(statement.retentionAmount).greaterThan(0)) {

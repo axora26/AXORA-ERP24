@@ -15,6 +15,7 @@ import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
+import { AutomationService } from "../workflow/automation.service.js";
 import { dec, money } from "../common/decimal.js";
 import { assertBody, optionalDate, optionalDecimal, optionalEnum, optionalId, optionalInt, optionalText, requiredDate, requiredDecimal, requiredEnum, requiredId, requiredText } from "../common/validation.js";
 import { blockingDocuments, compliance, fullToFullConsumption, type DocumentKind } from "./fleet-math.js";
@@ -46,6 +47,7 @@ export class FleetService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly numbering: NumberingService,
+    private readonly automation: AutomationService,
   ) {}
 
   // -------------------------------------------------------------------
@@ -455,6 +457,7 @@ export class FleetService {
         });
         ticketId = ticket.id;
         await writeAudit(tx, scope, actorUserId, "assets.ticket.created", "MaintenanceTicket", ticket.id, { code: ticketCode, assetId: vehicle.assetId, fleet: vehicle.code });
+        await this.automation.emit(tx, scope, { type: "assets.ticket.created", resourceId: ticket.id, actorUserId, link: `/assets/${vehicle.assetId}`, payload: { code: ticketCode, title: ticket.title, priority: ticket.priority, assetCode: asset.code } });
       }
       const code = await this.numbering.next(tx, scope, "SIN");
       const incident = await tx.fleetIncident.create({
@@ -478,6 +481,7 @@ export class FleetService {
         await tx.asset.update({ where: { id: vehicle.assetId }, data: { status: "OUT_OF_SERVICE" } });
       }
       await writeAudit(tx, scope, actorUserId, "fleet.incident.reported", "FleetIncident", incident.id, { code, vehicle: vehicle.code, kind, driverEmployeeId: assignment?.employeeId ?? null, ticketId });
+      await this.automation.emit(tx, scope, { type: "fleet.incident.reported", resourceId: incident.id, actorUserId, link: `/fleet/vehicles/${vehicleId}`, payload: { code, kind, vehicleCode: vehicle.code, cost: incident.cost === null ? null : incident.cost.toString() } });
       return incident.id;
     });
     return (await this.listIncidents(scope, { status: "ALL" })).find((incident) => incident.id === id)!;

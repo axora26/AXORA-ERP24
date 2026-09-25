@@ -12,6 +12,7 @@ import { smartSection } from "./smart.js";
 import { energySection } from "./energy.js";
 import { fleetSection } from "./fleet.js";
 import { subcontractingSection } from "./subcontracting.js";
+import { workflowSection } from "./workflow.js";
 
 /** Ordre d'affichage des indicateurs de la vue d'ensemble. */
-export const DASHBOARD_SECTIONS: DashboardSection[] = [crmSection, salesSection, projectsSection, procurementSection, inventorySection, financeSection, hrSection, fieldSection, qhseSection, assetsSection, smartSection, energySection, fleetSection, subcontractingSection, documentsSection];
+export const DASHBOARD_SECTIONS: DashboardSection[] = [crmSection, salesSection, projectsSection, procurementSection, inventorySection, financeSection, hrSection, fieldSection, qhseSection, assetsSection, smartSection, energySection, fleetSection, subcontractingSection, workflowSection, documentsSection];

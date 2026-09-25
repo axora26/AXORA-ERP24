@@ -16,6 +16,7 @@ import { energyStep } from "./energy.mjs";
 import { fleetStep } from "./fleet.mjs";
 import { subcontractingStep } from "./subcontracting.mjs";
 import { portalStep } from "./portal.mjs";
+import { workflowStep } from "./workflow.mjs";
 
 /** Etapes executees dans l'ordre (les suivantes peuvent dependre du contexte des precedentes). */
-export const DEMO_STEPS = [adminStep, commercialStep, projectsStep, procurementStep, inventoryStep, financeStep, hrStep, documentsStep, fieldStep, qhseStep, mepStep, commissioningStep, bimStep, assetsStep, smartStep, energyStep, fleetStep, subcontractingStep, portalStep];
+export const DEMO_STEPS = [adminStep, commercialStep, projectsStep, procurementStep, inventoryStep, financeStep, hrStep, documentsStep, fieldStep, qhseStep, mepStep, commissioningStep, bimStep, assetsStep, smartStep, energyStep, fleetStep, subcontractingStep, portalStep, workflowStep];

@@ -213,6 +213,14 @@ const LABELS: Record<string, string> = {
   "portal.session.opened": "Connexion au portail",
   "portal.document.downloaded": "Document téléchargé depuis le portail",
   "portal.order.acknowledged": "Commande accusée par le fournisseur (portail)",
+  "workflow.definition.created": "Workflow créé (nouvelle version)",
+  "workflow.definition.activated": "Version de workflow activée",
+  "workflow.definition.deactivated": "Workflow désactivé",
+  "workflow.approval.requested": "Approbation de workflow requise",
+  "workflow.approval.approved": "Approbation de workflow accordée",
+  "workflow.approval.rejected": "Approbation de workflow refusée",
+  "workflow.approval.escalated": "Approbation de workflow escaladée (délai dépassé)",
+  "workflow.webhook.retried": "Webhook relancé manuellement",
 };
 
 export function describeAudit(action: string): string {

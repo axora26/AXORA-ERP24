@@ -3,6 +3,7 @@ import type { SmartIngestResult } from "@axora24/contracts";
 import { Prisma } from "@axora24/database";
 import { PrismaService } from "../core/prisma.service.js";
 import { writeAudit } from "../common/audit.js";
+import { AutomationService } from "../workflow/automation.service.js";
 import { assertBody, optionalText } from "../common/validation.js";
 import { conditionMet, parseReadingValue, withinTolerance } from "./alarm-engine.js";
 import type { GatewayContext } from "./gateway-token.guard.js";
@@ -30,7 +31,10 @@ interface Candidate {
  */
 @Injectable()
 export class SmartIngestionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly automation: AutomationService,
+  ) {}
 
   async ingest(gateway: GatewayContext, body: unknown, ip: string | undefined): Promise<SmartIngestResult> {
     const input = assertBody(body);
@@ -147,6 +151,11 @@ export class SmartIngestionService {
                   });
                   openByRule.set(rule.id, alarm.id);
                   result.alarmsRaised += 1;
+                  await this.automation.emit(
+                    tx,
+                    { organizationId: gateway.organizationId, companyId: gateway.companyId },
+                    { type: "smart.alarm.raised", resourceId: alarm.id, actorUserId: null, link: `/smart/points/${point.id}`, payload: { message: rule.message, severity: rule.severity, triggerValue: reading.value.toString(), pointName: point.name } },
+                  );
                 } else if (!met && current) {
                   await tx.smartAlarm.update({ where: { id: current }, data: { status: "CLEARED", clearedAt: reading.ts, clearValue: reading.value } });
                   openByRule.delete(rule.id);

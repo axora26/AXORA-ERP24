@@ -118,3 +118,18 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 - Suspension / revocation : un trigger revoque sessions et invitations ouvertes dans la meme transaction ; la revocation est definitive.
 - Actions externes auditees avec `actorUserId = null` et l'identifiant du principal en metadonnees.
 **Reversible** : oui (ajout de types de ressources exposables sans changer le modele de securite).
+
+## ADR-0012 — Moteur de workflow : outbox transactionnelle, execution idempotente, barriere fail-closed
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-21 doit automatiser des regles (notifications, approbations, integrations) sans qu'un module appelle la logique d'approbation d'un autre (BC-21) et sans jamais contourner les separations de devoirs existantes.
+**Decision** :
+- Les modules emettent des evenements types dans la MEME transaction que la mutation (table `automation_events`, immuable) ; le moteur les traite apres validation (declenchement differe + tache periodique, `AUTOMATION_AUTORUN`), ou a la demande (`POST /workflow/run`).
+- Une execution est unique par (definition, evenement) ; ses effets (notifications, approbation, livraison de webhook) sont ecrits dans la meme transaction que la ligne d'execution : un doublon concurrent echoue sur la contrainte d'unicite et n'a aucun effet. Le journal est append-only ; un echec technique est journalise dans une transaction separee.
+- Une definition est versionnee et immuable (trigger) ; seul son etat actif change. Elle ne s'applique qu'aux evenements posterieurs a sa creation.
+- Les actions sont limitees a NOTIFY, REQUIRE_APPROVAL et WEBHOOK : le moteur ne modifie jamais directement une donnee metier. Une approbation de workflow ne remplace pas l'approbation metier : elle la **conditionne** (`WorkflowGate`), de facon fail-closed (refus tant qu'un evenement susceptible de creer une approbation n'est pas evalue).
+- Webhooks : secret genere par la plateforme, montre une fois, chiffre (INTEGRATION_ENCRYPTION_KEY) ; signature HMAC-SHA256 de `horodatage.corps` recalculee a chaque tentative (le destinataire rejette un horodatage de plus de 5 minutes) ; corps et URL figes en base ; cibles HTTPS publiques uniquement (cibles locales admises seulement si `WEBHOOK_ALLOW_PRIVATE_TARGETS=true`, developpement) ; redirections non suivies ; 5 tentatives bornees puis relance manuelle auditee.
+**Consequences** : latence de quelques secondes entre la mutation et l'effet ; la barriere peut demander de reessayer pendant ce delai. La resolution DNS des cibles n'est pas epinglee (rebinding DNS non couvert) : documente comme limite.
+**Reversible** : oui (nouvelles actions ou evenements sans changer le modele).
+

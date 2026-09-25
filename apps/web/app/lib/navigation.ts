@@ -26,14 +26,15 @@ import {
   Globe2,
   Box,
   UsersRound,
+  Workflow,
 } from "lucide-react";
 
 export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Permission de lecture requise : l'entree est masquee sinon (le serveur refuse de toute facon). */
-  permission?: string;
+  /** Permission(s) de lecture requise(s), l'une suffit : l'entree est masquee sinon (le serveur refuse de toute facon). */
+  permission?: string | string[];
   /** Mots-cles additionnels pour la palette de commandes (Ctrl K). */
   keywords?: string;
 }
@@ -51,7 +52,10 @@ export interface NavGroup {
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Pilotage",
-    items: [{ href: "/", label: "Vue d'ensemble", icon: LayoutDashboard, keywords: "dashboard accueil command center" }],
+    items: [
+      { href: "/", label: "Vue d'ensemble", icon: LayoutDashboard, keywords: "dashboard accueil command center" },
+      { href: "/workflow", label: "Workflows & approbations", icon: Workflow, permission: ["workflow.definition.read", "workflow.approval.decide"], keywords: "automatisation regles approbation validation escalade notifications webhook" },
+    ],
   },
   {
     label: "Commercial",
@@ -123,7 +127,7 @@ export const NAV_GROUPS: NavGroup[] = [
 export function visibleGroups(can: (permission: string) => boolean): NavGroup[] {
   return NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.permission || can(item.permission)),
+    items: group.items.filter((item) => !item.permission || (Array.isArray(item.permission) ? item.permission.some(can) : can(item.permission))),
   })).filter((group) => group.items.length > 0);
 }
 

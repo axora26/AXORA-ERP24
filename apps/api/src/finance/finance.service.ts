@@ -18,6 +18,8 @@ import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
+import { AutomationService } from "../workflow/automation.service.js";
+import { WorkflowGate } from "../workflow/workflow-gate.service.js";
 import { dec, money, qty, sumDecimals } from "../common/decimal.js";
 import {
   assertBody,
@@ -61,6 +63,8 @@ export class FinanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly numbering: NumberingService,
+    private readonly automation: AutomationService,
+    private readonly gate: WorkflowGate,
   ) {}
 
   // ---------------------------------------------------------------------
@@ -421,6 +425,13 @@ export class FinanceService {
         matchStatus,
         total: money(totals.total),
       });
+      await this.automation.emit(tx, scope, {
+        type: "finance.payable.recorded",
+        resourceId: invoice.id,
+        actorUserId,
+        link: `/finance/payables/${invoice.id}`,
+        payload: { code, supplierName: supplier.name, total: money(totals.total), currency, matchStatus },
+      });
       return invoice.id;
     });
     return this.getSupplierInvoice(scope, id);
@@ -446,6 +457,7 @@ export class FinanceService {
           `Approving an invoice with status ${invoice.matchStatus} requires a justification note`,
         );
       }
+      if (decision === "APPROVED") await this.gate.assertCleared(tx, scope, "SupplierInvoice", invoice.id);
       await tx.supplierInvoice.update({
         where: { id: invoice.id },
         data: { status: decision, decidedByUserId: actorUserId, decidedAt: new Date(), decisionNote: note },

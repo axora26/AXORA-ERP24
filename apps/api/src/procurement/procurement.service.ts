@@ -12,6 +12,8 @@ import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
 import { StockLedgerService } from "../inventory/stock-ledger.service.js";
+import { AutomationService } from "../workflow/automation.service.js";
+import { WorkflowGate } from "../workflow/workflow-gate.service.js";
 import { dec, money, qty, sumDecimals } from "../common/decimal.js";
 import {
   assertBody,
@@ -55,6 +57,8 @@ export class ProcurementService {
     private readonly prisma: PrismaService,
     private readonly numbering: NumberingService,
     private readonly ledger: StockLedgerService,
+    private readonly automation: AutomationService,
+    private readonly gate: WorkflowGate,
   ) {}
 
   // ---------------------------------------------------------------------
@@ -259,7 +263,7 @@ export class ProcurementService {
 
   async submitRequest(scope: CompanyScope, requestId: string, actorUserId: string) {
     await this.prisma.$transaction(async (tx) => {
-      const request = await tx.purchaseRequest.findFirst({ where: { id: requestId, ...scope } });
+      const request = await tx.purchaseRequest.findFirst({ where: { id: requestId, ...scope }, include: { lines: true } });
       if (!request) throw new NotFoundException("Purchase request not found");
       if (request.requestedByUserId !== actorUserId) {
         throw new ForbiddenException("Only the requester can submit their request");
@@ -270,6 +274,14 @@ export class ProcurementService {
       });
       if (updated.count !== 1) throw new BadRequestException("Only a draft request can be submitted");
       await writeAudit(tx, scope, actorUserId, "procurement.request.submitted", "PurchaseRequest", requestId, { code: request.code });
+      const estimated = sumDecimals(request.lines.map((line) => dec(line.quantity).mul(line.estimatedUnitPrice)));
+      await this.automation.emit(tx, scope, {
+        type: "procurement.request.submitted",
+        resourceId: requestId,
+        actorUserId,
+        link: `/procurement/requests/${requestId}`,
+        payload: { code: request.code, title: request.title, estimatedTotal: money(estimated), currency: request.currency },
+      });
     });
     return this.getRequest(scope, requestId);
   }
@@ -290,6 +302,7 @@ export class ProcurementService {
         // Separation des devoirs (BC-05 invariant 5) : demandeur != approbateur.
         throw new ForbiddenException("The requester cannot approve or reject their own request");
       }
+      if (decision === "APPROVED") await this.gate.assertCleared(tx, scope, "PurchaseRequest", requestId);
       const updated = await tx.purchaseRequest.updateMany({
         where: { id: requestId, status: "SUBMITTED" },
         data: { status: decision, decidedByUserId: actorUserId, decidedAt: new Date(), decisionNote: note },

@@ -146,6 +146,9 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "portal.principal.read": "Consulter les accès portail (clients, fournisseurs)",
   "portal.principal.manage": "Inviter, suspendre ou révoquer les accès portail",
   "portal.grant.manage": "Exposer ou retirer des ressources sur les portails",
+  "workflow.definition.read": "Consulter workflows, exécutions et approbations",
+  "workflow.definition.manage": "Configurer les workflows et automatisations",
+  "workflow.approval.decide": "Décider les approbations de workflow (rôle désigné)",
 };
 
 export function registerResourceLabels(labels: Record<string, string>): void {

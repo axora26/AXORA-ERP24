@@ -5,6 +5,7 @@ import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
+import { AutomationService } from "../workflow/automation.service.js";
 import { dec, money, qty, sumDecimals } from "../common/decimal.js";
 import { StockLedgerService } from "../inventory/stock-ledger.service.js";
 import {
@@ -55,6 +56,7 @@ export class AssetsService {
     private readonly prisma: PrismaService,
     private readonly numbering: NumberingService,
     private readonly ledger: StockLedgerService,
+    private readonly automation: AutomationService,
   ) {}
 
   // -------------------------------------------------------------------
@@ -355,6 +357,7 @@ export class AssetsService {
       });
       if (failureAt && input.outOfService === true) await tx.asset.update({ where: { id: assetId }, data: { status: "OUT_OF_SERVICE" } });
       await writeAudit(tx, scope, actorUserId, "assets.ticket.created", "MaintenanceTicket", ticket.id, { code, assetId, failureAt: failureAt?.toISOString() ?? null });
+      await this.automation.emit(tx, scope, { type: "assets.ticket.created", resourceId: ticket.id, actorUserId, link: `/assets/${assetId}`, payload: { code, title: ticket.title, priority: ticket.priority, assetCode: asset.code } });
     });
     return this.listTickets(scope, {});
   }

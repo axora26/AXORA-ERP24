@@ -84,7 +84,9 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm --filter @axora24/database exec prisma migrate deploy
-      - name: Cle MFA ephemere (jamais committee)
-        run: echo "MFA_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - name: Cles MFA et integrations ephemeres (jamais committees)
+        run: |
+          echo "MFA_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "INTEGRATION_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: pnpm build:packages
       - run: pnpm test:e2e

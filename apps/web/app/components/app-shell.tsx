@@ -3,11 +3,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, Bell, Building2, LogOut, Menu, Search, X } from "lucide-react";
+import { AlertTriangle, Building2, LogOut, Menu, Search, X } from "lucide-react";
 import { api, ApiError, setActiveCompanyId } from "../lib/api";
 import { isActive, visibleGroups, type NavItem } from "../lib/navigation";
 import { SessionContext, type SessionApi, type SessionContextValue } from "../lib/session";
 import { Brand } from "./brand";
+import { NotificationBell } from "./notification-bell";
 
 const COMPANY_STORAGE_KEY = "axora.activeCompanyId";
 
@@ -209,9 +210,7 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
                   </span>
                 )
               )}
-              <button className="icon-button" aria-label="Notifications" type="button">
-                <Bell size={19} />
-              </button>
+              <NotificationBell />
               <Link className="user-menu" href="/account" title="Mon compte">
                 <span>{initialsOf(sessionApi.user.fullName)}</span>
                 <div>

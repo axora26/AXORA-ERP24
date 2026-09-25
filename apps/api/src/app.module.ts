@@ -26,8 +26,9 @@ import { EnergyModule } from "./energy/energy.module.js";
 import { FleetModule } from "./fleet/fleet.module.js";
 import { SubcontractingModule } from "./subcontracting/subcontracting.module.js";
 import { PortalModule } from "./portal/portal.module.js";
+import { WorkflowModule } from "./workflow/workflow.module.js";
 
 @Module({
-  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule, BimModule, AssetsModule, SmartModule, EnergyModule, FleetModule, SubcontractingModule, PortalModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule, BimModule, AssetsModule, SmartModule, EnergyModule, FleetModule, SubcontractingModule, PortalModule, WorkflowModule],
 })
 export class AppModule {}

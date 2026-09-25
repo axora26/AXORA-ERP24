@@ -861,3 +861,32 @@ a.btn { text-decoration: none; }
 .portal-inline-form input { height: 38px; border: 1px solid #d0d5dd; border-radius: 8px; padding: 0 10px; }
 .portal-footer { color: #98a2b3; font-size: 11px; text-align: center; margin-top: 12px; }
 .portal-inline-form .primary-button { width: auto; height: 38px; min-height: 0; margin: 0; padding: 0 16px; font-size: 13px; }
+
+/* INC-21 — Workflows & notifications */
+.notification-bell { position: relative; }
+.notification-bell .icon-button { position: relative; }
+.notification-count { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #d92d20; color: #fff; font: 700 10px/18px Inter, sans-serif; text-align: center; }
+.notification-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; width: min(380px, calc(100vw - 24px)); max-height: 70vh; overflow: auto; background: #fff; border: 1px solid #e4e7ec; border-radius: 12px; box-shadow: 0 16px 40px rgba(16, 24, 40, .16); }
+.notification-panel header { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; background: #fff; border-bottom: 1px solid #eef0f4; }
+.notification-panel header button { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; color: var(--blue-600); font: 600 12px Inter, sans-serif; cursor: pointer; }
+.notification-panel ul { list-style: none; margin: 0; padding: 0; }
+.notification-panel li button { display: grid; gap: 3px; width: 100%; padding: 11px 14px; border: 0; border-bottom: 1px solid #f2f4f7; background: #fff; text-align: left; cursor: pointer; font: 400 12px Inter, sans-serif; color: #475467; }
+.notification-panel li button:hover { background: #f8fafc; }
+.notification-panel li button.unread { background: #eff6ff; }
+.notification-panel li button.unread strong::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--blue-600); vertical-align: middle; }
+.notification-panel li strong { color: #101828; font-size: 13px; }
+.notification-panel li small { color: #98a2b3; }
+.notification-empty { margin: 0; padding: 18px 14px; color: #667085; font-size: 13px; }
+.workflow-log { margin: 0; padding-left: 16px; font-size: 12px; }
+.workflow-log li.ok { color: #067647; }
+.workflow-log li.ko { color: #b42318; }
+.workflow-actions { display: block; max-width: 380px; white-space: normal; }
+.workflow-condition-row { grid-template-columns: minmax(140px, 1.4fr) 110px minmax(120px, 1.4fr) 38px; }
+.workflow-action-list { display: grid; gap: 10px; }
+.workflow-action { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin: 0; padding: 12px 14px 14px; border: 1px solid #e4e7ec; border-radius: 10px; }
+.workflow-action legend { display: inline-flex; align-items: center; gap: 8px; padding: 0 6px; color: #344054; font: 600 12px Inter, sans-serif; }
+.workflow-action legend .icon-button { width: 28px; height: 28px; }
+@media (max-width: 720px) {
+  .workflow-condition-row { grid-template-columns: 1fr 1fr; }
+  .workflow-action { grid-template-columns: minmax(0, 1fr); }
+}
