@@ -1,0 +1,58 @@
+// ---------------------------------------------------------------------------
+// INC-22 — Copilote IA (docs/foundation/02-domain-model.md BC-22)
+//
+// INVARIANTS :
+// 1. Le copilote herite strictement des droits de l'utilisateur : chaque
+//    outil de lecture exige la permission de lecture de son module.
+// 2. Chaque reponse laisse une preuve d'inference append-only : question,
+//    controles d'acces (accordes ET refuses), sources citees, reponse et son
+//    empreinte SHA-256 (verifiee par la base).
+// 3. Aucun chemin d'ecriture : le copilote ne propose que des liens vers les
+//    ecrans existants (memes controles qu'une action humaine).
+// ---------------------------------------------------------------------------
+
+model AiCopilotSession {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  userId         String
+  title          String
+  createdAt      DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+
+  evidences AiInferenceEvidence[]
+
+  @@index([userId, companyId, lastActivityAt])
+  @@map("ai_copilot_sessions")
+}
+
+model AiInferenceEvidence {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  userId           String
+  sessionId        String
+  question         String
+  /// BRIEFING | TOOLS | LOOKUP | HELP
+  mode             String
+  /// Controles d'acces appliques a l'utilisateur demandeur : [{tool, label, permission, granted}].
+  permissionChecks Json
+  /// Sources consultees et citees : [{index, tool, resourceType, resourceId, label, link}].
+  sources          Json
+  /// Blocs de reponse structures : [{title, tool, lines: [{text, cites}]}].
+  blocks           Json
+  answer           String
+  answerSha256     String   @db.Char(64)
+  /// Moteur de reponse (deterministe, ancre sur les donnees).
+  engine           String
+  /// Fournisseur de modele generatif appele : null = aucun modele appele.
+  modelProvider    String?
+  latencyMs        Int
+  createdAt        DateTime @default(now())
+
+  session AiCopilotSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId, createdAt])
+  @@index([sessionId, createdAt])
+  @@map("ai_inference_evidence")
+}

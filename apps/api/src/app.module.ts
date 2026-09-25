@@ -1,12 +1,41 @@
 import { Module } from "@nestjs/common";
+import { APP_FILTER } from "@nestjs/core";
+import { FrenchMessagesFilter } from "./common/i18n/french-messages.filter.js";
 import { HealthModule } from "./health/health.module.js";
+import { CommonModule } from "./common/common.module.js";
 import { CoreModule } from "./core/core.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { CrmModule } from "./crm/crm.module.js";
 import { EstimationModule } from "./estimation/estimation.module.js";
 import { SalesModule } from "./sales/sales.module.js";
+import { DashboardModule } from "./dashboard/dashboard.module.js";
+import { AdminModule } from "./admin/admin.module.js";
+import { ProjectsModule } from "./projects/projects.module.js";
+import { ProcurementModule } from "./procurement/procurement.module.js";
+import { InventoryModule } from "./inventory/inventory.module.js";
+import { FinanceModule } from "./finance/finance.module.js";
+import { HrModule } from "./hr/hr.module.js";
+import { FilesModule } from "./files/files.module.js";
+import { DocumentsModule } from "./documents/documents.module.js";
+import { FieldModule } from "./field/field.module.js";
+import { QhseModule } from "./qhse/qhse.module.js";
+import { MepModule } from "./mep/mep.module.js";
+import { CommissioningModule } from "./commissioning/commissioning.module.js";
+import { BimModule } from "./bim/bim.module.js";
+import { AssetsModule } from "./assets/assets.module.js";
+import { SmartModule } from "./smart/smart.module.js";
+import { EnergyModule } from "./energy/energy.module.js";
+import { FleetModule } from "./fleet/fleet.module.js";
+import { SubcontractingModule } from "./subcontracting/subcontracting.module.js";
+import { PortalModule } from "./portal/portal.module.js";
+import { WorkflowModule } from "./workflow/workflow.module.js";
+import { CopilotModule } from "./copilot/copilot.module.js";
+import { AnalyticsModule } from "./analytics/analytics.module.js";
+import { IntegrationsModule } from "./integrations/integrations.module.js";
 
 @Module({
-  imports: [HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule, BimModule, AssetsModule, SmartModule, EnergyModule, FleetModule, SubcontractingModule, PortalModule, WorkflowModule, CopilotModule, AnalyticsModule, IntegrationsModule],
+  // Messages d'erreur en francais pour tous les clients (interface, portails, API publique).
+  providers: [{ provide: APP_FILTER, useClass: FrenchMessagesFilter }],
 })
 export class AppModule {}

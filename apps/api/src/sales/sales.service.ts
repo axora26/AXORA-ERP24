@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@axora24/database";
 import { PrismaService } from "../core/prisma.service.js";
-import type { CompanyScope } from "../crm/company-scope.service.js";
+import type { CompanyScope } from "../common/company-scope.service.js";
 import {
   requiredText,
   type AcceptQuoteDto,

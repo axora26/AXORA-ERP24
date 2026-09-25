@@ -22,6 +22,7 @@ vi.mock("../lib/api", () => ({
 const finalizedDqe = {
   id: "dqe-1",
   companyId: "company-1",
+  opportunityId: "opp-1",
   code: "DQE-001",
   title: "DQE Campus solaire",
   currency: "USD",
@@ -40,7 +41,13 @@ const finalizedDqe = {
       lineTotal: "1000.000000",
     },
   ],
-  source: { studyId: "study-1", studyCode: "ST-001" },
+  source: {
+    studyId: "study-1",
+    studyCode: "ST-001",
+    studyOpportunityId: "opp-1",
+    createdAt: "2026-09-22T00:00:00.000Z",
+  },
+  finalizedAt: "2026-09-22T00:00:00.000Z",
   createdAt: "2026-09-22T00:00:00.000Z",
 };
 

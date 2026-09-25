@@ -26,7 +26,13 @@ import type {
  *   resout organisation et entreprise depuis la session.
  * - Les montants restent des chaines decimales de bout en bout.
  */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+/**
+ * Par defaut, l'interface appelle l'API sur la MEME origine (`/api/v1`),
+ * relayee vers le serveur NestJS par la reecriture de next.config.js : le
+ * cookie de session reste first-party et une seule URL suffit pour ouvrir
+ * l'application (local, conteneur ou tunnel).
+ */
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
 export class ApiError extends Error {
   constructor(
@@ -38,37 +44,75 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Entreprise active choisie dans le shell (utilisateur multi-entreprises).
+ * Ce n'est qu'une PREFERENCE d'affichage : le serveur revalide toujours cet
+ * identifiant contre les appartenances de la session (CompanyScopeService).
+ */
+let activeCompanyId: string | null = null;
+
+export function setActiveCompanyId(companyId: string | null): void {
+  activeCompanyId = companyId;
+}
+
+function withCompany(path: string): string {
+  if (!activeCompanyId || /[?&]companyId=/.test(path)) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}companyId=${encodeURIComponent(activeCompanyId)}`;
+}
+
+/** URL d'un contenu servi par l'API (fichier, photo) dans l'entreprise active. */
+export function assetUrl(url: string): string {
+  if (!activeCompanyId || /[?&]companyId=/.test(url)) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}companyId=${encodeURIComponent(activeCompanyId)}`;
+}
+
+function bodyWithCompany(body: unknown): unknown {
+  if (!activeCompanyId || body === null || typeof body !== "object" || Array.isArray(body)) return body;
+  return "companyId" in body ? body : { ...body, companyId: activeCompanyId };
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${API_URL}${withCompany(path)}`, {
       ...init,
       credentials: "include",
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+      // FormData : le navigateur fixe lui-meme le Content-Type multipart (avec sa frontiere).
+      headers: init?.body instanceof FormData ? { ...(init?.headers ?? {}) } : { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
   } catch {
-    throw new ApiError(0, "L'API AXORA est momentanement injoignable.");
+    throw new ApiError(0, "L'API AXORA est momentanément injoignable (réseau indisponible ?).");
   }
 
   if (!response.ok) {
     // Le message serveur est affiche tel quel : il est deja redige pour
     // l'utilisateur et ne contient aucun secret (docs/foundation/03-security.md).
-    const body = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new ApiError(response.status, body?.message ?? `Erreur ${response.status}`);
+    const body = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
+    const message = Array.isArray(body?.message) ? body.message.join(" · ") : body?.message;
+    throw new ApiError(response.status, message ?? `Erreur ${response.status}`);
   }
 
   if (response.status === 204) {
     return undefined as T;
   }
-  return (await response.json()) as T;
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export const api = {
   get: <T>(path: string) => call<T>(path),
-  post: <T>(path: string, body: unknown) =>
-    call<T>(path, { method: "POST", body: JSON.stringify(body) }),
-  patch: <T>(path: string, body: unknown) =>
-    call<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
+  post: <T>(path: string, body: unknown = {}) =>
+    call<T>(path, { method: "POST", body: JSON.stringify(bodyWithCompany(body)) }),
+  patch: <T>(path: string, body: unknown = {}) =>
+    call<T>(path, { method: "PATCH", body: JSON.stringify(bodyWithCompany(body)) }),
+  put: <T>(path: string, body: unknown = {}) =>
+    call<T>(path, { method: "PUT", body: JSON.stringify(bodyWithCompany(body)) }),
+  delete: <T>(path: string) => call<T>(path, { method: "DELETE" }),
+  upload: <T>(path: string, file: Blob, filename: string) => {
+    const form = new FormData();
+    form.append("file", file, filename);
+    return call<T>(path, { method: "POST", body: form });
+  },
 };
 
 export const crmApi = {

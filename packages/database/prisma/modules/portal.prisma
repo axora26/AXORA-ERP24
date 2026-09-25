@@ -1,0 +1,127 @@
+// ---------------------------------------------------------------------------
+// INC-20 — Portails Client & Fournisseur (docs/foundation/02-domain-model.md BC-20)
+//
+// INVARIANTS :
+// 1. Plan d'identite separe : principal, invitation et session externes
+//    n'ont aucune table commune avec les utilisateurs internes ; cookie
+//    distinct ; aucun droit interne herite.
+// 2. Un principal est rattache a une seule societe et a un seul
+//    enregistrement racine : compte CRM (CLIENT) ou fournisseur (SUPPLIER).
+// 3. Toute ressource exposee l'est par une autorisation explicite, verifiee
+//    comme appartenant a l'enregistrement racine du principal.
+// 4. Invitation a usage unique ; suspension ou revocation invalident
+//    immediatement sessions et invitations.
+// ---------------------------------------------------------------------------
+
+enum PortalPrincipalKind {
+  CLIENT
+  SUPPLIER
+}
+
+enum PortalPrincipalStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum PortalResourceType {
+  PROJECT
+  CUSTOMER_INVOICE
+  DOCUMENT
+  PURCHASE_ORDER
+  SUPPLIER_INVOICE
+}
+
+model PortalPrincipal {
+  id              String                @id @default(cuid())
+  organizationId  String
+  companyId       String
+  kind            PortalPrincipalKind
+  email           String
+  fullName        String
+  crmAccountId    String?
+  supplierId      String?
+  passwordHash    String?
+  status          PortalPrincipalStatus @default(INVITED)
+  activatedAt     DateTime?
+  statusChangedAt DateTime?
+  statusChangedBy String?
+  statusReason    String?
+  createdByUserId String
+  createdAt       DateTime              @default(now())
+
+  supplier         Supplier?                    @relation(fields: [supplierId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  invitations      PortalInvitation[]
+  sessions         PortalSession[]
+  grants           PortalResourceGrant[]
+  acknowledgements PortalOrderAcknowledgement[]
+
+  @@unique([companyId, email])
+  @@index([organizationId, companyId, status])
+  @@map("portal_principals")
+}
+
+model PortalInvitation {
+  id              String    @id @default(cuid())
+  principalId     String
+  tokenHash       String    @unique
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+
+  principal PortalPrincipal @relation(fields: [principalId], references: [id], onDelete: Restrict)
+
+  @@index([principalId])
+  @@map("portal_invitations")
+}
+
+model PortalSession {
+  id          String    @id @default(cuid())
+  principalId String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+
+  principal PortalPrincipal @relation(fields: [principalId], references: [id], onDelete: Restrict)
+
+  @@index([principalId])
+  @@map("portal_sessions")
+}
+
+model PortalResourceGrant {
+  id              String             @id @default(cuid())
+  organizationId  String
+  companyId       String
+  principalId     String
+  resourceType    PortalResourceType
+  resourceId      String
+  grantedByUserId String
+  grantedAt       DateTime           @default(now())
+  revokedByUserId String?
+  revokedAt       DateTime?
+
+  principal PortalPrincipal @relation(fields: [principalId], references: [id], onDelete: Restrict)
+
+  @@index([principalId, resourceType])
+  @@map("portal_resource_grants")
+}
+
+/// Accuse de reception d'une commande par le fournisseur (date de livraison confirmee). Append-only.
+model PortalOrderAcknowledgement {
+  id            String   @id @default(cuid())
+  principalId   String
+  orderId       String
+  confirmedDate DateTime @db.Date
+  note          String?
+  createdAt     DateTime @default(now())
+
+  principal PortalPrincipal @relation(fields: [principalId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@map("portal_order_acknowledgements")
+}

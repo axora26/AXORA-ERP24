@@ -1,8 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CrmController } from "./crm.controller.js";
 import { CrmService } from "./crm.service.js";
-import { CompanyScopeService } from "./company-scope.service.js";
-import { PrismaService } from "../core/prisma.service.js";
 import { AuthModule } from "../auth/auth.module.js";
 
 /**
@@ -12,7 +10,7 @@ import { AuthModule } from "../auth/auth.module.js";
 @Module({
   imports: [AuthModule],
   controllers: [CrmController],
-  providers: [CrmService, CompanyScopeService, PrismaService],
-  exports: [CompanyScopeService],
+  providers: [CrmService],
+  exports: [CrmService],
 })
 export class CrmModule {}

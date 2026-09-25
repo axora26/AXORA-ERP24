@@ -41,6 +41,8 @@ model Company {
   organizationId String
   name           String
   legalName      String?
+  /// Devise de reference (valorisation du stock, consolidation) — ISO 4217.
+  currency       String   @default("USD") @db.Char(3)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -73,23 +75,28 @@ model Branch {
 // ---------------------------------------------------------------------------
 
 model User {
-  id             String    @id @default(cuid())
-  organizationId String
-  email          String
-  passwordHash   String
-  fullName       String
-  isActive       Boolean   @default(true)
-  mfaEnabled     Boolean   @default(false)
-  mfaSecretEnc   String?
-  lastLoginAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  organizationId      String
+  email               String
+  passwordHash        String
+  fullName            String
+  isActive            Boolean   @default(true)
+  mfaEnabled          Boolean   @default(false)
+  mfaSecretEnc        String?
+  /// Secret TOTP en cours d'enrolement (chiffre), confirme par un premier code valide.
+  mfaPendingSecretEnc String?
+  /// Dernier pas TOTP accepte (anti-rejeu : un code ne sert qu'une fois).
+  mfaLastCounter      Int?
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   companyMemberships CompanyMembership[]
   sessions           Session[]
   roleAssignments    RoleAssignment[]
   auditLogs          AuditLog[]
+  mfaChallenges      MfaChallenge[]
 
   @@unique([organizationId, email])
   @@index([organizationId])

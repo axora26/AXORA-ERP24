@@ -18,6 +18,13 @@ import { PERMISSION_KEY } from "./require-permission.decorator.js";
  * Les grants sont resolus EXCLUSIVEMENT depuis la base de donnees a partir de
  * l'utilisateur de la session — jamais depuis un champ transmis par le client.
  */
+declare module "express" {
+  interface Request {
+    /** Cles de permission effectives de la session (resolues serveur). */
+    axoraPermissions?: Set<string>;
+  }
+}
+
 @Injectable()
 export class PermissionGuard implements CanActivate {
   constructor(
@@ -26,13 +33,13 @@ export class PermissionGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermission = this.reflector.get<string | undefined>(
+    const requiredPermissions = this.reflector.get<string[] | undefined>(
       PERMISSION_KEY,
       context.getHandler(),
     );
 
     // Pas de permission declaree explicitement -> deny-by-default.
-    if (!requiredPermission) {
+    if (!requiredPermissions || requiredPermissions.length === 0) {
       throw new ForbiddenException("No permission declared for this route (deny-by-default)");
     }
 
@@ -56,13 +63,16 @@ export class PermissionGuard implements CanActivate {
       })),
     );
 
-    const authorized = isAuthorized(
-      { key: requiredPermission, organizationId: user.organizationId },
-      grants,
+    request.axoraPermissions = new Set(
+      grants.filter((grant) => grant.organizationId === user.organizationId).map((grant) => grant.permissionKey),
+    );
+
+    const authorized = requiredPermissions.some((key) =>
+      isAuthorized({ key, organizationId: user.organizationId }, grants),
     );
 
     if (!authorized) {
-      throw new ForbiddenException(`Missing permission: ${requiredPermission}`);
+      throw new ForbiddenException(`Missing permission: ${requiredPermissions.join(" | ")}`);
     }
 
     return true;

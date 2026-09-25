@@ -1,0 +1,135 @@
+// ---------------------------------------------------------------------------
+// INC-13 — MEP (docs/foundation/02-domain-model.md BC-13)
+//
+// INVARIANTS :
+// 1. Aucun calcul n'est presente comme valide sans ses donnees d'entree, sa
+//    formule et la formule substituee (calculees par le serveur, noyau
+//    versionne) ; aucune norme n'est codee sans source verifiee.
+// 2. Toute modification d'hypothese cree une nouvelle revision : une
+//    revision n'est jamais reecrite (trigger) ; la validation revient a un
+//    ingenieur distinct de l'auteur (CHECK).
+// 3. L'equipement MEP est l'identite de reference stable reprise par le BIM,
+//    le commissioning et la GMAO (jamais dupliquee).
+// ---------------------------------------------------------------------------
+
+enum MepDiscipline {
+  HVAC
+  ELECTRICAL
+  LOW_CURRENT
+  PLUMBING
+  FIRE_PROTECTION
+}
+
+enum MepEquipmentStatus {
+  SPECIFIED
+  SELECTED
+  INSTALLED
+  COMMISSIONED
+}
+
+enum CalculationStatus {
+  DRAFT
+  VALIDATED
+  SUPERSEDED
+}
+
+model MepSystem {
+  id             String        @id @default(cuid())
+  organizationId String
+  companyId      String
+  projectId      String
+  code           String
+  name           String
+  discipline     MepDiscipline
+  description    String?
+  createdAt      DateTime      @default(now())
+
+  equipment MepEquipment[]
+
+  @@unique([projectId, code])
+  @@unique([id, organizationId, companyId])
+  @@map("mep_systems")
+}
+
+model MepEquipment {
+  id                  String             @id @default(cuid())
+  organizationId      String
+  companyId           String
+  projectId           String
+  systemId            String
+  /// Repere unique sur le projet (ex. CTA-01, TGBT, POMPE-EG-02).
+  tag                 String
+  name                String
+  discipline          MepDiscipline
+  manufacturer        String?
+  model               String?
+  location            String?
+  quantity            Int                @default(1)
+  /// Caracteristiques : [{ "name": string, "value": string, "unit": string }].
+  specs               Json
+  status              MepEquipmentStatus @default(SPECIFIED)
+  technicalDocumentId String?
+  createdByUserId     String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  system        MepSystem              @relation(fields: [systemId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  commissioning CommissioningActivity?
+  asset         Asset?
+
+  @@unique([projectId, tag])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId, status])
+  @@map("mep_equipment")
+}
+
+model EngineeringCalculation {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String
+  projectId       String
+  systemId        String?
+  equipmentId     String?
+  calcType        String
+  title           String
+  currentRevision Int      @default(1)
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  revisions EngineeringCalculationRevision[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId])
+  @@index([equipmentId])
+  @@map("engineering_calculations")
+}
+
+model EngineeringCalculationRevision {
+  id                String            @id @default(cuid())
+  organizationId    String
+  companyId         String
+  calculationId     String
+  revision          Int
+  inputs            Json
+  outputs           Json
+  formula           String
+  substitution      String
+  assumptions       Json
+  /// References citees par l'ingenieur pour justifier les entrees (documents, normes, fiches).
+  sources           String?
+  notes             String?
+  kernelVersion     String
+  status            CalculationStatus @default(DRAFT)
+  authorUserId      String
+  validatedByUserId String?
+  validatedAt       DateTime?
+  validationNote    String?
+  createdAt         DateTime          @default(now())
+
+  calculation EngineeringCalculation @relation(fields: [calculationId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([calculationId, revision])
+  @@map("engineering_calculation_revisions")
+}

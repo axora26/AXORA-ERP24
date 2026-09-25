@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { OrganizationController } from "./organization.controller.js";
 import { OrganizationService } from "./organization.service.js";
-import { PrismaService } from "./prisma.service.js";
 import { PermissionSyncService } from "./permission-sync.service.js";
 import { AuthModule } from "../auth/auth.module.js";
 
@@ -13,6 +12,6 @@ import { AuthModule } from "../auth/auth.module.js";
 @Module({
   imports: [AuthModule],
   controllers: [OrganizationController],
-  providers: [OrganizationService, PermissionSyncService, PrismaService],
+  providers: [OrganizationService, PermissionSyncService],
 })
 export class CoreModule {}

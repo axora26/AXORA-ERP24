@@ -1,0 +1,108 @@
+// ---------------------------------------------------------------------------
+// INC-23 — API publique & integrations (docs/foundation/02-domain-model.md BC-24)
+//
+// INVARIANTS :
+// 1. Une cle d'API porte des permissions explicites (jamais un acces total),
+//    bornees a la creation par celles de son createur et re-verifiees a
+//    chaque requete ; seule l'empreinte SHA-256 du secret est conservee.
+// 2. Limitation de debit par minute et quota journalier par cle ; liste d'IP.
+// 3. Une revocation est definitive ; les permissions d'une cle sont figees.
+// 4. Webhook entrant : signature verifiee avant tout traitement, idempotence
+//    par identifiant d'evenement (unique en base), journal append-only.
+// ---------------------------------------------------------------------------
+
+model ApiKey {
+  id                 String    @id @default(cuid())
+  organizationId     String
+  companyId          String
+  name               String
+  prefix             String
+  keyHash            String    @unique @db.Char(64)
+  permissions        String[]
+  rateLimitPerMinute Int
+  dailyQuota         Int
+  allowedIps         String[]
+  expiresAt          DateTime?
+  revokedAt          DateTime?
+  revokedByUserId    String?
+  revokeReason       String?
+  lastUsedAt         DateTime?
+  createdByUserId    String
+  createdAt          DateTime  @default(now())
+
+  usage    ApiKeyUsage[]
+  requests ApiRequestLog[]
+
+  @@index([organizationId, companyId])
+  @@map("api_keys")
+}
+
+/// Compteurs de debit : fenetre « m:AAAA-MM-JJTHH:MM » (minute) ou « d:AAAA-MM-JJ » (jour).
+model ApiKeyUsage {
+  keyId  String
+  window String
+  count  Int    @default(0)
+
+  key ApiKey @relation(fields: [keyId], references: [id], onDelete: Restrict)
+
+  @@id([keyId, window])
+  @@map("api_key_usage")
+}
+
+model ApiRequestLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  keyId          String
+  method         String
+  path           String
+  status         Int
+  ip             String?
+  durationMs     Int
+  at             DateTime @default(now())
+
+  key ApiKey @relation(fields: [keyId], references: [id], onDelete: Restrict)
+
+  @@index([keyId, at])
+  @@map("api_request_logs")
+}
+
+model InboundEndpoint {
+  id              String    @id @default(cuid())
+  organizationId  String
+  companyId       String
+  name            String
+  /// CRM_LEAD : cree un prospect CRM.
+  kind            String
+  secretEnc       String
+  active          Boolean   @default(true)
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  lastReceivedAt  DateTime?
+
+  events InboundEvent[]
+
+  @@index([organizationId, companyId])
+  @@map("inbound_endpoints")
+}
+
+model InboundEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  endpointId     String
+  externalId     String
+  /// ACCEPTED | REJECTED
+  status         String
+  error          String?
+  resourceType   String?
+  resourceId     String?
+  payloadSha256  String   @db.Char(64)
+  receivedAt     DateTime @default(now())
+
+  endpoint InboundEndpoint @relation(fields: [endpointId], references: [id], onDelete: Restrict)
+
+  @@unique([endpointId, externalId])
+  @@index([organizationId, companyId, receivedAt])
+  @@map("inbound_events")
+}

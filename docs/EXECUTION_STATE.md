@@ -1,76 +1,49 @@
 # AXORA-ERP24 — Etat d'execution courant
 
-**Derniere mise a jour** : 2026-09-21
+**Derniere mise a jour** : 2026-09-25 — branche `claude/funny-meitner-l317n1` (PR draft vers `feat/foundation`).
 
-## Phase courante
+Le detail par module et les preuves sont dans `docs/MODULE_STATUS.md` ; les decisions dans `docs/DECISIONS.md`.
 
-**INC-02 — CRM (prospects -> opportunites -> pipeline)** livre en local (voir `docs/foundation/06-product-backlog.md`). INC-00 et INC-01 implementes, aucun encore VERIFIED faute de run CI distant.
+## Mode de travail
 
-## Fait (verifie par execution reelle, pas suppose)
+Developpement continu, increment par increment (`docs/foundation/06-product-backlog.md`). Chaque increment livre : schema Prisma + migration, API NestJS protegee (`@ScopedController`, permission explicite par route), audit transactionnel, tests e2e sur PostgreSQL reel (isolation tenant, RBAC refuse, invariants metier), ecran web, etape du jeu DEMO. Un increment n'est committe qu'apres `typecheck`, `lint`, `test`, `test:e2e` et builds verts en local, et verification des ecrans dans Chromium.
 
-### INC-00 (commit `ada072f`)
-- Depot Git initialise, branche de travail `feat/foundation`.
-- 6 rapports fondateurs committes dans `docs/foundation/`.
-- Monorepo pnpm : `pnpm install` reussi (644 packages), `pnpm build:packages` OK (contracts/security/database/ui).
-- `packages/security` : 11/11 tests unitaires vitest PASS (password scrypt, RBAC deny-by-default, session opaque).
-- `packages/database` : schema Prisma INC-01, migration `20260920213943_init_core_rbac_audit` appliquee sur PostgreSQL 18 reel, seed DEMO verifie.
-- `apps/api` : build NestJS OK (`nest build`). `apps/web` : build Next.js OK (`next build`), warning `themeColor` corrige.
-- `docker-compose.dev.yml` : PostgreSQL 18 + Redis, healthchecks **healthy** verifies (bug point de montage Postgres 18 corrige).
-- CI GitHub Actions ecrite (`.github/workflows/ci.yml`) — **jamais executee sur un runner reel**.
+## Fait
 
-### INC-01 (en cours, apres `ada072f`)
-- `apps/api/src/auth/` complet : `AuthService` (bootstrap organisation transactionnel, login, logout), `SessionGuard` (cookie opaque, hash SHA-256, jamais de JWT auto-porteur), `PermissionGuard` (deny-by-default, grants resolus serveur uniquement), `RequirePermission` decorateur.
-- Toutes les routes Core protegees par `SessionGuard` + `PermissionGuard`.
-- **Defaut d'isolation tenant reel detecte manuellement** (2 organisations de test, curl croise) puis corrige : voir `docs/DECISIONS.md` ADR-0004. `GET /organizations` (liste globale, faille) supprime, remplace par `GET /organizations/me` (scope strict a l'appelant).
-- 4 nouveaux tests e2e (`apps/api/test/tenant-isolation.e2e.test.ts`) executes contre PostgreSQL reel : 401 sans session, isolation cross-tenant (assertion croisee explicite), rejet mot de passe errone, revocation session au logout.
-- `vitest.config.ts` + `unplugin-swc` ajoutes (le transform esbuild par defaut de vitest cassait silencieusement l'injection de dependances NestJS — decorateurs non preserves).
-- **Total tests `apps/api`** : 5/5 PASS (`health.test.ts` + `tenant-isolation.e2e.test.ts`).
-- Verification manuelle HTTP complete : bootstrap 2 organisations reelles, login, `/auth/me`, isolation confirmee visuellement avant l'ecriture des tests automatises.
+- INC-00 a INC-04 (repris de `feat/foundation`).
+- Socle plateforme (ADR-0007) : module commun, garde de perimetre, numerotation, tableau de bord reel, shell web a routes, kit UI, `pnpm local`, jeu DEMO via l'API.
+- INC-01 complete : administration utilisateurs / roles / entreprises / audit, mot de passe, MFA TOTP.
+- INC-05 : projets (contrat -> projet, WBS, budget par feuilles, baseline, avenants, taches, Gantt, jalons, risques).
+- INC-06 : achats (DA, approbation par un tiers, comparatif fournisseurs, commandes, receptions partielles idempotentes, engagement projet).
+- INC-07 : stock (grand livre append-only et soldes non negatifs garantis en base, cout moyen pondere, sorties chantier, transferts, inventaires) ; devise de reference par entreprise.
+- INC-08 : finance (facturation client et situations, 3-way match, validation par un tiers, paiements anti-doublon, tresorerie, facture PDF).
+- INC-09 : RH (employes, badges, pointages append-only, feuilles de temps validees par un tiers et imputees aux projets, conges, preparation de paie sans retenue legale presumee).
+- INC-10 : GED (fichiers immuables par empreinte, revisions immuables, visa par un tiers) et chantier (journal signe, preuves horodatees, reserves levees sur preuve verifiee, synchronisation hors ligne avec conflits explicites) — ADR-0009.
+- INC-11 : QHSE (inspections a checklist ouvrant automatiquement les NCR, NCR et incidents immuables en base, actions verifiees et NCR cloturees par un tiers, permis de travail, quarts d'heure securite, taux de frequence sur heures RH validees).
+- INC-13 : MEP (systemes, equipements de reference, noyau de calcul transparent et versionne, notes de calcul revisionnees validees par un autre ingenieur).
+- INC-12 : mise en service (sequence precommissioning -> essai -> anomalie -> correction -> retest -> reception -> remise DOE, garantie en base).
+- INC-14 : BIM/IFC (lecteur IFC teste sur fichiers reels buildingSMART IFC2X3/IFC4/IFC4X3, versions verifiees par empreinte, visa, comparaison, liaison MEP, conflits) ; connecteur Revit natif honnetement NOT_TESTED.
+- INC-15 : Actifs/GMAO (passeports a origine tracee depuis la mise en service, preventif idempotent, tickets -> OT, temps RH et pieces du grand livre de stock, cloture gardee en base, MTBF/MTTR/disponibilite sur historique reel).
+- INC-16 : Smart Building (passerelles a jeton, ingestion idempotente avec conflits, alarmes au seuil fige, consignes confirmees par relecture, cinq niveaux de connectivite, simulateur jamais preuve) ; pilotes protocolaires natifs NOT_TESTED.
+- INC-17 : Energie (compteurs, intervalles idempotents par passerelle ou import, tarifs historises, bilans avec couverture, autonomie uniquement sur donnees suffisantes, alertes figees).
+- INC-18 : Parc (vehicules/engins adosses a la GMAO, compteurs monotones append-only, affectation a chauffeur habilite et vehicule en regle, carburant plein a plein, echeances, incidents -> tickets GMAO, cout de possession).
+- INC-19 : Sous-traitants (fournisseurs qualifies avec vigilance, lots sur commandes emises, situations derivees des taches, factures en Finance, retenues de garantie de premier ordre).
+- INC-20 : Portails client & fournisseur (identites externes separees, invitation a usage unique, exposition explicite re-verifiee, revocation immediate en base). Demo locale : /portal/login?c=<id entreprise>, moa@clinique-saint-luc.demo / PortailClient2026! et adv@fournisseur.demo / PortailFournisseur2026!.
+- INC-21 : Workflow (evenements en outbox transactionnelle, definitions versionnees, executions idempotentes journalisees, approbations a quatre yeux avec escalade et barriere fail-closed sur achats/factures/situations, webhooks HMAC re-signes, notifications). Demo locale : daf@axora-erp24.local / Controle2026! (une approbation en attente).
+- INC-22 : Copilote IA (reponses ancrees et citees, strictement bornees par le RBAC de l'appelant, preuve d'inference append-only a empreinte verifiee en base ; aucun modele generatif appele). Demo : la DAF voit ses demandes d'achat et un refus QHSE trace.
+- Incident d'environnement : le conteneur a redemarre (PostgreSQL, API et web arretes) ; base relancee sans perte (29 migrations, donnees demo intactes), serveurs relances.
+- INC-23 (partie 1) : Analytique (indicateurs mensuels sur donnees reelles, RBAC par indicateur, instantanes figes, export CSV, tableaux de bord partages).
+- INC-23 (partie 2) : API publique v1 (cles bornees par leur createur et re-verifiees a chaque requete, debit, quota, IP, journal, OpenAPI), webhook entrant signe et idempotent vers le CRM, registre des connecteurs a grille de verite (`NOT_TESTED` explicites). Correctif tests : defauts d'environnement de test prioritaires sur le `.env` de developpement.
+- Correctif : le catalogue `ALL_PERMISSIONS` est desormais indexe par la cle de permission (une fusion d'objets ecrasait les constantes homonymes READ/MANAGE de modules differents) ; test de non-regression.
+- Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
+- INC-24 : PWA installable (manifeste, icones `any`/`maskable`, service worker sans cache d'API, page hors ligne), chantier utilisable hors ligne avec purge a la deconnexion, messages d'erreur en francais pour tous les clients (catalogue + test de couverture), en-tetes de securite API et web, contrastes AA et ARIA des graphiques, responsive 390/768 px, audit des dependances sans vulnerabilite, performances mesurees (ADR-0015). Emballages natifs Windows/Android/iOS `BLOCKED` (identites de signature absentes).
+- Qualification finale : suite navigateur versionnee (`pnpm test:browser`, Playwright : 30 ecrans, axe-core, responsive, PWA hors ligne, securite ; job CI `browser-tests`), deux defauts d'accessibilite trouves par la suite et corriges, installation neuve reproductible prouvee sur une base distincte, preuves dans `docs/AXORA-ERP24_TEST_EVIDENCE.md`, rapport `docs/AXORA-ERP24_FINAL_DELIVERY_REPORT.md`.
 
-### INC-01 — interface Core + fiabilisation des gates (2026-09-21)
+## Bloque (externe)
 
-- `apps/web` : ecran de connexion et shell applicatif (sidebar, topbar, dashboard) responsive, verifies reellement dans un navigateur (375 px et pleine largeur) contre l'API et PostgreSQL reels — connexion, restauration de session au rechargement, rendu mobile.
-- **Defaut reel corrige** : `GET /auth/me` ne renvoyait pas `fullName` alors que `POST /auth/login` le renvoyait. Au rechargement d'une page authentifiee, le client plantait (`user.fullName.split` sur `undefined`). `AuthenticatedUser` porte desormais `fullName` ; regression verrouillee par `test/auth-contract.e2e.test.ts`.
-- **Defaut reel corrige** : aucune couche de l'application ne chargeait `.env` (ni NestJS, ni @prisma/client v6). Le demarrage documente au README echouait sur une machine propre. `apps/api/src/config/env.ts` charge desormais le `.env` du monorepo **sans jamais ecraser une variable deja presente** (CI/production prioritaires) ; invariant couvert par 4 tests unitaires.
-- **Defaut reel corrige** : les tests e2e (base PostgreSQL requise) tournaient dans le gate `pnpm test`, execute en CI sur un runner sans base. Separation effective : `pnpm test` = unitaires purs, `pnpm test:e2e` = e2e (`vitest.e2e.config.ts`, fichier jusqu'ici reference par le script mais inexistant).
-- CI : nouveau job `e2e-tests` avec service `postgres:18-alpine` + `prisma migrate deploy`.
-- Donnees du dashboard : indicateurs financiers/projets encore fictifs, desormais **explicitement signales par un bandeau "Donnees de demonstration"** dans l'interface (regle AXORA : aucune valeur inventee presentee comme reelle).
-- Ports alignes sur 3100 pour le web (`.env`, `.env.example`, CORS par defaut de l'API).
+- CI GitHub Actions : les jobs echouent en ~2 s sans journal depuis le run 3 (facturation/quota du compte GitHub). Aucun module ne peut etre promu `VERIFIED` tant qu'un run reel n'a pas abouti.
+- Lien public vers l'instance locale de developpement : les services de tunnel (trycloudflare.com, localtunnel.me, ngrok.com) sont refuses par la politique reseau de l'environnement de developpement. Le suivi se fait via la page de suivi (captures reelles) et la PR.
 
-**Gates executes localement sur l'arbre de travail correspondant** : `pnpm typecheck` OK, `pnpm lint` OK (0 erreur, 0 warning), `pnpm test` 16 tests PASS, `pnpm test:e2e` 8 tests PASS contre PostgreSQL 18 reel, `pnpm build:packages` + `pnpm build` OK.
+## Prochaine etape
 
-### INC-02 — CRM (2026-09-21)
-
-**Modele de donnees** (`packages/database/prisma/schema.prisma`, migration `20260921172536_inc_02_crm`) : `CrmAccount`, `CrmContact`, `CrmLead`, `CrmPipelineStage`, `CrmOpportunity`, `CrmActivity`. Chaque entite porte `organizationId` ET `companyId`. Montants en `Decimal(18,2)`. `CrmActivity` n'a pas de `updatedAt` : l'historique est append-only par construction.
-
-**Securite du scope entreprise** : `CompanyScopeService` revalide systematiquement tout `companyId` transmis (query ou body) contre les `CompanyMembership` de la SESSION. Un identifiant appartenant a un autre tenant renvoie 403 avec le meme message qu'une entreprise inexistante (pas de divulgation d'existence). Toutes les routes CRM portent `SessionGuard` + `PermissionGuard` + `@RequirePermission` explicite (deny-by-default).
-
-**Parcours livre** : creation de prospect -> conversion transactionnelle en opportunite (creation du compte si absent, du contact, rattachement `sourceLeadId`, deux activites immuables) -> deplacement d'etape avec cloture automatique WON/LOST -> tableau de bord agrege en Decimal exact.
-
-**Defauts reels corriges au passage** :
-- le proprietaire d'une organisation n'etait membre d'aucune entreprise (`CompanyMembership` jamais cree au bootstrap) — tout module scope entreprise lui aurait ete refuse ; corrige au bootstrap + migration de rattrapage `20260921180000_backfill_owner_company_membership` ;
-- les organisations existantes n'avaient ni pipeline par defaut (migration `20260921180500_backfill_default_pipeline`) ni les nouvelles cles de permission — d'ou `PermissionSyncService`, qui complete au demarrage les roles `isSystem` OWNER avec toutes les cles de `ALL_PERMISSIONS` (ajout uniquement, jamais de retrait, jamais de role personnalise touche) ;
-- `pnpm db:validate`, `db:format` et `db:migrate` pointaient vers des scripts inexistants et la CLI Prisma ne trouvait pas le `.env` du monorepo — corrige par `scripts/with-env.mjs` (meme invariant de precedence que le chargeur applicatif) ;
-- normalisation de `relatedType` : les valeurs sont en casse mixte (`Lead`, `Opportunity`) alors que le validateur d'enum compare en majuscules, ce qui renvoyait 400 sur des requetes valides — detecte par les tests e2e avant toute livraison.
-
-**Interface** (`apps/web/app/components/crm-workspace.tsx`) : indicateurs, pipeline par etape, liste de prospects avec creation et conversion, liste d'opportunites. **Aucune donnee de demonstration** : quand il n'y a rien, l'ecran affiche un etat vide explicite. Parcours verifie dans un navigateur reel (creation d'un prospect puis conversion, compteurs mis a jour en direct).
-
-**Gates executes localement** : `pnpm typecheck` OK, `pnpm lint` OK (0 erreur, 0 warning), `pnpm test` 26 tests PASS, `pnpm test:e2e` 24 tests PASS sur PostgreSQL 18 reel (dont 16 tests CRM : isolation cross-company, double conversion, decimales exactes, historique immuable), `pnpm build` OK.
-
-## Pas encore fait (a ne jamais presenter comme fait)
-
-- CI GitHub Actions jamais executee sur un runner reel (GitHub Actions) — uniquement verifie en local. Le job `e2e-tests` ajoute le 2026-09-21 n'a jamais tourne sur un runner : sa validite est UNVERIFIED.
-- Indicateurs de la vue d'ensemble (CA, projets, budget, activite) : donnees fictives signalees par un bandeau dans l'UI, pas encore connectees a des donnees reelles. L'espace CRM, lui, n'affiche que des donnees reelles.
-- CRM : pas d'edition ni de suppression des comptes/contacts, pas de pagination ni de filtres, pas de reorganisation des etapes du pipeline, pas de gestion multi-devises (un pipeline melangeant plusieurs devises est signale `MIXED` et non additionne).
-- Aucun utilisateur ne peut encore etre rattache a plusieurs entreprises via l'interface : le cas est gere cote API (400 si `companyId` est requis et absent) mais non expose.
-- MFA (TOTP) : colonnes DB presentes (`mfaEnabled`, `mfaSecretEnc`) mais aucune logique d'activation/verification implementee.
-- Pas de rotation/expiration automatique des sessions au-dela de la duree fixe (7 jours) ; pas de refresh token.
-- Audit log : le modele existe et est utilise pour `organization.bootstrap`, mais pas encore pour login/logout/echecs d'authentification.
-- Service worker PWA non implemente (seul le manifest existe).
-- Aucun guard de type "role systeme" (ex: empecher la suppression du dernier OWNER) — non requis a ce stade mais a anticiper.
-
-## Prochaine etape immediate
-
-1. Reprendre la CI distante des que la facturation GitHub est regularisee — aucun increment ne peut passer VERIFIED avant.
-2. INC-03 — Estimation : Study / DQE / BPU / Pricing (depend de INC-02).
-3. Completer INC-01 : MFA (TOTP), audit des echecs d'authentification, administration des roles dans l'UI.
+Les 25 increments du backlog sont implementes. Restent, hors du code : faire aboutir un run CI (attribution de runner / facturation GitHub) pour promouvoir les modules en `VERIFIED` ; fournir les identites de signature pour les emballages natifs ; connecter les systemes externes reels (SMTP, SMS, S3, banque, LLM, equipements GTB) pour tester les connecteurs `NOT_TESTED`. Le reste a faire fonctionnel par module est liste dans `docs/MODULE_STATUS.md`.

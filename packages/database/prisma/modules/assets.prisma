@@ -1,0 +1,219 @@
+// ---------------------------------------------------------------------------
+// INC-15 — Actifs / GMAO (docs/foundation/02-domain-model.md BC-15)
+//
+// INVARIANTS :
+// 1. Un actif installe par le projet provient d'une mise en service reelle
+//    (equipement COMMISSIONED, activite receptionnee) ; un actif preexistant
+//    est cree manuellement avec une justification tracee.
+// 2. Un ticket ne devient OT que par une transition explicite tracee.
+// 3. Un OT consomme du stock (grand livre, type MAINTENANCE_ISSUE) et du
+//    temps d'employes RH (cout fige) de facon traçable ; sa cloture exige
+//    un compte-rendu et au moins une saisie de temps.
+// 4. MTBF / MTTR calcules uniquement sur les OT correctifs clotures
+//    (defaillance -> remise en service), jamais estimes.
+// ---------------------------------------------------------------------------
+
+enum AssetStatus {
+  IN_SERVICE
+  OUT_OF_SERVICE
+  RETIRED
+}
+
+enum AssetCriticality {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AssetOrigin {
+  COMMISSIONING
+  MANUAL
+}
+
+enum MaintenanceTicketStatus {
+  OPEN
+  CONVERTED
+  REJECTED
+}
+
+enum MaintenancePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum WorkOrderType {
+  PREVENTIVE
+  CORRECTIVE
+}
+
+enum WorkOrderStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Asset {
+  id                      String           @id @default(cuid())
+  organizationId          String
+  companyId               String
+  code                    String
+  name                    String
+  projectId               String?
+  equipmentId             String?
+  commissioningActivityId String?
+  origin                  AssetOrigin
+  originJustification     String?
+  serialNumber            String?
+  manufacturer            String?
+  model                   String?
+  location                String
+  installedAt             DateTime
+  warrantyEndsAt          DateTime?
+  criticality             AssetCriticality @default(MEDIUM)
+  status                  AssetStatus      @default(IN_SERVICE)
+  createdByUserId         String
+  createdAt               DateTime         @default(now())
+
+  equipment    MepEquipment?     @relation(fields: [equipmentId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  plans        MaintenancePlan[]
+  workOrders   WorkOrder[]
+  smartPoints  SmartPoint[]
+  energyMeters EnergyMeter[]
+  fleetVehicle FleetVehicle?
+
+  @@unique([companyId, code])
+  @@unique([equipmentId, organizationId, companyId])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@map("assets")
+}
+
+model MaintenancePlan {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  assetId         String
+  title           String
+  instructions    String
+  intervalDays    Int
+  nextDueDate     DateTime @db.Date
+  estimatedHours  Decimal? @db.Decimal(6, 2)
+  active          Boolean  @default(true)
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, active, nextDueDate])
+  @@map("maintenance_plans")
+}
+
+model MaintenanceTicket {
+  id               String                  @id @default(cuid())
+  organizationId   String
+  companyId        String
+  code             String
+  assetId          String
+  title            String
+  description      String
+  priority         MaintenancePriority     @default(NORMAL)
+  /// Instant de defaillance constate (debut d'indisponibilite pour un correctif).
+  failureAt        DateTime?
+  status           MaintenanceTicketStatus @default(OPEN)
+  reportedByUserId String
+  decidedByUserId  String?
+  decidedAt        DateTime?
+  decisionNote     String?
+  createdAt        DateTime                @default(now())
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@map("maintenance_tickets")
+}
+
+model WorkOrder {
+  id                 String              @id @default(cuid())
+  organizationId     String
+  companyId          String
+  code               String
+  assetId            String
+  type               WorkOrderType
+  ticketId           String?
+  planId             String?
+  /// Echeance planifiee d'un preventif (idempotence de la generation).
+  plannedFor         DateTime?           @db.Date
+  title              String
+  instructions       String
+  priority           MaintenancePriority @default(NORMAL)
+  dueDate            DateTime
+  status             WorkOrderStatus     @default(OPEN)
+  assignedEmployeeId String?
+  failureAt          DateTime?
+  restoredAt         DateTime?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  completionReport   String?
+  completedByUserId  String?
+  laborCost          Decimal             @default(0) @db.Decimal(18, 2)
+  partsCost          Decimal             @default(0) @db.Decimal(18, 2)
+  createdByUserId    String
+  createdAt          DateTime            @default(now())
+
+  asset Asset            @relation(fields: [assetId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  labor WorkOrderLabor[]
+  parts WorkOrderPart[]
+
+  @@unique([companyId, code])
+  @@unique([ticketId])
+  @@unique([planId, plannedFor])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status, dueDate])
+  @@index([assetId, type, status])
+  @@map("work_orders")
+}
+
+/// Temps passe par un employe RH sur un OT, cout fige a la saisie (append-only).
+model WorkOrderLabor {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  workOrderId      String
+  employeeId       String
+  workDate         DateTime @db.Date
+  hours            Decimal  @db.Decimal(5, 2)
+  hourlyCost       Decimal  @db.Decimal(18, 2)
+  cost             Decimal  @db.Decimal(18, 2)
+  recordedByUserId String
+  createdAt        DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([workOrderId])
+  @@map("work_order_labor")
+}
+
+/// Piece consommee : reference le mouvement du grand livre de stock (append-only).
+model WorkOrderPart {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  workOrderId      String
+  stockMovementId  String   @unique
+  itemId           String
+  warehouseId      String
+  quantity         Decimal  @db.Decimal(18, 3)
+  cost             Decimal  @db.Decimal(18, 2)
+  recordedByUserId String
+  createdAt        DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([workOrderId])
+  @@map("work_order_parts")
+}

@@ -1,0 +1,270 @@
+// ---------------------------------------------------------------------------
+// INC-09 — Ressources humaines (docs/foundation/02-domain-model.md BC-08)
+//
+// INVARIANTS :
+// 1. Chaine stricte : capture -> identification -> evenement de presence ->
+//    validation -> paie. Un pointage est un fait append-only (trigger).
+// 2. Une feuille de temps reste un brouillon tant qu'elle n'est pas validee
+//    par une personne distincte de l'employe et de son auteur ; seules les
+//    heures VALIDEES sont valorisees (cout projet) et prises en paie.
+// 3. Aucune paie n'est preparee pour une periode contenant des feuilles de
+//    temps non validees ; aucune regle fiscale ou sociale n'est presumee
+//    (retenues legales non calculees tant qu'aucun parametrage pays n'existe).
+// 4. Les donnees salariales ne sont exposees qu'avec hr.payroll.read.
+// ---------------------------------------------------------------------------
+
+enum EmploymentContractType {
+  PERMANENT
+  FIXED_TERM
+  TEMPORARY
+  CONTRACTOR
+  INTERN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum AttendanceType {
+  IN
+  OUT
+}
+
+enum AttendanceSource {
+  MANUAL
+  QR
+  PIN
+  BADGE
+  BIOMETRIC
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  VALIDATED
+  REJECTED
+}
+
+enum LeaveType {
+  PAID
+  SICK
+  UNPAID
+  TRAINING
+  OTHER
+}
+
+enum LeaveStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PayrollStatus {
+  DRAFT
+  CLOSED
+}
+
+model Department {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  code           String
+  name           String
+  createdAt      DateTime @default(now())
+
+  employees Employee[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@map("hr_departments")
+}
+
+model Employee {
+  id              String                 @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String
+  firstName       String
+  lastName        String
+  jobTitle        String
+  departmentId    String?
+  userId          String?
+  email           String?
+  phone           String?
+  hireDate        DateTime
+  contractType    EmploymentContractType
+  status          EmployeeStatus         @default(ACTIVE)
+  terminationDate DateTime?
+  /// Identifiant de badge / QR / PIN pour le pointage (identification).
+  badgeCode       String?
+  /// Cout horaire charge pour l'imputation des temps aux projets.
+  hourlyCost      Decimal                @default(0) @db.Decimal(18, 2)
+  /// Salaire de base mensuel brut (donnee sensible : hr.payroll.read).
+  baseSalary      Decimal                @default(0) @db.Decimal(18, 2)
+  currency        String                 @default("USD") @db.Char(3)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  department       Department?       @relation(fields: [departmentId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  fleetAssignments FleetAssignment[]
+  skills           EmployeeSkill[]
+  timesheets       Timesheet[]
+  leaves           LeaveRequest[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, badgeCode])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@map("hr_employees")
+}
+
+/// Competence ou habilitation (ex. electrique, travail en hauteur) avec echeance.
+model EmployeeSkill {
+  id             String    @id @default(cuid())
+  employeeId     String
+  name           String
+  level          Int
+  certifiedUntil DateTime?
+  createdAt      DateTime  @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, name])
+  @@map("hr_employee_skills")
+}
+
+/// Evenement de presence (fait append-only, trigger en base).
+model AttendanceEvent {
+  id               String           @id @default(cuid())
+  organizationId   String
+  companyId        String
+  employeeId       String
+  type             AttendanceType
+  source           AttendanceSource
+  occurredAt       DateTime
+  projectId        String?
+  deviceRef        String?
+  note             String?
+  capturedByUserId String
+  createdAt        DateTime         @default(now())
+
+  @@index([organizationId, companyId, employeeId, occurredAt])
+  @@index([projectId])
+  @@map("hr_attendance_events")
+}
+
+model Timesheet {
+  id                String          @id @default(cuid())
+  organizationId    String
+  companyId         String
+  employeeId        String
+  /// Lundi de la semaine couverte (UTC).
+  weekStart         DateTime
+  status            TimesheetStatus @default(DRAFT)
+  totalHours        Decimal         @default(0) @db.Decimal(7, 2)
+  createdByUserId   String
+  submittedByUserId String?
+  submittedAt       DateTime?
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  employee Employee         @relation(fields: [employeeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  entries  TimesheetEntry[]
+
+  @@unique([employeeId, weekStart])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@map("hr_timesheets")
+}
+
+model TimesheetEntry {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  timesheetId    String
+  workDate       DateTime
+  hours          Decimal  @db.Decimal(5, 2)
+  projectId      String?
+  wbsItemId      String?
+  description    String?
+  /// Cout fige a la validation (heures x cout horaire), jamais avant.
+  costAmount     Decimal? @db.Decimal(18, 2)
+
+  timesheet Timesheet @relation(fields: [timesheetId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@index([timesheetId])
+  @@index([projectId])
+  @@map("hr_timesheet_entries")
+}
+
+model LeaveRequest {
+  id                String      @id @default(cuid())
+  organizationId    String
+  companyId         String
+  employeeId        String
+  type              LeaveType
+  startDate         DateTime
+  endDate           DateTime
+  /// Jours ouvres (lundi-vendredi) couverts, calcules par le serveur.
+  days              Decimal     @db.Decimal(5, 1)
+  reason            String?
+  status            LeaveStatus @default(REQUESTED)
+  requestedByUserId String
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  createdAt         DateTime    @default(now())
+
+  employee Employee @relation(fields: [employeeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([organizationId, companyId, status])
+  @@index([employeeId, startDate])
+  @@map("hr_leave_requests")
+}
+
+/// Preparation de paie mensuelle : consolide salaires de base, heures validees
+/// et elements variables saisis. Aucune retenue legale n'est calculee.
+model PayrollRun {
+  id              String        @id @default(cuid())
+  organizationId  String
+  companyId       String
+  /// Periode AAAA-MM.
+  period          String
+  status          PayrollStatus @default(DRAFT)
+  currency        String        @db.Char(3)
+  createdByUserId String
+  closedByUserId  String?
+  closedAt        DateTime?
+  createdAt       DateTime      @default(now())
+
+  lines PayrollLine[]
+
+  @@unique([companyId, period])
+  @@unique([id, organizationId, companyId])
+  @@map("hr_payroll_runs")
+}
+
+model PayrollLine {
+  id              String  @id @default(cuid())
+  organizationId  String
+  companyId       String
+  runId           String
+  employeeId      String
+  baseSalary      Decimal @db.Decimal(18, 2)
+  validatedHours  Decimal @db.Decimal(7, 2)
+  /// Elements variables (primes +, retenues -) saisis explicitement.
+  adjustments     Decimal @default(0) @db.Decimal(18, 2)
+  grossAmount     Decimal @db.Decimal(18, 2)
+  adjustmentNotes String?
+
+  run PayrollRun @relation(fields: [runId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@unique([runId, employeeId])
+  @@map("hr_payroll_lines")
+}

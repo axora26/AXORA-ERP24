@@ -3,9 +3,12 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import cookieParser from "cookie-parser";
 import { AppModule } from "./app.module.js";
+import { applySecurityHeaders } from "./common/security-headers.js";
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // rawBody : les webhooks entrants verifient leur signature sur le corps brut.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
+  applySecurityHeaders(app);
   app.use(cookieParser());
   app.enableCors({
     origin: process.env.CORS_ORIGIN ?? "http://localhost:3100",

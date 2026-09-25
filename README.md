@@ -44,17 +44,27 @@ axora-erp24/
   ops/             # Scripts de deploiement
 ```
 
-## Demarrage local
+## Demarrage local (une commande)
 
-Prerequis : Node.js >=20, pnpm 9, Docker.
+Prerequis : Node.js >= 20, pnpm 9, et une base PostgreSQL (Docker recommande).
 
 ```bash
 pnpm install
-pnpm db:generate
-docker compose -f docker-compose.dev.yml up -d
-pnpm dev:api    # API sur http://localhost:4000
-pnpm dev        # Web sur http://localhost:3000
+docker compose -f docker-compose.dev.yml up -d   # PostgreSQL + Redis
+pnpm local                                        # migrations + API + web + donnees DEMO
 ```
+
+Puis ouvrir **http://localhost:3100** et se connecter avec le compte de demonstration :
+`demo@axora-erp24.local` / `Demo2026!` (organisation marquee DEMO, bandeau permanent dans l'interface).
+
+- `pnpm local --no-demo` : demarrage sans donnees de demonstration.
+- `pnpm demo:seed` : (re)charge le jeu DEMO sur une API deja demarree — il passe par l'API reelle
+  (regles metier, RBAC et audit appliques) et est idempotent.
+- L'interface appelle l'API sur la meme origine (`/api/v1`, relaye par Next.js vers le port 4000) :
+  une seule URL suffit.
+
+Demarrage manuel equivalent : `pnpm db:generate && pnpm db:migrate:deploy && pnpm build:packages`,
+puis `pnpm dev:api` (API, port 4000) et `pnpm dev` (web, port 3100).
 
 ## Verification (source de verite CI)
 
@@ -64,6 +74,14 @@ pnpm typecheck
 pnpm test
 pnpm build
 pnpm test:e2e
+pnpm test:browser   # instance lancee (pnpm local) ; E2E_BASE_URL pour une autre adresse
 ```
 
-Aucun statut `PASS` n'est annonce sans execution reelle de ces commandes.
+`pnpm test:browser` (Playwright) parcourt les 30 ecrans avec le compte DEMO : erreurs JavaScript et console,
+accessibilite axe-core WCAG 2.1 AA, absence de defilement horizontal a 390 et 768 px, securite. Le parcours
+hors ligne (service worker) s'execute contre un build de production :
+`E2E_BASE_URL=http://localhost:3200` apres `next build && next start -p 3200` dans `apps/web`. Un Chromium
+deja installe peut etre designe par `PLAYWRIGHT_CHROMIUM_EXECUTABLE`, sinon `pnpm --filter @axora24/web exec playwright install chromium`.
+
+Aucun statut `PASS` n'est annonce sans execution reelle de ces commandes. Preuves datees par SHA :
+`docs/AXORA-ERP24_TEST_EVIDENCE.md` ; rapport de livraison : `docs/AXORA-ERP24_FINAL_DELIVERY_REPORT.md`.

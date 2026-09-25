@@ -1,0 +1,221 @@
+// ---------------------------------------------------------------------------
+// INC-18 — Gestion de parc (docs/foundation/02-domain-model.md BC-18)
+//
+// INVARIANTS :
+// 1. Une affectation reference un employe RH (chauffeur) actif et habilite ;
+//    jamais deux affectations ouvertes pour un meme vehicule (index unique).
+// 2. Compteurs (km / heures) et carburant : series d'evenements horodates
+//    append-only ; un releve ne peut pas faire reculer le compteur (trigger).
+// 3. La maintenance reutilise la GMAO : chaque vehicule porte un passeport
+//    d'actif (BC-15), ses OT et tickets sont ceux de la GMAO.
+// ---------------------------------------------------------------------------
+
+enum FleetVehicleKind {
+  VEHICLE
+  ENGINE
+  MACHINE
+}
+
+enum FleetUsageUnit {
+  KM
+  HOURS
+}
+
+enum FleetFuelType {
+  DIESEL
+  PETROL
+  ELECTRIC
+  NONE
+}
+
+enum FleetVehicleStatus {
+  ACTIVE
+  IMMOBILIZED
+  DISPOSED
+}
+
+enum FleetReadingSource {
+  MANUAL
+  FUEL
+  ASSIGNMENT_START
+  ASSIGNMENT_END
+  INCIDENT
+}
+
+enum FleetDocumentKind {
+  INSURANCE
+  REGISTRATION
+  INSPECTION
+  PERMIT
+  OTHER
+}
+
+enum FleetIncidentKind {
+  ACCIDENT
+  BREAKDOWN
+  DAMAGE
+  THEFT
+  FINE
+}
+
+enum FleetIncidentStatus {
+  OPEN
+  CLOSED
+}
+
+model FleetVehicle {
+  id              String             @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String
+  kind            FleetVehicleKind
+  category        String
+  registration    String?
+  serialNumber    String?
+  make            String
+  model           String
+  year            Int?
+  fuelType        FleetFuelType
+  usageUnit       FleetUsageUnit
+  /// Habilitation exigee du conducteur (competence RH valide, ex. « Permis C », « CACES R482 »).
+  requiredLicence String?
+  assetId         String
+  acquisitionDate DateTime           @db.Date
+  acquisitionCost Decimal?           @db.Decimal(14, 2)
+  homeBase        String
+  status          FleetVehicleStatus @default(ACTIVE)
+  createdByUserId String
+  createdAt       DateTime           @default(now())
+
+  asset       Asset               @relation(fields: [assetId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  readings    FleetMeterReading[]
+  assignments FleetAssignment[]
+  fuelLogs    FleetFuelLog[]
+  documents   FleetDocument[]
+  incidents   FleetIncident[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, registration])
+  @@unique([assetId, organizationId, companyId])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@map("fleet_vehicles")
+}
+
+model FleetMeterReading {
+  id               String             @id @default(cuid())
+  organizationId   String
+  companyId        String
+  vehicleId        String
+  readAt           DateTime
+  value            Decimal            @db.Decimal(12, 1)
+  source           FleetReadingSource
+  recordedByUserId String
+  createdAt        DateTime           @default(now())
+
+  vehicle FleetVehicle @relation(fields: [vehicleId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([vehicleId, readAt])
+  @@map("fleet_meter_readings")
+}
+
+model FleetAssignment {
+  id              String    @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String
+  vehicleId       String
+  employeeId      String
+  projectId       String?
+  purpose         String
+  startAt         DateTime
+  startReading    Decimal   @db.Decimal(12, 1)
+  endAt           DateTime?
+  endReading      Decimal?  @db.Decimal(12, 1)
+  endNote         String?
+  createdByUserId String
+  closedByUserId  String?
+  createdAt       DateTime  @default(now())
+
+  vehicle  FleetVehicle @relation(fields: [vehicleId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  employee Employee     @relation(fields: [employeeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([companyId, code])
+  @@index([organizationId, companyId, projectId])
+  @@map("fleet_assignments")
+}
+
+model FleetFuelLog {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  vehicleId        String
+  filledAt         DateTime
+  liters           Decimal  @db.Decimal(10, 2)
+  unitPrice        Decimal  @db.Decimal(10, 4)
+  totalCost        Decimal  @db.Decimal(12, 2)
+  reading          Decimal  @db.Decimal(12, 1)
+  fullTank         Boolean
+  station          String?
+  projectId        String?
+  assignmentId     String?
+  receiptFileId    String?
+  recordedByUserId String
+  createdAt        DateTime @default(now())
+
+  vehicle FleetVehicle @relation(fields: [vehicleId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([vehicleId, filledAt])
+  @@index([organizationId, companyId, projectId])
+  @@map("fleet_fuel_logs")
+}
+
+model FleetDocument {
+  id               String            @id @default(cuid())
+  organizationId   String
+  companyId        String
+  vehicleId        String
+  kind             FleetDocumentKind
+  reference        String
+  issuer           String?
+  validFrom        DateTime          @db.Date
+  validUntil       DateTime          @db.Date
+  cost             Decimal?          @db.Decimal(12, 2)
+  fileId           String?
+  recordedByUserId String
+  createdAt        DateTime          @default(now())
+
+  vehicle FleetVehicle @relation(fields: [vehicleId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([vehicleId, kind, validUntil])
+  @@map("fleet_documents")
+}
+
+model FleetIncident {
+  id                  String              @id @default(cuid())
+  organizationId      String
+  companyId           String
+  code                String
+  vehicleId           String
+  kind                FleetIncidentKind
+  occurredAt          DateTime
+  description         String
+  location            String?
+  /// Conducteur au moment des faits (affectation ouverte a cet instant), jamais saisi librement.
+  driverEmployeeId    String?
+  assignmentId        String?
+  cost                Decimal?            @db.Decimal(12, 2)
+  maintenanceTicketId String?
+  status              FleetIncidentStatus @default(OPEN)
+  reportedByUserId    String
+  closedByUserId      String?
+  closedAt            DateTime?
+  closureNote         String?
+  createdAt           DateTime            @default(now())
+
+  vehicle FleetVehicle @relation(fields: [vehicleId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([companyId, code])
+  @@index([organizationId, companyId, status])
+  @@map("fleet_incidents")
+}

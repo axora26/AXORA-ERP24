@@ -1,0 +1,161 @@
+// ---------------------------------------------------------------------------
+// INC-21 — Workflow Engine & Automatisation (docs/foundation/02-domain-model.md BC-21)
+//
+// INVARIANTS :
+// 1. Les modules emettent des evenements types (outbox, meme transaction
+//    que la mutation metier) ; aucune logique d'approbation d'un autre
+//    module n'est appelee directement.
+// 2. Une approbation de workflow est decidee par une personne distincte du
+//    demandeur (CHECK) et titulaire du role approbateur.
+// 3. Une execution est unique par (definition, evenement) — idempotente —
+//    et journalisee, succes comme echec.
+// 4. Un webhook sortant est signe (HMAC-SHA256) et horodate (anti-rejeu).
+// ---------------------------------------------------------------------------
+
+enum AutomationExecutionStatus {
+  SUCCEEDED
+  FAILED
+}
+
+enum WorkflowApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+model AutomationEvent {
+  id             String    @id @default(cuid())
+  organizationId String
+  companyId      String
+  type           String
+  resourceType   String
+  resourceId     String
+  actorUserId    String?
+  payload        Json
+  occurredAt     DateTime  @default(now())
+  processedAt    DateTime?
+
+  executions AutomationExecution[]
+
+  @@index([processedAt, occurredAt])
+  @@index([organizationId, companyId, type])
+  @@map("automation_events")
+}
+
+model WorkflowDefinition {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String
+  version         Int
+  name            String
+  description     String?
+  eventType       String
+  /// Liste de conditions {field, operator, value} toutes requises (ET).
+  conditions      Json
+  /// Actions ordonnees : NOTIFY | REQUIRE_APPROVAL | WEBHOOK (secret chiffre, jamais renvoye).
+  actions         Json
+  active          Boolean  @default(true)
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  executions AutomationExecution[]
+
+  @@unique([companyId, code, version])
+  @@index([organizationId, companyId, eventType, active])
+  @@map("workflow_definitions")
+}
+
+model AutomationExecution {
+  id             String                    @id @default(cuid())
+  organizationId String
+  companyId      String
+  definitionId   String
+  eventId        String
+  status         AutomationExecutionStatus
+  log            Json
+  error          String?
+  startedAt      DateTime
+  finishedAt     DateTime                  @default(now())
+
+  definition WorkflowDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  event      AutomationEvent    @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@unique([definitionId, eventId])
+  @@index([organizationId, companyId, status])
+  @@map("automation_executions")
+}
+
+model WorkflowApproval {
+  id               String                 @id @default(cuid())
+  organizationId   String
+  companyId        String
+  code             String
+  definitionId     String
+  eventId          String
+  executionId      String?
+  resourceType     String
+  resourceId       String
+  title            String
+  requesterUserId  String?
+  approverRoleId   String
+  escalationRoleId String?
+  dueAt            DateTime
+  escalatedAt      DateTime?
+  status           WorkflowApprovalStatus @default(PENDING)
+  decidedByUserId  String?
+  decidedAt        DateTime?
+  decisionNote     String?
+  createdAt        DateTime               @default(now())
+
+  @@unique([companyId, code])
+  @@unique([definitionId, eventId])
+  @@index([organizationId, companyId, status])
+  @@index([resourceType, resourceId])
+  @@map("workflow_approvals")
+}
+
+model Notification {
+  id             String    @id @default(cuid())
+  organizationId String
+  companyId      String
+  userId         String
+  title          String
+  body           String
+  link           String?
+  executionId    String?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  organizationId String
+  companyId      String
+  executionId    String
+  definitionId   String
+  url            String
+  body           String
+  timestamp      String
+  signature      String
+  attempts       Int                   @default(0)
+  status         WebhookDeliveryStatus @default(PENDING)
+  lastStatusCode Int?
+  lastError      String?
+  nextAttemptAt  DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime              @default(now())
+
+  @@index([status, nextAttemptAt])
+  @@index([organizationId, companyId, status])
+  @@map("webhook_deliveries")
+}

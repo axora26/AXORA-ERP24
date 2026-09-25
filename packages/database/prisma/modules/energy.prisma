@@ -1,0 +1,184 @@
+// ---------------------------------------------------------------------------
+// INC-17 — Energie (docs/foundation/02-domain-model.md BC-17)
+//
+// INVARIANTS :
+// 1. Un compteur reference un point de comptage identifie (batiment, et le
+//    cas echeant passerelle + reference, actif GMAO).
+// 2. Ingestion d'intervalles idempotente : meme compteur + meme debut +
+//    meme valeur = doublon ; valeur differente = conflit refuse. Intervalles
+//    append-only.
+// 3. Autonomie calculee uniquement sur des donnees reellement disponibles
+//    (niveau recent, couverture suffisante des intervalles) — sinon
+//    « non calculable » avec la raison, jamais extrapolee.
+// 4. Tarifs historises (append-only) : un cout se calcule au tarif en
+//    vigueur a la date de l'intervalle.
+// ---------------------------------------------------------------------------
+
+enum EnergyMeterKind {
+  GRID_IMPORT
+  GRID_EXPORT
+  PV_PRODUCTION
+  GENSET_PRODUCTION
+  BATTERY_CHARGE
+  BATTERY_DISCHARGE
+  CONSUMPTION
+  GENSET_FUEL
+}
+
+enum EnergyIntervalSource {
+  GATEWAY
+  IMPORT
+}
+
+enum EnergyStorageKind {
+  BATTERY
+  FUEL_TANK
+}
+
+enum EnergyAlertKind {
+  INTERVAL_ABOVE
+  DAILY_ABOVE
+}
+
+enum EnergyAlertStatus {
+  OPEN
+  ACKNOWLEDGED
+}
+
+model EnergyMeter {
+  id              String          @id @default(cuid())
+  organizationId  String
+  companyId       String
+  buildingId      String
+  code            String
+  name            String
+  kind            EnergyMeterKind
+  intervalMinutes Int
+  gatewayId       String?
+  externalRef     String?
+  assetId         String?
+  active          Boolean         @default(true)
+  createdByUserId String
+  createdAt       DateTime        @default(now())
+
+  building  SmartBuilding     @relation(fields: [buildingId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  gateway   SmartGateway?     @relation(fields: [gatewayId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  asset     Asset?            @relation(fields: [assetId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  intervals EnergyInterval[]
+  tariffs   EnergyTariff[]
+  rules     EnergyAlertRule[]
+  storages  EnergyStorage[]
+
+  @@unique([companyId, code])
+  @@unique([gatewayId, externalRef])
+  @@unique([id, organizationId, companyId])
+  @@map("energy_meters")
+}
+
+model EnergyInterval {
+  id               String               @id @default(cuid())
+  organizationId   String
+  companyId        String
+  meterId          String
+  periodStart      DateTime
+  value            Decimal              @db.Decimal(18, 4)
+  source           EnergyIntervalSource
+  gatewayId        String?
+  /// Recu d'une passerelle declaree simulateur : jamais presente comme une mesure.
+  simulated        Boolean              @default(false)
+  recordedByUserId String?
+  receivedAt       DateTime             @default(now())
+
+  meter EnergyMeter @relation(fields: [meterId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([meterId, periodStart])
+  @@index([organizationId, companyId, periodStart])
+  @@map("energy_intervals")
+}
+
+model EnergyTariff {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  meterId         String
+  validFrom       DateTime @db.Date
+  unitPrice       Decimal  @db.Decimal(14, 6)
+  note            String?
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  meter EnergyMeter @relation(fields: [meterId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([meterId, validFrom])
+  @@map("energy_tariffs")
+}
+
+model EnergyStorage {
+  id              String            @id @default(cuid())
+  organizationId  String
+  companyId       String
+  buildingId      String
+  name            String
+  kind            EnergyStorageKind
+  /// Capacite utile (kWh pour une batterie, litres pour une cuve).
+  usableCapacity  Decimal           @db.Decimal(14, 3)
+  /// Point de telemetrie donnant le niveau (en % si levelIsPercent, sinon dans l'unite de la capacite).
+  levelPointId    String
+  levelIsPercent  Boolean           @default(true)
+  /// Reserve non exploitable, dans l'unite du niveau.
+  reserve         Decimal           @default(0) @db.Decimal(14, 3)
+  /// Compteur dont la consommation vide ce stockage (charge servie, gasoil consomme).
+  drainMeterId    String
+  createdByUserId String
+  createdAt       DateTime          @default(now())
+
+  building   SmartBuilding @relation(fields: [buildingId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  levelPoint SmartPoint    @relation(fields: [levelPointId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  drainMeter EnergyMeter   @relation(fields: [drainMeterId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@map("energy_storages")
+}
+
+model EnergyAlertRule {
+  id              String          @id @default(cuid())
+  organizationId  String
+  companyId       String
+  meterId         String
+  kind            EnergyAlertKind
+  threshold       Decimal         @db.Decimal(18, 4)
+  message         String
+  active          Boolean         @default(true)
+  createdByUserId String
+  createdAt       DateTime        @default(now())
+
+  meter  EnergyMeter   @relation(fields: [meterId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  alerts EnergyAlert[]
+
+  @@unique([id, organizationId, companyId])
+  @@map("energy_alert_rules")
+}
+
+model EnergyAlert {
+  id                   String            @id @default(cuid())
+  organizationId       String
+  companyId            String
+  ruleId               String
+  meterId              String
+  kind                 EnergyAlertKind
+  threshold            Decimal           @db.Decimal(18, 4)
+  message              String
+  /// Debut de l'intervalle (INTERVAL_ABOVE) ou du jour UTC (DAILY_ABOVE) en cause.
+  periodStart          DateTime
+  value                Decimal           @db.Decimal(18, 4)
+  raisedAt             DateTime          @default(now())
+  status               EnergyAlertStatus @default(OPEN)
+  acknowledgedByUserId String?
+  acknowledgedAt       DateTime?
+  acknowledgeNote      String?
+
+  rule EnergyAlertRule @relation(fields: [ruleId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([ruleId, periodStart])
+  @@index([organizationId, companyId, status])
+  @@map("energy_alerts")
+}

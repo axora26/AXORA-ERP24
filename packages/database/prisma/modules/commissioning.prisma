@@ -1,0 +1,132 @@
+// ---------------------------------------------------------------------------
+// INC-12 — Commissioning (docs/foundation/02-domain-model.md BC-12)
+//
+// INVARIANTS :
+// 1. Sequence non contournable : precommissioning reussi -> essai
+//    fonctionnel -> (anomalie -> correction -> retest)* -> reception ->
+//    remise au client. Garde applicative ET trigger en base.
+// 2. Une anomalie reference toujours un equipement reel (via l'activite,
+//    FK vers mep_equipment) et l'essai qui l'a revelee.
+// 3. Un retest reussi posterieur a la derniere correction est obligatoire
+//    avant reception ; les fiches d'essai sont append-only.
+// 4. La remise au client reference des documents GED approuves (DOE).
+// ---------------------------------------------------------------------------
+
+enum CommissioningStatus {
+  PLANNED
+  IN_PROGRESS
+  ACCEPTED
+  HANDED_OVER
+}
+
+enum CommissioningTestKind {
+  PRECOMMISSIONING
+  FUNCTIONAL
+  RETEST
+}
+
+enum CommissioningOutcome {
+  PASS
+  FAIL
+}
+
+enum PunchItemStatus {
+  OPEN
+  CORRECTED
+  CLOSED
+}
+
+model CommissioningActivity {
+  id                 String              @id @default(cuid())
+  organizationId     String
+  companyId          String
+  code               String
+  projectId          String
+  equipmentId        String
+  procedure          String
+  status             CommissioningStatus @default(PLANNED)
+  acceptedByUserId   String?
+  acceptedAt         DateTime?
+  acceptanceNote     String?
+  handedOverByUserId String?
+  handedOverAt       DateTime?
+  handoverRecipient  String?
+  createdByUserId    String
+  createdAt          DateTime            @default(now())
+
+  equipment  MepEquipment             @relation(fields: [equipmentId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  tests      CommissioningTest[]
+  punchItems CommissioningPunchItem[]
+  documents  CommissioningDocument[]
+
+  @@unique([companyId, code])
+  @@unique([equipmentId, organizationId, companyId])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId, status])
+  @@map("commissioning_activities")
+}
+
+/// Fiche d'essai : resultats immuables (append-only).
+model CommissioningTest {
+  id                String                @id @default(cuid())
+  organizationId    String
+  companyId         String
+  activityId        String
+  sequence          Int
+  kind              CommissioningTestKind
+  /// Mesures : [{ name, unit, min, max, measured, pass }] ; controles : [{ label, ok }].
+  measurements      Json
+  checks            Json
+  outcome           CommissioningOutcome
+  notes             String?
+  /// Fichiers de preuve (photos, rapports) : identifiants de fichiers stockes.
+  fileIds           Json
+  performedByUserId String
+  performedAt       DateTime              @default(now())
+
+  activity CommissioningActivity @relation(fields: [activityId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([activityId, sequence])
+  @@unique([id, organizationId, companyId])
+  @@map("commissioning_tests")
+}
+
+model CommissioningPunchItem {
+  id                String          @id @default(cuid())
+  organizationId    String
+  companyId         String
+  activityId        String
+  testId            String
+  description       String
+  severity          String
+  status            PunchItemStatus @default(OPEN)
+  correctionNote    String?
+  correctionFileId  String?
+  correctedByUserId String?
+  correctedAt       DateTime?
+  closedByTestId    String?
+  closedAt          DateTime?
+  createdByUserId   String
+  createdAt         DateTime        @default(now())
+
+  activity CommissioningActivity @relation(fields: [activityId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([activityId, status])
+  @@map("commissioning_punch_items")
+}
+
+/// Documents de la remise au client (DOE), documents GED approuves.
+model CommissioningDocument {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  activityId     String
+  documentId     String
+  linkedByUserId String
+  createdAt      DateTime @default(now())
+
+  activity CommissioningActivity @relation(fields: [activityId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([activityId, documentId])
+  @@map("commissioning_documents")
+}

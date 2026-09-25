@@ -49,3 +49,128 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 - ne jamais stocker de mot de passe, jeton en clair ou cookie dans les metadonnees d'audit.
 
 **Raison** : un compteur en memoire ne resiste ni aux redemarrages ni au scale-out. Les evenements d'authentification doivent rester fiables et auditables sans exposer de secret.
+
+## ADR-0007 — Socle de plateforme pour la livraison des modules INC-05 a INC-24
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : 20 increments restent a livrer. Chaque module reimplementait la resolution du perimetre entreprise, instanciait son propre `PrismaService` (un pool de connexions PostgreSQL par module) et l'interface web etait une page unique a vues commutees (aucune URL partageable, retour arriere inoperant).
+**Decision** :
+- `CommonModule` global : une seule instance `PrismaService`, `CompanyScopeService`, `NumberingService`.
+- `@ScopedController()` = `SessionGuard` + `PermissionGuard` (deny-by-default) + `CompanyScopeGuard` ; le perimetre entreprise est injecte par `@Scope()` et reste revalide contre les appartenances de la session.
+- Validateurs communs (`common/validation.ts`) : montants en chaines decimales exactes uniquement (un nombre JSON est refuse), dates ISO, enums normalises.
+- `writeAudit(tx, ...)` : audit ecrit dans la transaction de la mutation.
+- Numerotation automatique `PREFIXE-ANNEE-NNNN` par entreprise, atomique (`INSERT ... ON CONFLICT DO UPDATE ... RETURNING`), testee sous concurrence.
+- Schema Prisma multi-fichiers (`prisma/modules/*.prisma`, GA depuis Prisma 6.7) : un fichier par module.
+- Web : App Router avec une route par module, shell authentifie commun (`AppShell`) alimente par `GET /auth/context` (entreprises + permissions effectives — indication d'interface uniquement, le serveur reste seul juge), palette de commandes Ctrl K, kit UI partage.
+- L'API est relayee sur la meme origine que l'interface (`/api/v1` -> port 4000) : cookie de session first-party, une seule URL a ouvrir.
+- Formatage des montants par arithmetique sur chaines (aucune conversion flottante, testee au-dela de 2^53).
+- Jeu de donnees DEMO cree via l'API HTTP reelle (regles metier, RBAC, audit appliques), organisation marquee `isDemo`, bandeau permanent dans l'interface.
+**Reversible** : oui (refactorisation interne, aucun changement de contrat HTTP existant ; `/auth/me` inchange).
+
+## ADR-0008 — Invariants de stock et d'audit garantis par la base de donnees
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : le backlog exige un ledger de mouvements immuable et un solde jamais negatif (BC-06), et un journal d'audit append-only (03-security). Une garantie purement applicative peut etre contournee par un script, une migration ou un futur module.
+**Decision** : (1) contrainte `CHECK (quantity >= 0 AND value >= 0)` sur `stock_balances` ; (2) trigger `axora_forbid_mutation` refusant tout `UPDATE`/`DELETE` sur `stock_movements` et `audit_logs`. Toute ecriture de stock passe par `StockLedgerService` (verrou `SELECT ... FOR UPDATE` sur la ligne de solde, cout moyen pondere). Le stock est valorise dans la devise de reference de l'entreprise (`companies.currency`) ; une reception d'article stocke dans une autre devise est refusee (pas de conversion implicite).
+**Consequence** : la suppression d'une organisation n'est plus possible tant que ses traces d'audit existent (comportement voulu : aucune route ne le permet).
+**Reversible** : oui par migration explicite, jamais silencieusement.
+
+## ADR-0009 — Fichiers immuables adresses par empreinte et synchronisation terrain hors ligne
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-10 introduit les premiers fichiers binaires (plans, PV, photos de chantier) et une saisie terrain devant fonctionner sans reseau sans jamais perdre ni ecraser silencieusement une donnee (BC-09, BC-10).
+**Decision** :
+- Un fichier est stocke une seule fois par entreprise sous la cle de son empreinte SHA-256 : le televersement est idempotent, l'objet n'est jamais reecrit, la ligne `stored_files` est append-only (trigger). Le type est detecte sur la signature binaire (liste blanche : JPEG, PNG, WebP, PDF, Office, ZIP, IFC, DWG) ; le type annonce par le client est ignore, aucun HTML/SVG n'est servi. Le contenu est servi avec `nosniff`, sur la meme origine, apres controle de permission (`RequireAnyPermission` : GED ou chantier).
+- Pilote de stockage local (`FILE_STORAGE_DIR`) derriere l'interface `FileStorage` ; le pilote compatible S3 prevu par l'architecture n'est pas livre (NOT_TESTED).
+- Une version de document ne change jamais de contenu (trigger `document_versions_immutable`) ; une revision cree une nouvelle version, l'approbation revient a une personne distincte de l'auteur et du soumetteur.
+- Toute saisie terrain (reserve, preuve, correction, journal) passe par `POST /field/sync`, en ligne comme hors ligne : un seul chemin. Chaque operation porte un identifiant genere sur l'appareil (rejeu = `DUPLICATE`, jamais un doublon) ; toute modification porte la version lue (verrou optimiste) : un ecart renvoie `CONFLICT` avec l'etat serveur, et l'utilisateur tranche explicitement (reappliquer sur la version affichee, ou abandonner). Cote navigateur, la file et les photos sont persistees dans IndexedDB et ne quittent la file que sur accuse serveur.
+- Preuves de chantier append-only et toujours rattachees a un contexte (CHECK) ; reserve levee uniquement apres photo de correction posterieure au dernier refus, verifiee par une autre personne que le declarant (CHECK en base).
+**Limite connue** : sans service worker (INC-24), l'application doit etre ouverte avant la coupure reseau ; la file survit a la fermeture de l'onglet.
+**Reversible** : oui (ajout d'un pilote S3 sans changement de contrat HTTP).
+
+
+## ADR-0010 — Passerelles GTB : jeton machine, ingestion unique, preuves physiques attestees
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-16 ouvre la plateforme a des emetteurs non humains (passerelles GTB/BMS/IoT) et exige de ne jamais confondre flux de donnees, simulateur et preuve de communication physique (BC-16, invariants 1 et 2).
+**Decision** :
+- Chaque passerelle recoit un jeton porteur opaque (`axgw_…`, 192 bits aleatoires) montre une seule fois ; seule son empreinte SHA-256 est stockee, le jeton est revocable par rotation ou desactivation. Les routes `/smart/gateway/*` n'acceptent que ce jeton (aucune session, aucun cookie) et ne voient que les points de leur passerelle ; le perimetre entreprise est porte par la passerelle.
+- Toute telemetrie entre par `POST /smart/gateway/readings` (lots de 1 000 lectures maximum, valeurs en chaines decimales). Ingestion serialisee par passerelle (verrou) : meme point + meme instant + meme valeur = doublon ignore ; valeur differente = conflit rapporte, jamais ecrase. Lectures append-only (trigger) ; hors plage plausible conservees en qualite `BAD` et non interpretees ; une lecture tardive enrichit l'historique sans piloter l'etat courant.
+- Aucun pilote natif BACnet/Modbus/KNX/MQTT n'est livre : ces protocoles sont modelises et s'integrent via une passerelle de terrain qui pousse vers l'API (niveau « connecteur developpe » = `NO` pour eux, affiche tel quel).
+- Les niveaux « lecture reelle » et « ecriture reelle » ne passent a `YES` que par une attestation humaine append-only d'un essai point-a-point (lecture comparee a une mesure de reference, verdict calcule par le serveur ; ecriture = consigne confirmee par relecture + constat sur site). Une passerelle declaree simulateur ne peut jamais en recevoir (trigger) ni etre requalifiee en passerelle physique.
+- Une consigne n'est jamais declaree appliquee sur l'acquit de la passerelle : seule une relecture du point dans la tolerance la confirme (CHECK en base).
+**Reversible** : oui (ajout ulterieur de pilotes natifs sans changement du modele de preuve).
+
+## ADR-0011 — Portails externes : plan d'identite separe et exposition explicite
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-20 ouvre l'ERP a des personnes externes (maitrise d'ouvrage, fournisseurs). Le risque principal est une fuite de droits internes ou de donnees d'une autre societe (BC-20, 03-security §2.3 et §4.4).
+**Decision** :
+- Tables dediees `portal_principals`, `portal_invitations`, `portal_sessions` ; cookie `axora_portal_session` distinct du cookie interne. La garde portail ne lit que le cookie portail, la garde interne que le cookie interne : aucune interoperabilite (tests croises).
+- Un principal appartient a une seule societe et a un seul enregistrement racine (compte CRM pour un client, fournisseur pour un fournisseur) — CHECK et trigger interdisent tout changement ulterieur.
+- Invitation : jeton aleatoire dont seule l'empreinte est stockee, transmis dans le fragment d'URL (jamais journalise par un serveur), usage unique (trigger), 7 jours. Mot de passe portail : 12 caracteres minimum, scrypt ; connexion limitee par la meme mecanique de throttling que l'interne (cle prefixee), comparaison a une empreinte factice si l'email est inconnu (pas d'enumeration par chronometrage).
+- Deny-by-default : une ressource n'est visible que par une autorisation explicite (`portal_resource_grants`), creee uniquement si la ressource appartient a l'enregistrement racine et est dans un etat publiable (facture emise, document approuve, commande emise) ; la regle est **re-verifiee a chaque lecture**. Les vues externes n'exposent jamais de couts internes (budget, engage, consomme).
+- Suspension / revocation : un trigger revoque sessions et invitations ouvertes dans la meme transaction ; la revocation est definitive.
+- Actions externes auditees avec `actorUserId = null` et l'identifiant du principal en metadonnees.
+**Reversible** : oui (ajout de types de ressources exposables sans changer le modele de securite).
+
+## ADR-0012 — Moteur de workflow : outbox transactionnelle, execution idempotente, barriere fail-closed
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-21 doit automatiser des regles (notifications, approbations, integrations) sans qu'un module appelle la logique d'approbation d'un autre (BC-21) et sans jamais contourner les separations de devoirs existantes.
+**Decision** :
+- Les modules emettent des evenements types dans la MEME transaction que la mutation (table `automation_events`, immuable) ; le moteur les traite apres validation (declenchement differe + tache periodique, `AUTOMATION_AUTORUN`), ou a la demande (`POST /workflow/run`).
+- Une execution est unique par (definition, evenement) ; ses effets (notifications, approbation, livraison de webhook) sont ecrits dans la meme transaction que la ligne d'execution : un doublon concurrent echoue sur la contrainte d'unicite et n'a aucun effet. Le journal est append-only ; un echec technique est journalise dans une transaction separee.
+- Une definition est versionnee et immuable (trigger) ; seul son etat actif change. Elle ne s'applique qu'aux evenements posterieurs a sa creation.
+- Les actions sont limitees a NOTIFY, REQUIRE_APPROVAL et WEBHOOK : le moteur ne modifie jamais directement une donnee metier. Une approbation de workflow ne remplace pas l'approbation metier : elle la **conditionne** (`WorkflowGate`), de facon fail-closed (refus tant qu'un evenement susceptible de creer une approbation n'est pas evalue).
+- Webhooks : secret genere par la plateforme, montre une fois, chiffre (INTEGRATION_ENCRYPTION_KEY) ; signature HMAC-SHA256 de `horodatage.corps` recalculee a chaque tentative (le destinataire rejette un horodatage de plus de 5 minutes) ; corps et URL figes en base ; cibles HTTPS publiques uniquement (cibles locales admises seulement si `WEBHOOK_ALLOW_PRIVATE_TARGETS=true`, developpement) ; redirections non suivies ; 5 tentatives bornees puis relance manuelle auditee.
+**Consequences** : latence de quelques secondes entre la mutation et l'effet ; la barriere peut demander de reessayer pendant ce delai. La resolution DNS des cibles n'est pas epinglee (rebinding DNS non couvert) : documente comme limite.
+**Reversible** : oui (nouvelles actions ou evenements sans changer le modele).
+
+## ADR-0013 — Copilote : reponses ancrees et deterministes, preuve d'inference obligatoire
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-22 exige que le copilote n'accede jamais a une donnee que l'utilisateur ne pourrait pas lire lui-meme, et que chaque reponse soit tracable a une source reelle avec la preuve du filtrage RBAC (BC-22). Aucun fournisseur de modele generatif n'est configure dans l'environnement de livraison.
+**Decision** :
+- Le copilote est un moteur deterministe : planification par mots-cles et references de pieces, outils de lecture parametres par le perimetre entreprise, composition de phrases a partir des seules valeurs lues. Il ne produit aucune affirmation non sourcee ; une question hors perimetre recoit la liste de ce qui peut etre demande.
+- Les droits consultes sont exactement ceux que la garde RBAC a resolus pour la requete ; `ai.copilot.use` ne donne acces a aucune donnee, chaque outil exige la permission de lecture de son module (deny-by-default). La synthese reutilise les sections du tableau de bord, deja soumises a la meme regle.
+- Chaque question laisse une preuve append-only (`ai_inference_evidence`) : controles d'acces accordes et refuses, sources citees, reponse, empreinte SHA-256 recalculee par la base (CHECK), moteur et fournisseur de modele (null). La preuve appartient au proprietaire de la session (trigger).
+- Aucun chemin d'ecriture : le copilote ne propose que des liens vers les ecrans, qui appliquent leurs propres controles.
+**Consequences** : comprehension limitee aux formulations prevues ; un futur branchement LLM devra se limiter a reformuler les faits deja sources et renseigner `modelProvider` (NOT_TESTED tant qu'aucun fournisseur n'est configure).
+**Reversible** : oui (ajout d'outils ou d'un reformulateur sans changer la preuve).
+
+## ADR-0014 — API publique : cles bornees par leur createur, webhooks entrants signes, verite des connecteurs
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-23 ouvre l'ERP a des systemes tiers (BC-24, 03-security §11) : une cle ne doit jamais donner un acces total ni plus que les droits d'une personne ; un webhook entrant ne doit rien traiter avant verification ; aucune integration non testee ne doit paraitre fonctionnelle.
+**Decision** :
+- Cle d'API = secret aleatoire de 32 octets (prefixe `axk_`), montre une fois ; seule l'empreinte SHA-256 est stockee. Permissions explicites prises dans un catalogue public, bornees a l'emission par celles de l'emetteur ; a chaque requete, permissions effectives = permissions de la cle ∩ permissions actuelles du createur (createur inactif ou sorti de l'entreprise = cle suspendue). Permissions figees et revocation definitive (triggers).
+- Limitation par minute et quota journalier par cle via compteurs atomiques (`INSERT … ON CONFLICT … RETURNING`) ; toute requete authentifiee compte, refus compris ; liste d'IP optionnelle ; limiteur d'essais invalides par IP. Journal append-only des requetes.
+- Webhook entrant : corps brut conserve par le serveur (`rawBody`), signature HMAC-SHA256 de `horodatage.corps` verifiee avant toute lecture, tolerance 5 min, schema strict, idempotence par `(point d'entree, id d'evenement)` unique en base ; l'effet metier (prospect CRM, meme regle que l'interface) et la trace sont ecrits dans la meme transaction. Limiteur de signatures invalides par point d'entree.
+- Registre des connecteurs a grille de verite, statuts du vocabulaire officiel (`IMPLEMENTED_NOT_VERIFIED`, `NOT_TESTED`, `NOT_IMPLEMENTED`) : jamais « TESTED » sans run CI, et aucun connecteur verifie tant qu'un systeme externe n'a pas ete reellement atteint (invariant teste).
+- Tests : les valeurs d'environnement propres aux tests sont fixees avant le chargement du `.env` de developpement (le planificateur d'automatisation active en developpement rendait un test dependant du timing).
+**Reversible** : oui (nouvelles routes et types d'evenements entrants sans changer le modele).
+
+
+## ADR-0015 — PWA, travail terrain hors ligne, messages d'erreur en francais, en-tetes de securite
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-24 demande une application installable et utilisable sur chantier sans reseau, sans jamais exposer de donnees d'un autre utilisateur ni presenter une donnee perimee comme fraiche, et un durcissement transverse (messages comprehensibles, en-tetes, dependances). Aucun certificat de signature, compte Apple ni SDK Android n'est disponible dans l'environnement de livraison.
+**Decision** :
+- **Plateforme livree = PWA** (manifeste complet, icones `any` + `maskable` au trace de la marque, service worker). Chromium ne signale aucune erreur d'installabilite. Les emballages natifs Windows (MSIX), Android (TWA/AAB) et iOS sont `BLOCKED` : ils exigent des identites de signature absentes ; rien n'est simule.
+- **Service worker** : cache statique versionne (`axora-static-v1`, ressources immuables en cache d'abord), coquilles de pages en reseau d'abord (`axora-pages-v1`) avec page `/offline` en dernier recours. **Aucune reponse de `/api/*` n'est jamais mise en cache** : les donnees metier restent soumises au RBAC du serveur. Le cache des pages est purge a la deconnexion (message `PURGE`) ; `/sw.js` est servi sans cache pour qu'une nouvelle version soit prise immediatement.
+- **Hors ligne terrain** : seule une erreur reseau fait reutiliser le dernier contexte de session connu (un 401 renvoie toujours vers la connexion). Le module terrain conserve sa derniere lecture **par utilisateur et par entreprise** dans le stockage local, affichee avec un bandeau « hors ligne » ; les saisies passent par la file de synchronisation existante (ADR-0009, conflits explicites). Tout est efface a la deconnexion.
+- **Messages d'erreur** : un filtre global traduit les messages des exceptions HTTP via un catalogue francais couvrant tous les gabarits anglais du code ; un test echoue si un message litteral n'est pas traduit. Les codes HTTP et la structure des reponses ne changent pas.
+- **En-tetes** : API — `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: same-site`, `Cache-Control: no-store` par defaut (sauf reponse qui fixe sa propre politique), pas de `X-Powered-By` (meme configuration dans le harnais e2e). Web — CSP en production (tout en meme origine, `frame-ancestors 'none'`, `object-src 'none'` ; `'unsafe-inline'` reste necessaire aux scripts d'hydratation de Next.js), `Permissions-Policy` (camera et position en meme origine seulement), pas de `X-Powered-By`.
+- **Dependances** : `pnpm.overrides` releve `multer`, `postcss` et `deepmerge-ts` vers des versions corrigees ; `pnpm audit --prod` ne signale aucune vulnerabilite connue.
+**Consequences** : une CSP sans `'unsafe-inline'` demandera des nonces par requete (rendu dynamique) ; toute nouvelle page utilisable hors ligne doit passer par le cache par utilisateur et la purge a la deconnexion ; tout nouveau message d'erreur doit entrer au catalogue (le test l'impose).
+**Reversible** : oui (version du cache incrementee pour invalider les clients ; catalogue et en-tetes centralises).

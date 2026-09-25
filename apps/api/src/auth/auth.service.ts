@@ -1,9 +1,11 @@
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
-import { hashPassword, verifyPassword, createSessionToken } from "@axora24/security";
+import { ConflictException, Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
+import { hashPassword, verifyPassword, createSessionToken, parseEncryptionKey } from "@axora24/security";
+import { AccountService } from "./account.service.js";
 import { ALL_PERMISSIONS } from "@axora24/contracts";
 import { DEFAULT_PIPELINE_STAGES } from "../crm/pipeline.defaults.js";
 import { PrismaService } from "../core/prisma.service.js";
 import type { LoginDto, RegisterOrganizationDto } from "./auth.dto.js";
+import type { AuthenticatedUser } from "./session.guard.js";
 import { LoginThrottleService } from "./login-throttle.service.js";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
@@ -12,6 +14,11 @@ export interface SessionResult {
   plainToken: string;
   expiresAt: Date;
   user: { id: string; email: string; fullName: string; organizationId: string };
+}
+
+export interface MfaChallengeResult {
+  mfaRequired: true;
+  challengeToken: string;
 }
 
 export interface RequestMetadata {
@@ -24,6 +31,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly loginThrottle: LoginThrottleService,
+    private readonly account: AccountService,
   ) {}
 
   /**
@@ -138,7 +146,7 @@ export class AuthService {
     };
   }
 
-  async login(input: LoginDto, metadata: RequestMetadata): Promise<SessionResult> {
+  async login(input: LoginDto, metadata: RequestMetadata): Promise<SessionResult | MfaChallengeResult> {
     const normalizedEmail = input.email.trim().toLowerCase();
     await this.loginThrottle.enforce(normalizedEmail, metadata.ipAddress);
 
@@ -161,6 +169,16 @@ export class AuthService {
     }
 
     await this.loginThrottle.recordSuccess(normalizedEmail, metadata.ipAddress);
+
+    if (user.mfaEnabled) {
+      // Mot de passe valide mais second facteur requis : aucun cookie de
+      // session n'est emis avant la verification du code TOTP.
+      if (!parseEncryptionKey(process.env.MFA_ENCRYPTION_KEY)) {
+        throw new ServiceUnavailableException("MFA is required for this account but not configured on this server");
+      }
+      return { mfaRequired: true, challengeToken: await this.account.issueChallenge(user.id, metadata) };
+    }
+
     const session = await this.createAuditedLoginSession(user, metadata);
 
     return {
@@ -172,6 +190,39 @@ export class AuthService {
         fullName: user.fullName,
         organizationId: user.organizationId,
       },
+    };
+  }
+
+  async context(user: AuthenticatedUser) {
+    const [organization, memberships, assignments] = await Promise.all([
+      this.prisma.organization.findUnique({
+        where: { id: user.organizationId },
+        select: { id: true, name: true, slug: true, isDemo: true },
+      }),
+      this.prisma.companyMembership.findMany({
+        where: { userId: user.id, company: { organizationId: user.organizationId } },
+        include: { company: { select: { id: true, name: true, currency: true } } },
+        orderBy: { createdAt: "asc" },
+      }),
+      this.prisma.roleAssignment.findMany({
+        where: { userId: user.id, role: { organizationId: user.organizationId } },
+        include: { role: { include: { permissions: { include: { permission: true } } } } },
+      }),
+    ]);
+
+    const permissions = new Set<string>();
+    const roles = new Set<string>();
+    for (const assignment of assignments) {
+      roles.add(assignment.role.name);
+      for (const grant of assignment.role.permissions) permissions.add(grant.permission.key);
+    }
+
+    return {
+      user,
+      organization,
+      companies: memberships.map((membership) => ({ ...membership.company, currency: membership.company.currency.trim() })),
+      roles: [...roles].sort(),
+      permissions: [...permissions].sort(),
     };
   }
 

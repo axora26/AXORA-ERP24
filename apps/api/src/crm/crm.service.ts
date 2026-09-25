@@ -10,7 +10,7 @@ import type {
   CrmPipelineStageView,
 } from "@axora24/contracts";
 import { PrismaService } from "../core/prisma.service.js";
-import type { CompanyScope } from "./company-scope.service.js";
+import type { CompanyScope } from "../common/company-scope.service.js";
 import {
   boundedInteger,
   currencyCode,
@@ -193,40 +193,43 @@ export class CrmService {
     input: CreateLeadDto,
     actorUserId: string,
   ): Promise<CrmLeadView> {
+    const lead = await this.prisma.$transaction((tx) => this.insertLead(tx, scope, input, actorUserId));
+    return toLeadView(lead);
+  }
+
+  /**
+   * Creation d'un prospect dans une transaction fournie (memes regles pour
+   * l'interface, l'API publique et les webhooks entrants).
+   */
+  async insertLead(tx: Prisma.TransactionClient, scope: CompanyScope, input: CreateLeadDto, actorUserId: string) {
     const contactName = requiredString(input.contactName, "contactName", 180);
     const companyName = requiredString(input.companyName, "companyName", 180);
-
-    const lead = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.crmLead.create({
-        data: {
-          organizationId: scope.organizationId,
-          companyId: scope.companyId,
-          contactName,
-          companyName,
-          email: optionalString(input.email, "email", 180),
-          phone: optionalString(input.phone, "phone", 40),
-          source: optionalString(input.source, "source", 120),
-          ownerUserId: actorUserId,
-        },
-      });
-
-      await tx.crmActivity.create({
-        data: {
-          organizationId: scope.organizationId,
-          companyId: scope.companyId,
-          type: "NOTE",
-          subject: "Prospect cree",
-          body: `${contactName} — ${companyName}`,
-          relatedType: "Lead",
-          relatedId: created.id,
-          actorUserId,
-        },
-      });
-
-      return created;
+    const created = await tx.crmLead.create({
+      data: {
+        organizationId: scope.organizationId,
+        companyId: scope.companyId,
+        contactName,
+        companyName,
+        email: optionalString(input.email, "email", 180),
+        phone: optionalString(input.phone, "phone", 40),
+        source: optionalString(input.source, "source", 120),
+        ownerUserId: actorUserId,
+      },
     });
 
-    return toLeadView(lead);
+    await tx.crmActivity.create({
+      data: {
+        organizationId: scope.organizationId,
+        companyId: scope.companyId,
+        type: "NOTE",
+        subject: "Prospect cree",
+        body: `${contactName} — ${companyName}`,
+        relatedType: "Lead",
+        relatedId: created.id,
+        actorUserId,
+      },
+    });
+    return created;
   }
 
   async updateLeadStatus(

@@ -1,0 +1,171 @@
+// ---------------------------------------------------------------------------
+// INC-14 — BIM / IFC (docs/foundation/02-domain-model.md BC-14)
+//
+// INVARIANTS :
+// 1. Une version de maquette reference son fichier IFC d'origine par son
+//    empreinte SHA-256, reverifiable a tout moment ; contenu importe
+//    immuable (trigger), elements append-only.
+// 2. Le connecteur Revit natif n'est jamais presente comme connecte : ses six
+//    etats sont exposes separement et restent NOT_TESTED sans Revit reel.
+// 3. Un conflit (clash) reference deux elements de la version et suit un
+//    workflow de resolution approuve par une personne distincte du proposant.
+// 4. La liaison equipement <-> element BIM ne duplique pas l'equipement :
+//    elle reference l'identite MEP par son id et l'element par son GlobalId.
+// ---------------------------------------------------------------------------
+
+enum BimDiscipline {
+  ARCHITECTURE
+  STRUCTURE
+  HVAC
+  ELECTRICAL
+  PLUMBING
+  FIRE_PROTECTION
+  COORDINATION
+  OTHER
+}
+
+enum BimVersionStatus {
+  IMPORTED
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+enum BimClashStatus {
+  OPEN
+  RESOLUTION_PROPOSED
+  RESOLVED
+}
+
+model BimModel {
+  id              String        @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String
+  projectId       String
+  name            String
+  discipline      BimDiscipline
+  createdByUserId String
+  createdAt       DateTime      @default(now())
+
+  versions BimModelVersion[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId])
+  @@map("bim_models")
+}
+
+model BimModelVersion {
+  id               String           @id @default(cuid())
+  organizationId   String
+  companyId        String
+  modelId          String
+  versionNumber    Int
+  fileId           String
+  /// Empreinte du fichier IFC source, reverifiee a l'import et sur demande.
+  sha256           String           @db.Char(64)
+  fileName         String
+  schema           String
+  application      String?
+  entityCount      Int
+  elementCount     Int
+  /// Structure spatiale, systemes, repartition par classe, avertissements.
+  summary          Json
+  status           BimVersionStatus @default(IMPORTED)
+  importedByUserId String
+  importedAt       DateTime         @default(now())
+  decidedByUserId  String?
+  decidedAt        DateTime?
+  decisionNote     String?
+
+  model    BimModel     @relation(fields: [modelId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  elements BimElement[]
+
+  @@unique([modelId, versionNumber])
+  @@unique([id, organizationId, companyId])
+  @@map("bim_model_versions")
+}
+
+model BimElement {
+  id              String  @id @default(cuid())
+  organizationId  String
+  companyId       String
+  versionId       String
+  globalId        String
+  ifcType         String
+  name            String?
+  description     String?
+  objectType      String?
+  tag             String?
+  storeyName      String?
+  typeName        String?
+  systems         Json
+  classifications Json
+  properties      Json
+  quantities      Json
+
+  version BimModelVersion @relation(fields: [versionId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([versionId, globalId])
+  @@index([versionId, ifcType])
+  @@map("bim_elements")
+}
+
+model EquipmentBimBinding {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  equipmentId    String
+  modelId        String
+  globalId       String
+  boundByUserId  String
+  createdAt      DateTime @default(now())
+
+  @@unique([equipmentId, modelId])
+  @@index([modelId, globalId])
+  @@map("bim_equipment_bindings")
+}
+
+model BimClash {
+  id               String         @id @default(cuid())
+  organizationId   String
+  companyId        String
+  code             String
+  modelId          String
+  versionId        String
+  elementAGlobalId String
+  elementBGlobalId String
+  description      String
+  status           BimClashStatus @default(OPEN)
+  proposal         String?
+  proposedByUserId String?
+  proposedAt       DateTime?
+  resolvedByUserId String?
+  resolvedAt       DateTime?
+  resolutionNote   String?
+  createdByUserId  String
+  createdAt        DateTime       @default(now())
+
+  comments BimClashComment[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, modelId, status])
+  @@map("bim_clashes")
+}
+
+model BimClashComment {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  clashId        String
+  authorUserId   String
+  body           String
+  createdAt      DateTime @default(now())
+
+  clash BimClash @relation(fields: [clashId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([clashId])
+  @@map("bim_clash_comments")
+}

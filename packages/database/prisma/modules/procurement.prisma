@@ -1,0 +1,268 @@
+// ---------------------------------------------------------------------------
+// INC-06 — Achats (docs/foundation/02-domain-model.md BC-05)
+//
+// INVARIANTS :
+// 1. Une demande d'achat (DA) est approuvee par une personne distincte de son
+//    demandeur ; seule une DA APPROVED peut devenir une commande, une fois.
+// 2. Une commande (BC) emise ENGAGE le budget du projet de ses lignes, en
+//    temps reel (cockpit projet) ; devise de commande = devise du projet.
+// 3. Reception partielle : la quantite recue d'une ligne ne depasse jamais la
+//    quantite commandee (verrou pessimiste sur la commande) ; une reception
+//    rejouee avec la meme cle d'idempotence ne cree rien de plus.
+// 4. Une commande ne peut etre annulee qu'avant toute reception.
+// ---------------------------------------------------------------------------
+
+enum PurchaseRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ORDERED
+  CANCELLED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+model Supplier {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  code             String
+  name             String
+  taxId            String?
+  email            String?
+  phone            String?
+  address          String?
+  city             String?
+  country          String?
+  category         String?
+  paymentTermsDays Int      @default(30)
+  currency         String   @default("USD") @db.Char(3)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  quotes               SupplierQuote[]
+  orders               PurchaseOrder[]
+  evaluations          SupplierEvaluation[]
+  subcontractorProfile SubcontractorProfile?
+  portalPrincipals     PortalPrincipal[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, name])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, isActive])
+  @@map("suppliers")
+}
+
+model PurchaseRequest {
+  id                String                @id @default(cuid())
+  organizationId    String
+  companyId         String
+  code              String
+  title             String
+  justification     String?
+  projectId         String?
+  currency          String                @default("USD") @db.Char(3)
+  neededBy          DateTime?
+  status            PurchaseRequestStatus @default(DRAFT)
+  requestedByUserId String
+  submittedAt       DateTime?
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  lines  PurchaseRequestLine[]
+  quotes SupplierQuote[]
+  orders PurchaseOrder[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@index([projectId])
+  @@map("purchase_requests")
+}
+
+model PurchaseRequestLine {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  companyId          String
+  requestId          String
+  position           Int
+  description        String
+  unitCode           String
+  quantity           Decimal  @db.Decimal(18, 3)
+  estimatedUnitPrice Decimal  @db.Decimal(18, 2)
+  wbsItemId          String?
+  /// Article stocke (INC-07) : la reception alimente alors le stock au lieu d'etre consommee.
+  inventoryItemId    String?
+  createdAt          DateTime @default(now())
+
+  request    PurchaseRequest     @relation(fields: [requestId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  quoteLines SupplierQuoteLine[]
+
+  @@unique([requestId, position])
+  @@index([organizationId, companyId, requestId])
+  @@map("purchase_request_lines")
+}
+
+/// Offre d'un fournisseur en reponse a une demande (comparatif ligne a ligne).
+model SupplierQuote {
+  id              String    @id @default(cuid())
+  organizationId  String
+  companyId       String
+  requestId       String
+  supplierId      String
+  reference       String?
+  validUntil      DateTime?
+  deliveryDays    Int?
+  note            String?
+  total           Decimal   @db.Decimal(18, 2)
+  selected        Boolean   @default(false)
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+
+  request  PurchaseRequest     @relation(fields: [requestId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  supplier Supplier            @relation(fields: [supplierId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  lines    SupplierQuoteLine[]
+
+  @@unique([requestId, supplierId])
+  @@index([organizationId, companyId, requestId])
+  @@map("supplier_quotes")
+}
+
+model SupplierQuoteLine {
+  id            String  @id @default(cuid())
+  quoteId       String
+  requestLineId String
+  unitPrice     Decimal @db.Decimal(18, 2)
+
+  quote       SupplierQuote       @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  requestLine PurchaseRequestLine @relation(fields: [requestLineId], references: [id], onDelete: Cascade)
+
+  @@unique([quoteId, requestLineId])
+  @@map("supplier_quote_lines")
+}
+
+model PurchaseOrder {
+  id              String              @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String
+  supplierId      String
+  requestId       String?
+  quoteId         String?
+  projectId       String?
+  currency        String              @default("USD") @db.Char(3)
+  status          PurchaseOrderStatus @default(DRAFT)
+  total           Decimal             @db.Decimal(18, 2)
+  expectedDate    DateTime?
+  issuedAt        DateTime?
+  issuedByUserId  String?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdByUserId String
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  supplier           Supplier            @relation(fields: [supplierId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  request            PurchaseRequest?    @relation(fields: [requestId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  lines              PurchaseOrderLine[]
+  receipts           GoodsReceipt[]
+  subcontractPackage SubcontractPackage?
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@index([projectId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  orderId          String
+  position         Int
+  description      String
+  unitCode         String
+  quantity         Decimal  @db.Decimal(18, 3)
+  unitPrice        Decimal  @db.Decimal(18, 2)
+  lineTotal        Decimal  @db.Decimal(18, 2)
+  receivedQuantity Decimal  @default(0) @db.Decimal(18, 3)
+  projectId        String?
+  wbsItemId        String?
+  inventoryItemId  String?
+  createdAt        DateTime @default(now())
+
+  order        PurchaseOrder      @relation(fields: [orderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  receiptLines GoodsReceiptLine[]
+
+  @@unique([orderId, position])
+  @@index([organizationId, companyId, orderId])
+  @@index([projectId])
+  @@map("purchase_order_lines")
+}
+
+model GoodsReceipt {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  code             String
+  orderId          String
+  idempotencyKey   String
+  note             String?
+  /// Magasin d'entree pour les lignes d'articles stockes.
+  warehouseId      String?
+  receivedByUserId String
+  receivedAt       DateTime @default(now())
+
+  order PurchaseOrder      @relation(fields: [orderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  lines GoodsReceiptLine[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, idempotencyKey])
+  @@index([organizationId, companyId, orderId])
+  @@map("goods_receipts")
+}
+
+model GoodsReceiptLine {
+  id          String  @id @default(cuid())
+  receiptId   String
+  orderLineId String
+  quantity    Decimal @db.Decimal(18, 3)
+
+  receipt   GoodsReceipt      @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  orderLine PurchaseOrderLine @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+
+  @@index([orderLineId])
+  @@map("goods_receipt_lines")
+}
+
+/// Evaluation fournisseur (1 a 5) sur la qualite, le respect des delais et le prix.
+model SupplierEvaluation {
+  id                String   @id @default(cuid())
+  organizationId    String
+  companyId         String
+  supplierId        String
+  orderId           String?
+  quality           Int
+  delivery          Int
+  price             Int
+  comment           String?
+  evaluatedByUserId String
+  createdAt         DateTime @default(now())
+
+  supplier Supplier @relation(fields: [supplierId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@index([organizationId, companyId, supplierId])
+  @@map("supplier_evaluations")
+}

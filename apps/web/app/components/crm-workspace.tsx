@@ -162,7 +162,8 @@ export function CrmWorkspace(): React.ReactElement {
             <p>Valeur des opportunites ouvertes par etape</p>
           </div>
         </div>
-        <div className="pipeline-track">
+        {/* Zone defilante horizontalement : atteignable au clavier (fleches) et nommee. */}
+        <div className="pipeline-track" tabIndex={0} role="region" aria-label="Étapes du pipeline commercial">
           {stages.map((stage) => {
             const entry = dashboard.stages.find((item) => item.stageId === stage.id);
             return (
