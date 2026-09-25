@@ -143,6 +143,9 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "subcontracting.statement.prepare": "Préparer les situations de sous-traitance",
   "subcontracting.statement.approve": "Approuver les situations de sous-traitance",
   "subcontracting.retention.release": "Libérer les retenues de garantie",
+  "portal.principal.read": "Consulter les accès portail (clients, fournisseurs)",
+  "portal.principal.manage": "Inviter, suspendre ou révoquer les accès portail",
+  "portal.grant.manage": "Exposer ou retirer des ressources sur les portails",
 };
 
 export function registerResourceLabels(labels: Record<string, string>): void {

@@ -52,6 +52,7 @@ model Supplier {
   orders               PurchaseOrder[]
   evaluations          SupplierEvaluation[]
   subcontractorProfile SubcontractorProfile?
+  portalPrincipals     PortalPrincipal[]
 
   @@unique([companyId, code])
   @@unique([companyId, name])

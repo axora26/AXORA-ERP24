@@ -32,3 +32,4 @@ export * from "./smart.js";
 export * from "./energy.js";
 export * from "./fleet.js";
 export * from "./subcontracting.js";
+export * from "./portal.js";

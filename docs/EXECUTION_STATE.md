@@ -28,6 +28,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-17 : Energie (compteurs, intervalles idempotents par passerelle ou import, tarifs historises, bilans avec couverture, autonomie uniquement sur donnees suffisantes, alertes figees).
 - INC-18 : Parc (vehicules/engins adosses a la GMAO, compteurs monotones append-only, affectation a chauffeur habilite et vehicule en regle, carburant plein a plein, echeances, incidents -> tickets GMAO, cout de possession).
 - INC-19 : Sous-traitants (fournisseurs qualifies avec vigilance, lots sur commandes emises, situations derivees des taches, factures en Finance, retenues de garantie de premier ordre).
+- INC-20 : Portails client & fournisseur (identites externes separees, invitation a usage unique, exposition explicite re-verifiee, revocation immediate en base). Demo locale : /portal/login?c=<id entreprise>, moa@clinique-saint-luc.demo / PortailClient2026! et adv@fournisseur.demo / PortailFournisseur2026!.
 - Correctif : le catalogue `ALL_PERMISSIONS` est desormais indexe par la cle de permission (une fusion d'objets ecrasait les constantes homonymes READ/MANAGE de modules differents) ; test de non-regression.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
@@ -38,4 +39,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-20 Portails, INC-21 Workflow, INC-22 Copilote IA, INC-23 Analytics/API publique, INC-24 PWA et rapport de livraison.
+INC-21 Workflow, INC-22 Copilote IA, INC-23 Analytics/API publique, INC-24 PWA et rapport de livraison.

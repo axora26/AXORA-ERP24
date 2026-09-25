@@ -104,3 +104,17 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 - Les niveaux « lecture reelle » et « ecriture reelle » ne passent a `YES` que par une attestation humaine append-only d'un essai point-a-point (lecture comparee a une mesure de reference, verdict calcule par le serveur ; ecriture = consigne confirmee par relecture + constat sur site). Une passerelle declaree simulateur ne peut jamais en recevoir (trigger) ni etre requalifiee en passerelle physique.
 - Une consigne n'est jamais declaree appliquee sur l'acquit de la passerelle : seule une relecture du point dans la tolerance la confirme (CHECK en base).
 **Reversible** : oui (ajout ulterieur de pilotes natifs sans changement du modele de preuve).
+
+## ADR-0011 — Portails externes : plan d'identite separe et exposition explicite
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : INC-20 ouvre l'ERP a des personnes externes (maitrise d'ouvrage, fournisseurs). Le risque principal est une fuite de droits internes ou de donnees d'une autre societe (BC-20, 03-security §2.3 et §4.4).
+**Decision** :
+- Tables dediees `portal_principals`, `portal_invitations`, `portal_sessions` ; cookie `axora_portal_session` distinct du cookie interne. La garde portail ne lit que le cookie portail, la garde interne que le cookie interne : aucune interoperabilite (tests croises).
+- Un principal appartient a une seule societe et a un seul enregistrement racine (compte CRM pour un client, fournisseur pour un fournisseur) — CHECK et trigger interdisent tout changement ulterieur.
+- Invitation : jeton aleatoire dont seule l'empreinte est stockee, transmis dans le fragment d'URL (jamais journalise par un serveur), usage unique (trigger), 7 jours. Mot de passe portail : 12 caracteres minimum, scrypt ; connexion limitee par la meme mecanique de throttling que l'interne (cle prefixee), comparaison a une empreinte factice si l'email est inconnu (pas d'enumeration par chronometrage).
+- Deny-by-default : une ressource n'est visible que par une autorisation explicite (`portal_resource_grants`), creee uniquement si la ressource appartient a l'enregistrement racine et est dans un etat publiable (facture emise, document approuve, commande emise) ; la regle est **re-verifiee a chaque lecture**. Les vues externes n'exposent jamais de couts internes (budget, engage, consomme).
+- Suspension / revocation : un trigger revoque sessions et invitations ouvertes dans la meme transaction ; la revocation est definitive.
+- Actions externes auditees avec `actorUserId = null` et l'identifiant du principal en metadonnees.
+**Reversible** : oui (ajout de types de ressources exposables sans changer le modele de securite).

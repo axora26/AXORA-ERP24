@@ -207,6 +207,13 @@ export const SUBCONTRACTING_PERMISSIONS = {
   RETENTION_RELEASE: "subcontracting.retention.release",
 } as const;
 
+/** INC-20 — Portails externes : gestion des identites externes et des expositions (jamais d'heritage RBAC). */
+export const PORTAL_PERMISSIONS = {
+  READ: "portal.principal.read",
+  MANAGE: "portal.principal.manage",
+  GRANT: "portal.grant.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -239,6 +246,7 @@ export const PERMISSION_GROUPS = [
   ENERGY_PERMISSIONS,
   FLEET_PERMISSIONS,
   SUBCONTRACTING_PERMISSIONS,
+  PORTAL_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

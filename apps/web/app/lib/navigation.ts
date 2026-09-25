@@ -23,6 +23,7 @@ import {
   RadioTower,
   Zap,
   Truck,
+  Globe2,
   Box,
   UsersRound,
 } from "lucide-react";
@@ -113,6 +114,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/roles", label: "Rôles & permissions", icon: ShieldCheck, permission: "core.role.manage", keywords: "rbac droits matrice" },
       { href: "/admin/companies", label: "Entreprises", icon: Building2, permission: "core.company.manage", keywords: "filiales societes" },
       { href: "/admin/audit", label: "Journal d'audit", icon: ScrollText, permission: "core.audit.read", keywords: "traces historique" },
+      { href: "/portal-admin", label: "Portails externes", icon: Globe2, permission: "portal.principal.read", keywords: "portail client fournisseur invitation acces externe" },
       { href: "/account", label: "Mon compte", icon: KeyRound, keywords: "mot de passe mfa securite profil" },
     ],
   },

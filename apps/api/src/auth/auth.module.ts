@@ -9,6 +9,6 @@ import { AccountService } from "./account.service.js";
 @Module({
   controllers: [AuthController],
   providers: [AuthService, AccountService, LoginThrottleService, SessionGuard, PermissionGuard],
-  exports: [SessionGuard, PermissionGuard],
+  exports: [SessionGuard, PermissionGuard, LoginThrottleService],
 })
 export class AuthModule {}

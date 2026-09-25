@@ -202,6 +202,17 @@ const LABELS: Record<string, string> = {
   "subcontracting.statement.rejected": "Situation de sous-traitance rejetée",
   "subcontracting.statement.invoiced": "Facture de situation enregistrée",
   "subcontracting.retention.released": "Retenue de garantie libérée",
+  "portal.principal.invited": "Accès portail invité",
+  "portal.principal.reinvited": "Invitation portail renouvelée",
+  "portal.principal.activated": "Accès portail activé (par la personne invitée)",
+  "portal.principal.active": "Accès portail réactivé",
+  "portal.principal.suspended": "Accès portail suspendu",
+  "portal.principal.revoked": "Accès portail révoqué",
+  "portal.grant.created": "Ressource exposée sur un portail",
+  "portal.grant.revoked": "Exposition portail retirée",
+  "portal.session.opened": "Connexion au portail",
+  "portal.document.downloaded": "Document téléchargé depuis le portail",
+  "portal.order.acknowledged": "Commande accusée par le fournisseur (portail)",
 };
 
 export function describeAudit(action: string): string {
