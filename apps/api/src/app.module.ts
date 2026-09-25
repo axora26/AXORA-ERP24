@@ -16,8 +16,9 @@ import { HrModule } from "./hr/hr.module.js";
 import { FilesModule } from "./files/files.module.js";
 import { DocumentsModule } from "./documents/documents.module.js";
 import { FieldModule } from "./field/field.module.js";
+import { QhseModule } from "./qhse/qhse.module.js";
 
 @Module({
-  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule],
 })
 export class AppModule {}

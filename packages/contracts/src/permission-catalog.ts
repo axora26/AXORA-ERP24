@@ -81,6 +81,12 @@ const RESOURCE_LABELS: Record<string, string> = {
   log: "les journaux de chantier",
   evidence: "les photos et observations",
   issue: "les réserves",
+  inspection: "les inspections QHSE",
+  finding: "les non-conformités",
+  action: "les actions correctives",
+  incident: "les incidents de sécurité",
+  permit: "les permis de travail",
+  toolbox: "les quarts d'heure sécurité",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -101,6 +107,7 @@ const ACTION_LABELS: Record<string, string> = {
   request: "Demander",
   sign: "Signer",
   upload: "Téléverser",
+  report: "Déclarer",
 };
 
 export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {};

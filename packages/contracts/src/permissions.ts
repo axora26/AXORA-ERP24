@@ -126,6 +126,20 @@ export const FIELD_PERMISSIONS = {
   ISSUE_CLOSE: "field.issue.close",
 } as const;
 
+/** INC-11 — QHSE : NCR immuables, verification et cloture par un tiers. */
+export const QHSE_PERMISSIONS = {
+  READ: "qhse.inspection.read",
+  INSPECTION_MANAGE: "qhse.inspection.manage",
+  FINDING_CREATE: "qhse.finding.create",
+  ACTION_MANAGE: "qhse.action.manage",
+  FINDING_CLOSE: "qhse.finding.close",
+  INCIDENT_REPORT: "qhse.incident.report",
+  INCIDENT_MANAGE: "qhse.incident.manage",
+  PERMIT_REQUEST: "qhse.permit.request",
+  PERMIT_APPROVE: "qhse.permit.approve",
+  TOOLBOX_MANAGE: "qhse.toolbox.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -148,6 +162,7 @@ export const ALL_PERMISSIONS = {
   ...HR_PERMISSIONS,
   ...DOCUMENTS_PERMISSIONS,
   ...FIELD_PERMISSIONS,
+  ...QHSE_PERMISSIONS,
   ...DASHBOARD_PERMISSIONS,
 } as const;
 

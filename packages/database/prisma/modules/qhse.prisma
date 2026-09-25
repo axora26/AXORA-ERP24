@@ -1,0 +1,297 @@
+// ---------------------------------------------------------------------------
+// INC-11 — QHSE (docs/foundation/02-domain-model.md BC-11)
+//
+// INVARIANTS :
+// 1. Une non-conformite (NCR) est immuable sur ses faits constates une fois
+//    creee (trigger) ; seules les actions correctives evoluent. Aucune
+//    suppression possible, y compris par un administrateur.
+// 2. Separation des devoirs : une action corrective est verifiee par une
+//    personne distincte de celle qui l'a realisee ; une NCR est cloturee par
+//    une personne distincte de son createur (CHECK en base).
+// 3. Chaque action corrective porte un responsable et une echeance ; le
+//    retard est calcule, jamais saisi.
+// 4. Un incident de securite est un fait : ses elements constates sont
+//    immuables et il ne peut etre supprime (audit renforce).
+// 5. Une inspection terminee est figee ; chaque point non conforme ouvre
+//    automatiquement une NCR (aucun constat perdu).
+// ---------------------------------------------------------------------------
+
+enum QhseDomain {
+  QUALITY
+  SAFETY
+  ENVIRONMENT
+}
+
+enum QhseInspectionStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum QhseCheckResult {
+  CONFORM
+  NON_CONFORM
+  NOT_APPLICABLE
+}
+
+enum QhseSeverity {
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum QhseFindingStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum QhseActionStatus {
+  OPEN
+  DONE
+  VERIFIED
+}
+
+enum SafetyIncidentType {
+  NEAR_MISS
+  FIRST_AID
+  MEDICAL_TREATMENT
+  LOST_TIME
+  PROPERTY_DAMAGE
+  ENVIRONMENTAL
+}
+
+enum SafetyIncidentStatus {
+  REPORTED
+  INVESTIGATED
+  CLOSED
+}
+
+enum WorkPermitType {
+  HOT_WORK
+  WORK_AT_HEIGHT
+  CONFINED_SPACE
+  ELECTRICAL
+  EXCAVATION
+  LIFTING
+  OTHER
+}
+
+enum WorkPermitStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+model QhseChecklistTemplate {
+  id             String     @id @default(cuid())
+  organizationId String
+  companyId      String
+  code           String
+  name           String
+  domain         QhseDomain
+  /// Points de controle : [{ "label": string, "critical": boolean }].
+  items          Json
+  createdAt      DateTime   @default(now())
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@map("qhse_checklist_templates")
+}
+
+model QhseInspection {
+  id              String               @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String
+  projectId       String
+  zoneId          String?
+  templateId      String?
+  title           String
+  domain          QhseDomain
+  scheduledAt     DateTime
+  inspectorUserId String
+  status          QhseInspectionStatus @default(PLANNED)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  /// Taux de conformite (%) calcule a la cloture sur les points applicables.
+  conformityRate  Decimal?             @db.Decimal(5, 2)
+  notes           String?
+  createdByUserId String
+  createdAt       DateTime             @default(now())
+
+  items QhseInspectionItem[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId, status])
+  @@map("qhse_inspections")
+}
+
+model QhseInspectionItem {
+  id               String           @id @default(cuid())
+  organizationId   String
+  companyId        String
+  inspectionId     String
+  position         Int
+  label            String
+  critical         Boolean          @default(false)
+  result           QhseCheckResult?
+  comment          String?
+  fileId           String?
+  answeredByUserId String?
+  answeredAt       DateTime?
+
+  inspection QhseInspection @relation(fields: [inspectionId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([inspectionId, position])
+  @@map("qhse_inspection_items")
+}
+
+model QhseFinding {
+  id               String            @id @default(cuid())
+  organizationId   String
+  companyId        String
+  code             String
+  projectId        String?
+  category         QhseDomain
+  severity         QhseSeverity
+  title            String
+  /// Constat : immuable une fois cree.
+  description      String
+  detectedAt       DateTime
+  inspectionId     String?
+  inspectionItemId String?
+  incidentId       String?
+  status           QhseFindingStatus @default(OPEN)
+  createdByUserId  String
+  closedByUserId   String?
+  closedAt         DateTime?
+  closureNote      String?
+  createdAt        DateTime          @default(now())
+
+  actions QhseCorrectiveAction[]
+
+  @@unique([companyId, code])
+  @@unique([inspectionItemId])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@map("qhse_findings")
+}
+
+model QhseCorrectiveAction {
+  id                String           @id @default(cuid())
+  organizationId    String
+  companyId         String
+  findingId         String
+  description       String
+  assigneeName      String
+  assigneeUserId    String?
+  dueDate           DateTime
+  status            QhseActionStatus @default(OPEN)
+  createdByUserId   String
+  completedByUserId String?
+  completedAt       DateTime?
+  completionNote    String?
+  fileId            String?
+  verifiedByUserId  String?
+  verifiedAt        DateTime?
+  verificationNote  String?
+  createdAt         DateTime         @default(now())
+
+  finding QhseFinding @relation(fields: [findingId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([organizationId, companyId, status, dueDate])
+  @@index([findingId])
+  @@map("qhse_corrective_actions")
+}
+
+model SafetyIncident {
+  id                   String               @id @default(cuid())
+  organizationId       String
+  companyId            String
+  code                 String
+  projectId            String?
+  type                 SafetyIncidentType
+  severity             QhseSeverity
+  occurredAt           DateTime
+  location             String
+  /// Faits constates : immuables une fois declares.
+  description          String
+  injuredPerson        String?
+  immediateActions     String?
+  reportedByUserId     String
+  /// Jours d'arret : donnee de suivi (peut s'allonger), jamais un fait initial.
+  lostDays             Int                  @default(0)
+  status               SafetyIncidentStatus @default(REPORTED)
+  investigationSummary String?
+  investigatedByUserId String?
+  investigatedAt       DateTime?
+  closedByUserId       String?
+  closedAt             DateTime?
+  createdAt            DateTime             @default(now())
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, occurredAt])
+  @@map("qhse_incidents")
+}
+
+model WorkPermit {
+  id                String           @id @default(cuid())
+  organizationId    String
+  companyId         String
+  code              String
+  projectId         String
+  zoneId            String?
+  type              WorkPermitType
+  description       String
+  precautions       String
+  validFrom         DateTime
+  validTo           DateTime
+  status            WorkPermitStatus @default(REQUESTED)
+  requestedByUserId String
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  closedByUserId    String?
+  closedAt          DateTime?
+  createdAt         DateTime         @default(now())
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId, status])
+  @@map("qhse_work_permits")
+}
+
+model ToolboxMeeting {
+  id                String   @id @default(cuid())
+  organizationId    String
+  companyId         String
+  projectId         String
+  heldAt            DateTime
+  topic             String
+  content           String
+  facilitatorUserId String
+  createdAt         DateTime @default(now())
+
+  attendees ToolboxAttendance[]
+
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId, heldAt])
+  @@map("qhse_toolbox_meetings")
+}
+
+model ToolboxAttendance {
+  id             String @id @default(cuid())
+  organizationId String
+  companyId      String
+  meetingId      String
+  employeeId     String
+
+  meeting ToolboxMeeting @relation(fields: [meetingId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([meetingId, employeeId])
+  @@map("qhse_toolbox_attendance")
+}

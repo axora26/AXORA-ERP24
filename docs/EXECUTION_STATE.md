@@ -19,6 +19,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-08 : finance (facturation client et situations, 3-way match, validation par un tiers, paiements anti-doublon, tresorerie, facture PDF).
 - INC-09 : RH (employes, badges, pointages append-only, feuilles de temps validees par un tiers et imputees aux projets, conges, preparation de paie sans retenue legale presumee).
 - INC-10 : GED (fichiers immuables par empreinte, revisions immuables, visa par un tiers) et chantier (journal signe, preuves horodatees, reserves levees sur preuve verifiee, synchronisation hors ligne avec conflits explicites) — ADR-0009.
+- INC-11 : QHSE (inspections a checklist ouvrant automatiquement les NCR, NCR et incidents immuables en base, actions verifiees et NCR cloturees par un tiers, permis de travail, quarts d'heure securite, taux de frequence sur heures RH validees).
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
 ## Bloque (externe)
@@ -28,4 +29,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-11 — QHSE (inspections avec checklists, non-conformites immuables, actions correctives avec responsable et echeance, cloture par un tiers, incidents et KPI), puis INC-12 a INC-17.
+INC-12 a INC-17 — Commissioning, MEP, BIM/IFC (connecteur Revit NOT_TESTED), Actifs/GMAO (MTBF/MTTR sur historique reel), Smart Building (connecteurs protocolaires NOT_TESTED), Energie.

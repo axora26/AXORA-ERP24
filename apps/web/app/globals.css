@@ -685,3 +685,26 @@ a.btn { text-decoration: none; }
   .conflict-card { flex-direction: column; }
   .conflict-actions { align-items: stretch; }
 }
+
+/* INC-11 — QHSE : checklist d'inspection */
+.checklist { list-style: none; margin: 0; padding: 8px 21px 18px; display: grid; gap: 10px; }
+.checklist li { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 12px 14px; border: 1px solid #e4e7ec; border-radius: 10px; background: #fff; }
+.checklist li.result-conform { border-color: #abefc6; background: #f6fef9; }
+.checklist li.result-non_conform { border-color: #fecdca; background: #fffbfa; }
+.checklist li.result-not_applicable { background: #f9fafb; }
+.checklist-label { display: flex; gap: 12px; align-items: flex-start; flex: 1; min-width: 0; }
+.checklist-label strong { margin-right: 8px; font-size: 13px; }
+.checklist-label p { margin: 6px 0 2px; font-size: 12px; color: #344054; }
+.checklist-label small { color: #667085; font-size: 11px; }
+.checklist-position { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; background: #eef2f6; color: #475467; font-size: 11px; font-weight: 700; }
+.checklist-photo { width: 84px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid #e4e7ec; }
+.checklist-results { display: flex; gap: 6px; flex: none; }
+.result-btn { height: 30px; padding: 0 10px; border: 1px solid #d0d5dd; border-radius: 7px; background: #fff; color: #344054; font: 600 11px Inter, sans-serif; cursor: pointer; }
+.result-btn:disabled { cursor: default; opacity: .55; }
+.result-btn.selected.conform { border-color: #12b76a; background: #ecfdf3; color: #067647; opacity: 1; }
+.result-btn.selected.non_conform { border-color: #f04438; background: #fef3f2; color: #b42318; opacity: 1; }
+.result-btn.selected.not_applicable { border-color: #98a2b3; background: #f2f4f7; color: #344054; opacity: 1; }
+.text-danger { color: #b42318; }
+@media (max-width: 900px) {
+  .checklist li { flex-direction: column; }
+}
