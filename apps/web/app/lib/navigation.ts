@@ -8,6 +8,7 @@ import {
   Receipt,
   ScrollText,
   ShoppingCart,
+  Boxes,
   ShieldCheck,
   UserCog,
   UsersRound,
@@ -56,6 +57,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Supply chain",
     items: [
       { href: "/procurement", label: "Achats", icon: ShoppingCart, permission: "procurement.request.read", keywords: "demandes commandes fournisseurs receptions" },
+      { href: "/inventory", label: "Stock & logistique", icon: Boxes, permission: "inventory.item.read", keywords: "articles magasins inventaire sorties transferts" },
     ],
   },
   {

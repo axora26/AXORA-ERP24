@@ -56,6 +56,15 @@ const LABELS: Record<string, string> = {
   "procurement.order.issued": "Commande émise",
   "procurement.order.cancelled": "Commande annulée",
   "procurement.receipt.created": "Réception enregistrée",
+  "inventory.item.created": "Article créé",
+  "inventory.item.updated": "Article modifié",
+  "inventory.warehouse.created": "Magasin créé",
+  "inventory.issue.posted": "Sortie de stock vers chantier",
+  "inventory.return.posted": "Retour de chantier en stock",
+  "inventory.transfer.posted": "Transfert entre magasins",
+  "inventory.adjustment.posted": "Ajustement de stock",
+  "inventory.count.opened": "Inventaire ouvert",
+  "inventory.count.closed": "Inventaire clôturé",
 };
 
 export function describeAudit(action: string): string {

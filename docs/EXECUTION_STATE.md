@@ -15,6 +15,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-01 complete : administration utilisateurs / roles / entreprises / audit, mot de passe, MFA TOTP.
 - INC-05 : projets (contrat -> projet, WBS, budget par feuilles, baseline, avenants, taches, Gantt, jalons, risques).
 - INC-06 : achats (DA, approbation par un tiers, comparatif fournisseurs, commandes, receptions partielles idempotentes, engagement projet).
+- INC-07 : stock (grand livre append-only et soldes non negatifs garantis en base, cout moyen pondere, sorties chantier, transferts, inventaires) ; devise de reference par entreprise.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
 ## Bloque (externe)
@@ -24,4 +25,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-07 — Stock & Logistique (articles, magasins, ledger de mouvements append-only non negatif, reception achats -> entree stock, sortie chantier affectee au projet).
+INC-08 — Finance (factures clients et fournisseurs, rapprochement 3-way commande/reception/facture, validation avant paiement, paiements partiels, anti double paiement, facture imprimable).

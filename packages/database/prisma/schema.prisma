@@ -41,6 +41,8 @@ model Company {
   organizationId String
   name           String
   legalName      String?
+  /// Devise de reference (valorisation du stock, consolidation) — ISO 4217.
+  currency       String   @default("USD") @db.Char(3)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

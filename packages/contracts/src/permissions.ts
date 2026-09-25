@@ -74,6 +74,15 @@ export const PROCUREMENT_PERMISSIONS = {
   RECEIPT_CREATE: "procurement.receipt.create",
 } as const;
 
+/** INC-07 — Stock & Logistique. Les ajustements (hors flux) sont une permission distincte. */
+export const INVENTORY_PERMISSIONS = {
+  ITEM_READ: "inventory.item.read",
+  ITEM_MANAGE: "inventory.item.manage",
+  MOVEMENT_CREATE: "inventory.movement.create",
+  ADJUSTMENT_CREATE: "inventory.adjustment.create",
+  COUNT_MANAGE: "inventory.count.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -91,6 +100,7 @@ export const ALL_PERMISSIONS = {
   ...SALES_PERMISSIONS,
   ...PROJECT_PERMISSIONS,
   ...PROCUREMENT_PERMISSIONS,
+  ...INVENTORY_PERMISSIONS,
   ...DASHBOARD_PERMISSIONS,
 } as const;
 

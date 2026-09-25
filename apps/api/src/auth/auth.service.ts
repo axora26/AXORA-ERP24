@@ -201,7 +201,7 @@ export class AuthService {
       }),
       this.prisma.companyMembership.findMany({
         where: { userId: user.id, company: { organizationId: user.organizationId } },
-        include: { company: { select: { id: true, name: true } } },
+        include: { company: { select: { id: true, name: true, currency: true } } },
         orderBy: { createdAt: "asc" },
       }),
       this.prisma.roleAssignment.findMany({
@@ -220,7 +220,7 @@ export class AuthService {
     return {
       user,
       organization,
-      companies: memberships.map((membership) => membership.company),
+      companies: memberships.map((membership) => ({ ...membership.company, currency: membership.company.currency.trim() })),
       roles: [...roles].sort(),
       permissions: [...permissions].sort(),
     };

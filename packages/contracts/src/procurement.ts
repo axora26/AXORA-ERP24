@@ -31,6 +31,7 @@ export interface PurchaseRequestLineView {
   estimatedUnitPrice: string;
   estimatedTotal: string;
   wbsItemId: string | null;
+  inventoryItemId: string | null;
 }
 
 export interface SupplierQuoteView {
@@ -83,6 +84,7 @@ export interface PurchaseOrderLineView {
   remainingQuantity: string;
   projectId: string | null;
   wbsItemId: string | null;
+  inventoryItemId: string | null;
 }
 
 export interface GoodsReceiptView {

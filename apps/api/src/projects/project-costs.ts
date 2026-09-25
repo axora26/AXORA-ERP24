@@ -22,7 +22,7 @@ export async function projectCostFigures(
   const rows = await prisma.$queryRaw<Array<{ committed: Prisma.Decimal | null; received: Prisma.Decimal | null }>>`
     SELECT
       COALESCE(SUM(l."lineTotal"), 0) AS "committed",
-      COALESCE(SUM(ROUND(l."receivedQuantity" * l."unitPrice", 2)), 0) AS "received"
+      COALESCE(SUM(CASE WHEN l."inventoryItemId" IS NULL THEN ROUND(l."receivedQuantity" * l."unitPrice", 2) ELSE 0 END), 0) AS "received"
     FROM "purchase_order_lines" l
     JOIN "purchase_orders" o ON o."id" = l."orderId"
     WHERE l."projectId" = ${projectId}
@@ -30,7 +30,16 @@ export async function projectCostFigures(
       AND o."companyId" = ${scope.companyId}
       AND o."status"::text IN ('ISSUED', 'PARTIALLY_RECEIVED', 'RECEIVED')
   `;
+  const stock = await prisma.$queryRaw<Array<{ consumed: Prisma.Decimal | null }>>`
+    SELECT COALESCE(-SUM("valueDelta"), 0) AS "consumed"
+    FROM "stock_movements"
+    WHERE "projectId" = ${projectId}
+      AND "organizationId" = ${scope.organizationId}
+      AND "companyId" = ${scope.companyId}
+      AND "type"::text IN ('ISSUE', 'RETURN')
+  `;
   const totals = rows[0];
+  const consumed = new Prisma.Decimal(totals?.received ?? 0).plus(new Prisma.Decimal(stock[0]?.consumed ?? 0));
   return {
     committed: {
       amount: money(totals?.committed ?? 0),
@@ -38,9 +47,9 @@ export async function projectCostFigures(
       source: "Commandes fournisseurs émises (Achats)",
     },
     consumed: {
-      amount: money(totals?.received ?? 0),
+      amount: money(consumed),
       available: true,
-      source: "Réceptions de commandes affectées au projet (Achats)",
+      source: "Réceptions directes chantier (Achats) + sorties de stock nettes des retours (Stock)",
     },
     invoiced: { amount: "0.00", available: false, source: "Finance — factures fournisseurs (INC-08)" },
     paid: { amount: "0.00", available: false, source: "Finance — paiements (INC-08)" },

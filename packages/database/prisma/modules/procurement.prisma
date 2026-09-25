@@ -100,6 +100,8 @@ model PurchaseRequestLine {
   quantity           Decimal  @db.Decimal(18, 3)
   estimatedUnitPrice Decimal  @db.Decimal(18, 2)
   wbsItemId          String?
+  /// Article stocke (INC-07) : la reception alimente alors le stock au lieu d'etre consommee.
+  inventoryItemId    String?
   createdAt          DateTime @default(now())
 
   request    PurchaseRequest     @relation(fields: [requestId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
@@ -195,6 +197,7 @@ model PurchaseOrderLine {
   receivedQuantity Decimal  @default(0) @db.Decimal(18, 3)
   projectId        String?
   wbsItemId        String?
+  inventoryItemId  String?
   createdAt        DateTime @default(now())
 
   order        PurchaseOrder      @relation(fields: [orderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
@@ -214,6 +217,8 @@ model GoodsReceipt {
   orderId          String
   idempotencyKey   String
   note             String?
+  /// Magasin d'entree pour les lignes d'articles stockes.
+  warehouseId      String?
   receivedByUserId String
   receivedAt       DateTime @default(now())
 

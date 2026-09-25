@@ -67,3 +67,12 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 - Formatage des montants par arithmetique sur chaines (aucune conversion flottante, testee au-dela de 2^53).
 - Jeu de donnees DEMO cree via l'API HTTP reelle (regles metier, RBAC, audit appliques), organisation marquee `isDemo`, bandeau permanent dans l'interface.
 **Reversible** : oui (refactorisation interne, aucun changement de contrat HTTP existant ; `/auth/me` inchange).
+
+## ADR-0008 — Invariants de stock et d'audit garantis par la base de donnees
+
+**Date** : 2026-09-25
+**Statut** : Acceptee
+**Contexte** : le backlog exige un ledger de mouvements immuable et un solde jamais negatif (BC-06), et un journal d'audit append-only (03-security). Une garantie purement applicative peut etre contournee par un script, une migration ou un futur module.
+**Decision** : (1) contrainte `CHECK (quantity >= 0 AND value >= 0)` sur `stock_balances` ; (2) trigger `axora_forbid_mutation` refusant tout `UPDATE`/`DELETE` sur `stock_movements` et `audit_logs`. Toute ecriture de stock passe par `StockLedgerService` (verrou `SELECT ... FOR UPDATE` sur la ligne de solde, cout moyen pondere). Le stock est valorise dans la devise de reference de l'entreprise (`companies.currency`) ; une reception d'article stocke dans une autre devise est refusee (pas de conversion implicite).
+**Consequence** : la suppression d'une organisation n'est plus possible tant que ses traces d'audit existent (comportement voulu : aucune route ne le permet).
+**Reversible** : oui par migration explicite, jamais silencieusement.

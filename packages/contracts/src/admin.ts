@@ -30,6 +30,7 @@ export interface AdminCompanyView {
   id: string;
   name: string;
   legalName: string | null;
+  currency: string;
   memberCount: number;
   createdAt: string;
 }

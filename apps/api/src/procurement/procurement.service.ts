@@ -11,6 +11,7 @@ import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
+import { StockLedgerService } from "../inventory/stock-ledger.service.js";
 import { dec, money, qty, sumDecimals } from "../common/decimal.js";
 import {
   assertBody,
@@ -53,6 +54,7 @@ export class ProcurementService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly numbering: NumberingService,
+    private readonly ledger: StockLedgerService,
   ) {}
 
   // ---------------------------------------------------------------------
@@ -214,20 +216,30 @@ export class ProcurementService {
         });
         leaves = new Set(wbs.filter((item) => item._count.children === 0).map((item) => item.id));
       }
-      const lines = (input.lines as unknown[]).map((raw, index) => {
-        const line = assertBody(raw);
+      const rawLines = (input.lines as unknown[]).map((raw) => assertBody(raw));
+      const itemIds = [...new Set(rawLines.map((line) => line.inventoryItemId).filter((id): id is string => typeof id === "string" && id !== ""))];
+      const items = itemIds.length
+        ? await tx.inventoryItem.findMany({ where: { id: { in: itemIds }, ...scope, isActive: true } })
+        : [];
+      const itemById = new Map(items.map((item) => [item.id, item]));
+      const lines = rawLines.map((line, index) => {
         const wbsItemId = optionalId(line.wbsItemId, `lines[${index}].wbsItemId`);
         if (wbsItemId && !projectId) throw new BadRequestException("wbsItemId requires a projectId");
         if (wbsItemId && !leaves.has(wbsItemId)) {
           throw new BadRequestException(`lines[${index}].wbsItemId must be a leaf WBS item of the project`);
         }
+        const inventoryItemId = optionalId(line.inventoryItemId, `lines[${index}].inventoryItemId`);
+        const item = inventoryItemId ? itemById.get(inventoryItemId) : undefined;
+        if (inventoryItemId && !item) throw new BadRequestException(`lines[${index}].inventoryItemId is not an active item`);
         return {
           position: index + 1,
-          description: requiredText(line.description, `lines[${index}].description`, 240),
-          unitCode: requiredText(line.unitCode, `lines[${index}].unitCode`, 20),
+          description: item ? (optionalText(line.description, `lines[${index}].description`, 240) ?? item.name) : requiredText(line.description, `lines[${index}].description`, 240),
+          // Un article stocke impose son unite de gestion.
+          unitCode: item ? item.unitCode : requiredText(line.unitCode, `lines[${index}].unitCode`, 20),
           quantity: requiredDecimal(line.quantity, `lines[${index}].quantity`, { positive: true }),
           estimatedUnitPrice: requiredDecimal(line.estimatedUnitPrice, `lines[${index}].estimatedUnitPrice`),
           wbsItemId,
+          inventoryItemId: item?.id ?? null,
         };
       });
       const code = await this.numbering.next(tx, scope, "DA");
@@ -409,6 +421,7 @@ export class ProcurementService {
           lineTotal: dec(line.quantity).mul(unitPrice).toDecimalPlaces(2),
           projectId: request.projectId,
           wbsItemId: line.wbsItemId,
+          inventoryItemId: line.inventoryItemId,
         };
       });
       const code = await this.numbering.next(tx, scope, "BC");
@@ -488,6 +501,7 @@ export class ProcurementService {
     const input = assertBody(body);
     const idempotencyKey = requiredText(input.idempotencyKey, "idempotencyKey", 120);
     const note = optionalText(input.note, "note", 1000);
+    const warehouseId = optionalId(input.warehouseId, "warehouseId");
     if (!Array.isArray(input.lines) || input.lines.length === 0) {
       throw new BadRequestException("lines must contain at least one received line");
     }
@@ -524,16 +538,46 @@ export class ProcurementService {
           );
         }
       }
+      const stocked = requested.some((item) => byId.get(item.orderLineId)?.inventoryItemId);
+      if (stocked && !warehouseId) {
+        throw new BadRequestException("warehouseId is required to receive stocked items");
+      }
+      if (stocked) {
+        const company = await tx.company.findUniqueOrThrow({ where: { id: scope.companyId }, select: { currency: true } });
+        if (company.currency.trim() !== order.currency.trim()) {
+          // Le stock est valorise dans la devise de l'entreprise : aucune conversion implicite.
+          throw new BadRequestException(
+            `Stocked items must be ordered in the company currency (${company.currency.trim()}), not ${order.currency.trim()}`,
+          );
+        }
+      }
       const code = await this.numbering.next(tx, scope, "BR");
       const receipt = await tx.goodsReceipt.create({
-        data: { ...scope, code, orderId: order.id, idempotencyKey, note, receivedByUserId: actorUserId },
+        data: { ...scope, code, orderId: order.id, idempotencyKey, note, warehouseId: stocked ? warehouseId : null, receivedByUserId: actorUserId },
       });
       for (const item of requested) {
-        await tx.goodsReceiptLine.create({ data: { receiptId: receipt.id, orderLineId: item.orderLineId, quantity: item.quantity } });
+        const orderLine = byId.get(item.orderLineId)!;
+        const receiptLine = await tx.goodsReceiptLine.create({
+          data: { receiptId: receipt.id, orderLineId: item.orderLineId, quantity: item.quantity },
+        });
         await tx.purchaseOrderLine.update({
           where: { id: item.orderLineId },
           data: { receivedQuantity: { increment: item.quantity } },
         });
+        if (orderLine.inventoryItemId) {
+          // Article stocke : entree en stock au prix d'achat (non consomme tant qu'il n'est pas sorti).
+          await this.ledger.post(tx, scope, {
+            itemId: orderLine.inventoryItemId,
+            warehouseId: warehouseId!,
+            type: "RECEIPT",
+            quantity: item.quantity,
+            unitCost: dec(orderLine.unitPrice),
+            goodsReceiptLineId: receiptLine.id,
+            reference: code,
+            // L'idempotence est deja garantie au niveau du bon de reception.
+            actorUserId,
+          });
+        }
       }
       const refreshed = await tx.purchaseOrderLine.findMany({ where: { orderId: order.id } });
       const complete = refreshed.every((line) => dec(line.receivedQuantity).greaterThanOrEqualTo(line.quantity));
@@ -622,6 +666,7 @@ function toRequestView(request: RequestWithRelations, names: Names): PurchaseReq
       estimatedUnitPrice: money(line.estimatedUnitPrice),
       estimatedTotal: money(dec(line.quantity).mul(line.estimatedUnitPrice)),
       wbsItemId: line.wbsItemId,
+      inventoryItemId: line.inventoryItemId,
     })),
     quotes: request.quotes.map((quote) => ({
       id: quote.id,
@@ -675,6 +720,7 @@ function toOrderView(order: OrderWithRelations, names: Names): PurchaseOrderView
       remainingQuantity: qty(dec(line.quantity).minus(line.receivedQuantity)),
       projectId: line.projectId,
       wbsItemId: line.wbsItemId,
+      inventoryItemId: line.inventoryItemId,
     })),
     receipts: order.receipts.map((receipt) => ({
       id: receipt.id,

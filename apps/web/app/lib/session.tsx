@@ -12,7 +12,7 @@ export interface SessionUser {
 export interface SessionContextValue {
   user: SessionUser;
   organization: { id: string; name: string; slug: string; isDemo: boolean } | null;
-  companies: Array<{ id: string; name: string }>;
+  companies: Array<{ id: string; name: string; currency: string }>;
   activeCompanyId: string | null;
   roles: string[];
   permissions: string[];

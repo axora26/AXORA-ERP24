@@ -14,6 +14,7 @@ import { writeAudit } from "../common/audit.js";
 import { DEFAULT_PIPELINE_STAGES } from "../crm/pipeline.defaults.js";
 import {
   assertBody,
+  currencyCode,
   optionalBoolean,
   optionalDate,
   optionalText,
@@ -293,6 +294,7 @@ export class AdminService {
       id: company.id,
       name: company.name,
       legalName: company.legalName,
+      currency: company.currency.trim(),
       memberCount: company._count.users,
       createdAt: company.createdAt.toISOString(),
     }));
@@ -302,6 +304,7 @@ export class AdminService {
     const input = assertBody(body);
     const name = requiredText(input.name, "name", 120);
     const legalName = optionalText(input.legalName, "legalName", 180);
+    const currency = input.currency === undefined ? "USD" : currencyCode(input.currency);
     const duplicate = await this.prisma.company.findFirst({
       where: { organizationId: actor.organizationId, name },
       select: { id: true },
@@ -310,7 +313,7 @@ export class AdminService {
 
     const companyId = await this.prisma.$transaction(async (tx) => {
       const company = await tx.company.create({
-        data: { organizationId: actor.organizationId, name, legalName },
+        data: { organizationId: actor.organizationId, name, legalName, currency },
       });
       // Le createur en devient membre pour pouvoir y travailler immediatement.
       await tx.companyMembership.create({ data: { userId: actor.id, companyId: company.id } });
