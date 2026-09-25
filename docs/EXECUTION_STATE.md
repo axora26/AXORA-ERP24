@@ -20,6 +20,9 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-09 : RH (employes, badges, pointages append-only, feuilles de temps validees par un tiers et imputees aux projets, conges, preparation de paie sans retenue legale presumee).
 - INC-10 : GED (fichiers immuables par empreinte, revisions immuables, visa par un tiers) et chantier (journal signe, preuves horodatees, reserves levees sur preuve verifiee, synchronisation hors ligne avec conflits explicites) — ADR-0009.
 - INC-11 : QHSE (inspections a checklist ouvrant automatiquement les NCR, NCR et incidents immuables en base, actions verifiees et NCR cloturees par un tiers, permis de travail, quarts d'heure securite, taux de frequence sur heures RH validees).
+- INC-13 : MEP (systemes, equipements de reference, noyau de calcul transparent et versionne, notes de calcul revisionnees validees par un autre ingenieur).
+- INC-12 : mise en service (sequence precommissioning -> essai -> anomalie -> correction -> retest -> reception -> remise DOE, garantie en base).
+- Correctif : le catalogue `ALL_PERMISSIONS` est desormais indexe par la cle de permission (une fusion d'objets ecrasait les constantes homonymes READ/MANAGE de modules differents) ; test de non-regression.
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
 ## Bloque (externe)
@@ -29,4 +32,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-12 a INC-17 — Commissioning, MEP, BIM/IFC (connecteur Revit NOT_TESTED), Actifs/GMAO (MTBF/MTTR sur historique reel), Smart Building (connecteurs protocolaires NOT_TESTED), Energie.
+INC-14 BIM/IFC (connecteur Revit NOT_TESTED), INC-15 Actifs/GMAO (MTBF/MTTR sur historique reel), INC-16 Smart Building (connecteurs protocolaires NOT_TESTED), INC-17 Energie.

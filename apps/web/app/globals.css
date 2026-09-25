@@ -708,3 +708,40 @@ a.btn { text-decoration: none; }
 @media (max-width: 900px) {
   .checklist li { flex-direction: column; }
 }
+
+/* INC-13 — MEP : notes de calcul */
+.calc-sheet { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; padding: 16px 21px; }
+.calc-sheet h3 { margin: 12px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #667085; }
+.calc-sheet h3:first-child { margin-top: 0; }
+.calc-table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 12px; }
+.calc-table td:first-child { display: table-cell; }
+.calc-table td.num { white-space: nowrap; text-align: right; }
+.calc-table td { padding: 6px 8px; border-top: 0; border-bottom: 1px solid #f2f4f7; font-size: 12px; color: #344054; }
+.calc-table .symbol { width: 56px; font: 600 13px "JetBrains Mono", ui-monospace, monospace; color: #1d4ed8; }
+.calc-table.result td { background: #f6fef9; }
+.formula-box { margin: 0; padding: 10px 12px; border-radius: 8px; background: #0f1b2d; color: #e6edf7; font: 500 13px "JetBrains Mono", ui-monospace, monospace; overflow-x: auto; }
+.form-grid .formula-box.wide, .formula-box.wide { grid-column: 1 / -1; }
+.calc-sources { margin: 10px 0 0; font-size: 12px; color: #344054; }
+.calc-assumptions { margin: 0; padding-left: 18px; font-size: 12px; color: #344054; }
+.calc-catalog { list-style: none; margin: 0; padding: 8px 21px 18px; display: grid; gap: 10px; }
+.calc-catalog li { display: grid; gap: 4px; padding-bottom: 10px; border-bottom: 1px solid #f2f4f7; font-size: 12px; }
+.calc-catalog code { font: 500 12px "JetBrains Mono", ui-monospace, monospace; color: #1d4ed8; }
+.calc-catalog small { color: #667085; }
+@media (max-width: 900px) { .calc-sheet { grid-template-columns: minmax(0, 1fr); } }
+
+/* INC-12 — Mise en service */
+.stepper { list-style: none; margin: 0; padding: 16px 21px; display: flex; flex-wrap: wrap; gap: 8px; }
+.stepper li { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: #f2f4f7; color: #667085; font-size: 12px; font-weight: 600; }
+.stepper li span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fff; font-size: 11px; }
+.stepper li.done { background: #ecfdf3; color: #067647; }
+.stepper li.current { background: #eaf1ff; color: var(--blue-600); box-shadow: inset 0 0 0 1px #b2ccff; }
+.test-sheets { list-style: none; margin: 0; padding: 8px 21px 18px; display: grid; gap: 12px; }
+.test-sheets > li { padding: 12px 14px; border-radius: 10px; border: 1px solid #abefc6; background: #f6fef9; font-size: 12px; }
+.test-sheets > li.fail { border-color: #fecdca; background: #fffbfa; }
+.test-sheets header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.test-sheets header small { color: #667085; margin-left: auto; }
+.test-sheets p { margin: 8px 0 0; }
+.checks { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
+.checks .ko { color: #b42318; }
+.measure-row { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.measure-row .inline-select { max-width: 180px; }

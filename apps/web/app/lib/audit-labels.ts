@@ -127,6 +127,17 @@ const LABELS: Record<string, string> = {
   "qhse.permit.rejected": "Permis de travail refusé",
   "qhse.permit.closed": "Permis de travail clôturé",
   "qhse.toolbox.recorded": "Quart d'heure sécurité enregistré",
+  "mep.system.created": "Système technique créé",
+  "mep.equipment.created": "Équipement MEP créé",
+  "mep.equipment.updated": "Équipement MEP modifié",
+  "mep.calculation.created": "Note de calcul créée",
+  "mep.calculation.revised": "Note de calcul révisée",
+  "mep.calculation.validated": "Note de calcul validée",
+  "commissioning.activity.created": "Mise en service ouverte",
+  "commissioning.test.recorded": "Fiche d'essai enregistrée",
+  "commissioning.punch.corrected": "Anomalie de mise en service corrigée",
+  "commissioning.activity.accepted": "Équipement réceptionné",
+  "commissioning.activity.handed_over": "Installation remise au client (DOE)",
 };
 
 export function describeAudit(action: string): string {

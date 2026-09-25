@@ -17,8 +17,10 @@ import { FilesModule } from "./files/files.module.js";
 import { DocumentsModule } from "./documents/documents.module.js";
 import { FieldModule } from "./field/field.module.js";
 import { QhseModule } from "./qhse/qhse.module.js";
+import { MepModule } from "./mep/mep.module.js";
+import { CommissioningModule } from "./commissioning/commissioning.module.js";
 
 @Module({
-  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule],
 })
 export class AppModule {}

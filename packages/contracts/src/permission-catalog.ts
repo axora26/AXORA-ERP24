@@ -87,6 +87,8 @@ const RESOURCE_LABELS: Record<string, string> = {
   incident: "les incidents de sécurité",
   permit: "les permis de travail",
   toolbox: "les quarts d'heure sécurité",
+  system: "les systèmes et équipements techniques",
+  calculation: "les notes de calcul",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -108,9 +110,14 @@ const ACTION_LABELS: Record<string, string> = {
   sign: "Signer",
   upload: "Téléverser",
   report: "Déclarer",
+  accept: "Réceptionner",
 };
 
-export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {};
+export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
+  "commissioning.activity.read": "Consulter les mises en service",
+  "commissioning.activity.manage": "Conduire les essais de mise en service",
+  "commissioning.activity.accept": "Réceptionner et remettre les installations",
+};
 
 export function registerResourceLabels(labels: Record<string, string>): void {
   Object.assign(RESOURCE_LABELS, labels);

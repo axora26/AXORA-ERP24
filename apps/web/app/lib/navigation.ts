@@ -16,6 +16,8 @@ import {
   HardHat,
   FileStack,
   ShieldPlus,
+  Cpu,
+  PlugZap,
   UsersRound,
 } from "lucide-react";
 
@@ -59,6 +61,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/field", label: "Chantier", icon: HardHat, permission: "field.site.read", keywords: "journal reserves photos terrain hors ligne punch list" },
       { href: "/qhse", label: "QHSE", icon: ShieldPlus, permission: "qhse.inspection.read", keywords: "securite qualite environnement ncr non-conformite incident accident permis feu inspection" },
       { href: "/documents", label: "Documents (GED)", icon: FileStack, permission: "documents.document.read", keywords: "ged plans visa revisions indices fichiers" },
+    ],
+  },
+  {
+    label: "Ingénierie",
+    items: [
+      { href: "/mep", label: "MEP & calculs", icon: Cpu, permission: "mep.system.read", keywords: "cvc electricite plomberie incendie equipements notes de calcul" },
+      { href: "/commissioning", label: "Mise en service", icon: PlugZap, permission: "commissioning.activity.read", keywords: "commissioning essais retest reception doe" },
     ],
   },
   {

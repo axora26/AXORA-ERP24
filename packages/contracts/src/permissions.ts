@@ -140,6 +140,21 @@ export const QHSE_PERMISSIONS = {
   TOOLBOX_MANAGE: "qhse.toolbox.manage",
 } as const;
 
+/** INC-13 — MEP : notes de calcul transparentes, validees par un autre ingenieur. */
+export const MEP_PERMISSIONS = {
+  READ: "mep.system.read",
+  MANAGE: "mep.system.manage",
+  CALCULATION_MANAGE: "mep.calculation.manage",
+  CALCULATION_VALIDATE: "mep.calculation.validate",
+} as const;
+
+/** INC-12 — Commissioning : sequence d'essais non contournable, reception par un tiers. */
+export const COMMISSIONING_PERMISSIONS = {
+  READ: "commissioning.activity.read",
+  MANAGE: "commissioning.activity.manage",
+  ACCEPT: "commissioning.activity.accept",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -150,21 +165,38 @@ export const DASHBOARD_PERMISSIONS = {
  * bootstrap d'une organisation les recoit toutes ; les autres roles sont
  * construits explicitement (deny-by-default, docs/foundation/03-security.md).
  */
-export const ALL_PERMISSIONS = {
-  ...CORE_PERMISSIONS,
-  ...CRM_PERMISSIONS,
-  ...ESTIMATION_PERMISSIONS,
-  ...SALES_PERMISSIONS,
-  ...PROJECT_PERMISSIONS,
-  ...PROCUREMENT_PERMISSIONS,
-  ...INVENTORY_PERMISSIONS,
-  ...FINANCE_PERMISSIONS,
-  ...HR_PERMISSIONS,
-  ...DOCUMENTS_PERMISSIONS,
-  ...FIELD_PERMISSIONS,
-  ...QHSE_PERMISSIONS,
-  ...DASHBOARD_PERMISSIONS,
-} as const;
+/** Groupes de permissions par module, dans l'ordre d'affichage du catalogue. */
+export const PERMISSION_GROUPS = [
+  CORE_PERMISSIONS,
+  CRM_PERMISSIONS,
+  ESTIMATION_PERMISSIONS,
+  SALES_PERMISSIONS,
+  PROJECT_PERMISSIONS,
+  PROCUREMENT_PERMISSIONS,
+  INVENTORY_PERMISSIONS,
+  FINANCE_PERMISSIONS,
+  HR_PERMISSIONS,
+  DOCUMENTS_PERMISSIONS,
+  FIELD_PERMISSIONS,
+  QHSE_PERMISSIONS,
+  MEP_PERMISSIONS,
+  COMMISSIONING_PERMISSIONS,
+  DASHBOARD_PERMISSIONS,
+] as const;
+
+type GroupValues<T> = T extends Record<string, infer V> ? V : never;
+
+/** Toute cle de permission connue du produit. */
+export type PermissionKey = GroupValues<(typeof PERMISSION_GROUPS)[number]>;
+
+/**
+ * Catalogue indexe par la cle de permission elle-meme : deux modules peuvent
+ * nommer leurs constantes READ/MANAGE sans jamais s'ecraser (une fusion
+ * d'objets par nom de constante perdait silencieusement des permissions).
+ */
+export const ALL_PERMISSIONS = Object.freeze(
+  Object.fromEntries(PERMISSION_GROUPS.flatMap((group) => Object.values(group)).map((key) => [key, key])),
+) as { readonly [K in PermissionKey]: K };
 
 export type CorePermissionKey =
   (typeof CORE_PERMISSIONS)[keyof typeof CORE_PERMISSIONS];
@@ -178,8 +210,6 @@ export type EstimationPermissionKey =
 export type SalesPermissionKey =
   (typeof SALES_PERMISSIONS)[keyof typeof SALES_PERMISSIONS];
 
-export type PermissionKey =
-  (typeof ALL_PERMISSIONS)[keyof typeof ALL_PERMISSIONS];
 
 export interface PermissionCheck {
   key: PermissionKey | string;
