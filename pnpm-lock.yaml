@@ -102,6 +102,12 @@ importers:
       '@axora24/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@fontsource/inter':
+        specifier: ^5
+        version: 5.3.0
+      '@fontsource/montserrat':
+        specifier: ^5
+        version: 5.3.0
       lucide-react:
         specifier: ^1.47.0
         version: 1.47.0(react@19.3.0)
@@ -672,6 +678,12 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource/inter@5.3.0':
+    resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
+
+  '@fontsource/montserrat@5.3.0':
+    resolution: {integrity: sha512-iQPDtZOnmM5ih4JBGaMSXisRap0ixb9bAUw2hDtY7EjVfaqiiNlKtVuJl9XclxUwtwMMHNcWXfQR6zI9x05+Tg==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -4521,6 +4533,10 @@ snapshots:
   '@exodus/bytes@1.15.2(@noble/hashes@1.8.0)':
     optionalDependencies:
       '@noble/hashes': 1.8.0
+
+  '@fontsource/inter@5.3.0': {}
+
+  '@fontsource/montserrat@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

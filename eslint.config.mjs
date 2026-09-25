@@ -32,6 +32,8 @@ export default tseslint.config(
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
+      // Convention : un parametre prefixe par "_" est volontairement inutilise.
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
 );

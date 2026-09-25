@@ -78,6 +78,24 @@ export function formatCompactMoney(amount: string, currency?: string | null): st
   return currency ? `${formatted} ${currency}` : formatted;
 }
 
+/**
+ * Somme exacte de montants decimaux (au centime) par entiers BigInt :
+ * aucune erreur d'arrondi flottant. Les decimales au-dela du centime sont
+ * tronquees (les montants API sont deja a 2 decimales).
+ */
+export function sumMoney(values: string[]): string {
+  let total = 0n;
+  for (const value of values) {
+    const match = /^(-)?(\d+)(?:\.(\d+))?$/.exec(value.trim());
+    if (!match) continue;
+    const cents = BigInt(match[2] ?? "0") * 100n + BigInt(`${match[3] ?? ""}00`.slice(0, 2));
+    total += match[1] ? -cents : cents;
+  }
+  const negative = total < 0n;
+  const absolute = negative ? -total : total;
+  return `${negative ? "-" : ""}${absolute / 100n}.${String(absolute % 100n).padStart(2, "0")}`;
+}
+
 export function formatQuantity(value: string | null | undefined, digits = 2): string {
   if (value === null || value === undefined || value === "") return "—";
   return formatDecimal(value, digits);

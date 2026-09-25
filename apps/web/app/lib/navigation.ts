@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Building2,
   Calculator,
+  FolderKanban,
   KeyRound,
   LayoutDashboard,
   Receipt,
@@ -42,6 +43,12 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/crm", label: "CRM & Pipeline", icon: UsersRound, permission: "crm.opportunity.read", keywords: "prospects leads opportunites clients" },
       { href: "/estimation", label: "Études & DQE", icon: Calculator, permission: "estimation.dqe.read", keywords: "bpu boq chiffrage estimation" },
       { href: "/sales", label: "Devis & Contrats", icon: Receipt, permission: "sales.quote.read", keywords: "offres contrats ventes" },
+    ],
+  },
+  {
+    label: "Projets & chantiers",
+    items: [
+      { href: "/projects", label: "Projets", icon: FolderKanban, permission: "projects.project.read", keywords: "wbs budget planning gantt avenants affaires" },
     ],
   },
   {

@@ -53,6 +53,15 @@ export const SALES_PERMISSIONS = {
   CONTRACT_MANAGE: "sales.contract.manage",
 } as const;
 
+/** INC-05 — Projets & Construction. L'approbation d'avenant est separee de leur saisie. */
+export const PROJECT_PERMISSIONS = {
+  PROJECT_READ: "projects.project.read",
+  PROJECT_MANAGE: "projects.project.manage",
+  BUDGET_MANAGE: "projects.budget.manage",
+  CHANGE_ORDER_APPROVE: "projects.changeorder.approve",
+  TASK_MANAGE: "projects.task.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -68,6 +77,7 @@ export const ALL_PERMISSIONS = {
   ...CRM_PERMISSIONS,
   ...ESTIMATION_PERMISSIONS,
   ...SALES_PERMISSIONS,
+  ...PROJECT_PERMISSIONS,
   ...DASHBOARD_PERMISSIONS,
 } as const;
 

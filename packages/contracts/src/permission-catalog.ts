@@ -53,6 +53,10 @@ const RESOURCE_LABELS: Record<string, string> = {
   library: "la bibliothèque",
   quote: "les devis",
   contract: "les contrats",
+  project: "les projets",
+  budget: "les budgets",
+  changeorder: "les avenants",
+  task: "les tâches",
 };
 
 const ACTION_LABELS: Record<string, string> = {

@@ -1,0 +1,237 @@
+// ---------------------------------------------------------------------------
+// INC-05 — Projets & Construction (docs/foundation/02-domain-model.md BC-04)
+//
+// INVARIANTS :
+// 1. Un projet appartient a exactement une entreprise ; toute ressource de
+//    projet porte organizationId + companyId + projectId (cle composite).
+// 2. Un contrat engendre au plus UN projet racine (contractId unique).
+// 3. Le budget est porte par les noeuds WBS FEUILLES uniquement : un noeud
+//    parent n'a jamais de ligne budgetaire propre, son budget est derive.
+// 4. Apres gel de la baseline (budgetBaselinedAt), les lignes budgetaires sont
+//    immuables : toute evolution passe par un avenant (ChangeOrder) approuve,
+//    par une personne distincte de son auteur.
+// 5. L'avancement physique est derive des taches (poids des taches DONE),
+//    jamais saisi librement.
+// ---------------------------------------------------------------------------
+
+enum ProjectStatus {
+  PLANNED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum ProjectWbsKind {
+  LOT
+  PHASE
+  WORK_PACKAGE
+}
+
+enum ProjectCostCategory {
+  MATERIAL
+  LABOR
+  EQUIPMENT
+  SUBCONTRACT
+  OVERHEAD
+  OTHER
+}
+
+enum ProjectTaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+}
+
+enum ProjectChangeOrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProjectMilestoneStatus {
+  PLANNED
+  ACHIEVED
+}
+
+enum ProjectRiskStatus {
+  OPEN
+  MITIGATED
+  CLOSED
+}
+
+model Project {
+  id                String        @id @default(cuid())
+  organizationId    String
+  companyId         String
+  code              String
+  name              String
+  description       String?
+  location          String?
+  clientName        String?
+  status            ProjectStatus @default(PLANNED)
+  currency          String        @default("USD") @db.Char(3)
+  /// Montant contractuel (vente) fige depuis le contrat source ; 0 sans contrat.
+  contractAmount    Decimal       @default(0) @db.Decimal(18, 2)
+  contractId        String?       @unique
+  managerUserId     String?
+  plannedStart      DateTime?
+  plannedEnd        DateTime?
+  budgetBaselinedAt DateTime?
+  budgetBaselinedBy String?
+  statusReason      String?
+  completedAt       DateTime?
+  createdByUserId   String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  wbsItems     ProjectWbsItem[]
+  budgetLines  ProjectBudgetLine[]
+  tasks        ProjectTask[]
+  milestones   ProjectMilestone[]
+  changeOrders ProjectChangeOrder[]
+  risks        ProjectRisk[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@map("projects")
+}
+
+model ProjectWbsItem {
+  id             String         @id @default(cuid())
+  organizationId String
+  companyId      String
+  projectId      String
+  parentId       String?
+  code           String
+  name           String
+  kind           ProjectWbsKind @default(WORK_PACKAGE)
+  position       Int            @default(0)
+  createdAt      DateTime       @default(now())
+
+  project      Project              @relation(fields: [projectId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  parent       ProjectWbsItem?      @relation("WbsTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children     ProjectWbsItem[]     @relation("WbsTree")
+  budgetLines  ProjectBudgetLine[]
+  tasks        ProjectTask[]
+  changeOrders ProjectChangeOrder[]
+
+  @@unique([projectId, code])
+  @@index([organizationId, companyId, projectId])
+  @@index([parentId])
+  @@map("project_wbs_items")
+}
+
+/// Ligne de budget de couts (deboursé) sur une feuille WBS.
+model ProjectBudgetLine {
+  id              String              @id @default(cuid())
+  organizationId  String
+  companyId       String
+  projectId       String
+  wbsItemId       String
+  category        ProjectCostCategory
+  description     String
+  amount          Decimal             @db.Decimal(18, 2)
+  createdByUserId String
+  createdAt       DateTime            @default(now())
+
+  project Project        @relation(fields: [projectId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  wbsItem ProjectWbsItem @relation(fields: [wbsItemId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId, projectId])
+  @@index([wbsItemId])
+  @@map("project_budget_lines")
+}
+
+model ProjectTask {
+  id             String            @id @default(cuid())
+  organizationId String
+  companyId      String
+  projectId      String
+  wbsItemId      String
+  name           String
+  status         ProjectTaskStatus @default(TODO)
+  /// Poids relatif dans l'avancement physique (> 0).
+  weight         Decimal           @default(1) @db.Decimal(10, 2)
+  plannedStart   DateTime?
+  plannedEnd     DateTime?
+  assigneeUserId String?
+  completedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  project Project        @relation(fields: [projectId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  wbsItem ProjectWbsItem @relation(fields: [wbsItemId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId, projectId, status])
+  @@index([wbsItemId])
+  @@map("project_tasks")
+}
+
+model ProjectMilestone {
+  id             String                 @id @default(cuid())
+  organizationId String
+  companyId      String
+  projectId      String
+  name           String
+  dueDate        DateTime
+  status         ProjectMilestoneStatus @default(PLANNED)
+  achievedAt     DateTime?
+  createdAt      DateTime               @default(now())
+
+  project Project @relation(fields: [projectId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@index([organizationId, companyId, projectId])
+  @@map("project_milestones")
+}
+
+/// Avenant / change order : seule voie de modification du budget apres baseline.
+model ProjectChangeOrder {
+  id                String                   @id @default(cuid())
+  organizationId    String
+  companyId         String
+  projectId         String
+  wbsItemId         String
+  code              String
+  title             String
+  reason            String
+  /// Variation du budget de couts (peut etre negative).
+  amount            Decimal                  @db.Decimal(18, 2)
+  status            ProjectChangeOrderStatus @default(PENDING)
+  requestedByUserId String
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  createdAt         DateTime                 @default(now())
+
+  project Project        @relation(fields: [projectId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  wbsItem ProjectWbsItem @relation(fields: [wbsItemId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, code])
+  @@index([organizationId, companyId, projectId, status])
+  @@map("project_change_orders")
+}
+
+model ProjectRisk {
+  id             String            @id @default(cuid())
+  organizationId String
+  companyId      String
+  projectId      String
+  title          String
+  description    String?
+  /// Probabilite et impact de 1 (faible) a 5 (critique) ; score = produit.
+  probability    Int
+  impact         Int
+  status         ProjectRiskStatus @default(OPEN)
+  mitigation     String?
+  ownerUserId    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  project Project @relation(fields: [projectId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@index([organizationId, companyId, projectId, status])
+  @@map("project_risks")
+}

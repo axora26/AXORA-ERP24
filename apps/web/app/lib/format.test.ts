@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCompactMoney, formatDecimal, formatMoney } from "./format";
+import { formatCompactMoney, formatDecimal, formatMoney, sumMoney } from "./format";
 
 const NBSP = "\u202f";
 
@@ -38,5 +38,14 @@ describe("formatMoney / formatCompactMoney", () => {
     expect(formatCompactMoney("5990000.00", "USD")).toBe("5,99 M USD");
     expect(formatCompactMoney("387875.00", "USD")).toBe("387,9 k USD");
     expect(formatCompactMoney("9500.00", "USD")).toBe(`9${NBSP}500,00 USD`);
+  });
+});
+
+describe("sumMoney", () => {
+  it("additionne au centime pres sans flottant", () => {
+    expect(sumMoney(["0.10", "0.20"])).toBe("0.30");
+    expect(sumMoney(["999999999999999.99", "0.01"])).toBe("1000000000000000.00");
+    expect(sumMoney(["-5.50", "2.25"])).toBe("-3.25");
+    expect(sumMoney([])).toBe("0.00");
   });
 });

@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap");
 
 :root {
   --navy: #0b1f3a;
@@ -544,3 +543,28 @@ button.search-box span { flex: 1; min-width: 0; overflow: hidden; white-space: n
 a.user-menu { color: inherit; text-decoration: none; border-radius: 8px; }
 a.user-menu:hover strong { color: var(--blue-600); }
 .login-card .link-button { font-size: 12px; }
+
+/* --- INC-05 : projets ---------------------------------------------------- */
+.figures { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; padding: 16px 21px 20px; }
+.figure { display: flex; flex-direction: column; gap: 4px; min-width: 0; border: 1px solid #e8ebf0; border-radius: 10px; padding: 12px 14px; background: #fff; }
+.figure span { color: #667085; font-size: 10.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+.figure strong { color: #182230; font: 700 16px Montserrat, sans-serif; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.figure small { color: #98a2b3; font-size: 10px; line-height: 1.4; }
+.figure.highlight { border-color: #b9cdf6; background: #f5f8ff; }
+.figure.positive strong { color: #0c6b3f; }
+.figure.negative strong { color: #b42318; }
+.figure.pending { border-style: dashed; background: #fbfcfe; }
+.figure.pending strong { color: #98a2b3; font-size: 13px; }
+.inline-select { height: 32px; max-width: 150px; border: 1px solid #d6dae2; border-radius: 7px; padding: 0 8px; color: #182230; background: #fff; font: 500 12px Inter, sans-serif; }
+.field-note.wide { grid-column: 1 / -1; margin: 0; }
+.gantt { display: grid; gap: 4px; padding: 14px 21px 18px; overflow-x: auto; }
+.gantt-row { display: grid; grid-template-columns: minmax(140px, 220px) minmax(420px, 1fr); align-items: center; gap: 12px; min-height: 26px; }
+.gantt-row > span { overflow: hidden; color: #344054; font-size: 11.5px; white-space: nowrap; text-overflow: ellipsis; }
+.gantt-track { position: relative; height: 22px; border-radius: 6px; background: repeating-linear-gradient(90deg, #f7f8fb 0, #f7f8fb 1px, transparent 1px, transparent 8.33%); }
+.gantt-head .gantt-track { background: none; height: 18px; }
+.gantt-head em { position: absolute; top: 0; color: #98a2b3; font-size: 10px; font-style: normal; white-space: nowrap; transform: translateX(2px); border-left: 1px solid #e4e7ec; padding-left: 4px; }
+.gantt-bar { position: absolute; top: 4px; height: 14px; border-radius: 4px; background: #9bb8f5; }
+.gantt-bar.status-in_progress { background: var(--blue-600); }
+.gantt-bar.status-done { background: var(--success); }
+.gantt-bar.status-blocked { background: #d92d20; }
+.gantt-today { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #f79009; }

@@ -256,7 +256,7 @@ export function Form({
   columns = 2,
   secondary,
 }: {
-  onSubmit: () => void | Promise<void>;
+  onSubmit: () => unknown;
   children: ReactNode;
   submitLabel: string;
   saving?: boolean;

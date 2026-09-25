@@ -13,6 +13,8 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-00 a INC-04 (repris de `feat/foundation`).
 - Socle plateforme (ADR-0007) : module commun, garde de perimetre, numerotation, tableau de bord reel, shell web a routes, kit UI, `pnpm local`, jeu DEMO via l'API.
 - INC-01 complete : administration utilisateurs / roles / entreprises / audit, mot de passe, MFA TOTP.
+- INC-05 : projets (contrat -> projet, WBS, budget par feuilles, baseline, avenants, taches, Gantt, jalons, risques).
+- Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
 ## Bloque (externe)
 
@@ -21,4 +23,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-05 — Projets & Construction (projet issu d'un contrat, WBS, budget par feuille, taches, avancement calcule, jalons).
+INC-06 — Achats (demande -> validation -> consultation -> commande -> reception partielle), engagement visible dans le cockpit projet.

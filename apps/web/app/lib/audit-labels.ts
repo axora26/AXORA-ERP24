@@ -29,6 +29,21 @@ const LABELS: Record<string, string> = {
   "core.role.permissions_changed": "Permissions d'un rôle modifiées",
   "core.role.deleted": "Rôle supprimé",
   "core.company.created": "Entreprise créée",
+  "projects.project.created": "Projet créé",
+  "projects.project.status_changed": "Statut de projet modifié",
+  "projects.wbs.created": "Élément WBS ajouté",
+  "projects.budget.line_added": "Ligne budgétaire ajoutée",
+  "projects.budget.line_removed": "Ligne budgétaire supprimée",
+  "projects.budget.baselined": "Baseline budgétaire figée",
+  "projects.changeorder.requested": "Avenant demandé",
+  "projects.changeorder.approved": "Avenant approuvé",
+  "projects.changeorder.rejected": "Avenant rejeté",
+  "projects.task.created": "Tâche créée",
+  "projects.task.status_changed": "Statut de tâche modifié",
+  "projects.milestone.created": "Jalon ajouté",
+  "projects.milestone.achieved": "Jalon atteint",
+  "projects.risk.created": "Risque enregistré",
+  "projects.risk.updated": "Risque mis à jour",
 };
 
 export function describeAudit(action: string): string {
