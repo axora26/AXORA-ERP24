@@ -197,6 +197,16 @@ export const FLEET_PERMISSIONS = {
   INCIDENT: "fleet.incident.report",
 } as const;
 
+/** INC-19 — Sous-traitants. Qualification, preparation et approbation des situations sont separees. */
+export const SUBCONTRACTING_PERMISSIONS = {
+  READ: "subcontracting.package.read",
+  MANAGE: "subcontracting.package.manage",
+  QUALIFY: "subcontracting.subcontractor.qualify",
+  STATEMENT_PREPARE: "subcontracting.statement.prepare",
+  STATEMENT_APPROVE: "subcontracting.statement.approve",
+  RETENTION_RELEASE: "subcontracting.retention.release",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -228,6 +238,7 @@ export const PERMISSION_GROUPS = [
   SMART_PERMISSIONS,
   ENERGY_PERMISSIONS,
   FLEET_PERMISSIONS,
+  SUBCONTRACTING_PERMISSIONS,
   DASHBOARD_PERMISSIONS,
 ] as const;
 

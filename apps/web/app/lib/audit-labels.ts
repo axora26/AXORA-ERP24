@@ -191,6 +191,17 @@ const LABELS: Record<string, string> = {
   "fleet.fuel.recorded": "Plein de carburant enregistré",
   "fleet.incident.reported": "Incident de parc déclaré",
   "fleet.incident.closed": "Incident de parc clos",
+  "subcontracting.subcontractor.created": "Sous-traitant enregistré",
+  "subcontracting.document.recorded": "Pièce de vigilance enregistrée",
+  "subcontracting.subcontractor.qualified": "Sous-traitant qualifié",
+  "subcontracting.subcontractor.suspended": "Sous-traitant suspendu",
+  "subcontracting.package.created": "Lot de sous-traitance confié",
+  "subcontracting.package.closed": "Lot de sous-traitance clos",
+  "subcontracting.statement.prepared": "Situation de sous-traitance préparée",
+  "subcontracting.statement.approved": "Situation de sous-traitance approuvée",
+  "subcontracting.statement.rejected": "Situation de sous-traitance rejetée",
+  "subcontracting.statement.invoiced": "Facture de situation enregistrée",
+  "subcontracting.retention.released": "Retenue de garantie libérée",
 };
 
 export function describeAudit(action: string): string {

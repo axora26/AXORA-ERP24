@@ -1,0 +1,178 @@
+// ---------------------------------------------------------------------------
+// INC-19 — Sous-traitants (docs/foundation/02-domain-model.md BC-19)
+//
+// INVARIANTS :
+// 1. Reutilisation : le sous-traitant est un fournisseur (Achats), le lot
+//    reference une commande emise existante, les factures de situation sont
+//    des factures fournisseurs (Finance) approuvees et payees par leurs
+//    flux habituels.
+// 2. L'avancement d'une situation est derive des taches reelles du lot WBS
+//    (poids des taches terminees), fige a la preparation — jamais saisi.
+// 3. La retenue de garantie est un objet de premier ordre avec une date de
+//    liberation explicite ; sa liberation est tracee et facturee a part.
+// ---------------------------------------------------------------------------
+
+enum SubcontractorStatus {
+  PENDING
+  QUALIFIED
+  SUSPENDED
+}
+
+enum SubcontractorDocumentKind {
+  RCCM
+  TAX_CERTIFICATE
+  SOCIAL_CERTIFICATE
+  LIABILITY_INSURANCE
+  DECENNIAL_INSURANCE
+  OTHER
+}
+
+enum SubcontractPackageStatus {
+  ACTIVE
+  COMPLETED
+  TERMINATED
+}
+
+enum SubcontractStatementStatus {
+  DRAFT
+  APPROVED
+  REJECTED
+}
+
+enum SubcontractRetentionStatus {
+  HELD
+  RELEASED
+}
+
+model SubcontractorProfile {
+  id              String              @id @default(cuid())
+  organizationId  String
+  companyId       String
+  supplierId      String
+  trades          String
+  workforce       Int?
+  status          SubcontractorStatus @default(PENDING)
+  decidedByUserId String?
+  decidedAt       DateTime?
+  decisionNote    String?
+  createdByUserId String
+  createdAt       DateTime            @default(now())
+
+  supplier  Supplier                @relation(fields: [supplierId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  documents SubcontractorDocument[]
+
+  @@unique([supplierId, organizationId, companyId])
+  @@unique([id, organizationId, companyId])
+  @@map("subcontractor_profiles")
+}
+
+model SubcontractorDocument {
+  id               String                    @id @default(cuid())
+  organizationId   String
+  companyId        String
+  profileId        String
+  kind             SubcontractorDocumentKind
+  reference        String
+  issuer           String?
+  validFrom        DateTime                  @db.Date
+  validUntil       DateTime                  @db.Date
+  fileId           String?
+  recordedByUserId String
+  createdAt        DateTime                  @default(now())
+
+  profile SubcontractorProfile @relation(fields: [profileId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@index([profileId, kind, validUntil])
+  @@map("subcontractor_documents")
+}
+
+model SubcontractPackage {
+  id                   String                   @id @default(cuid())
+  organizationId       String
+  companyId            String
+  code                 String
+  projectId            String
+  supplierId           String
+  purchaseOrderId      String
+  wbsItemId            String
+  title                String
+  scope                String
+  /// Montant HT du lot, fige depuis la commande emise.
+  amount               Decimal                  @db.Decimal(18, 2)
+  retentionRate        Decimal                  @db.Decimal(5, 2)
+  retentionReleaseDays Int
+  status               SubcontractPackageStatus @default(ACTIVE)
+  createdByUserId      String
+  closedByUserId       String?
+  closedAt             DateTime?
+  closureNote          String?
+  createdAt            DateTime                 @default(now())
+
+  purchaseOrder PurchaseOrder          @relation(fields: [purchaseOrderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  statements    SubcontractStatement[]
+  retentions    SubcontractRetention[]
+
+  @@unique([companyId, code])
+  @@unique([purchaseOrderId, organizationId, companyId])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, projectId])
+  @@map("subcontract_packages")
+}
+
+model SubcontractStatement {
+  id                String                     @id @default(cuid())
+  organizationId    String
+  companyId         String
+  code              String
+  packageId         String
+  number            Int
+  periodEnd         DateTime                   @db.Date
+  /// Avancement cumule derive des taches du lot WBS (0-100), fige a la preparation.
+  cumulativePercent Decimal                    @db.Decimal(7, 4)
+  previousPercent   Decimal                    @db.Decimal(7, 4)
+  doneTasks         Int
+  totalTasks        Int
+  grossAmount       Decimal                    @db.Decimal(18, 2)
+  retentionAmount   Decimal                    @db.Decimal(18, 2)
+  netAmount         Decimal                    @db.Decimal(18, 2)
+  status            SubcontractStatementStatus @default(DRAFT)
+  preparedByUserId  String
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  supplierInvoiceId String?                    @unique
+  createdAt         DateTime                   @default(now())
+
+  package   SubcontractPackage    @relation(fields: [packageId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  retention SubcontractRetention?
+
+  @@unique([companyId, code])
+  @@unique([packageId, number])
+  @@unique([id, organizationId, companyId])
+  @@map("subcontract_statements")
+}
+
+model SubcontractRetention {
+  id                 String                     @id @default(cuid())
+  organizationId     String
+  companyId          String
+  packageId          String
+  statementId        String
+  amount             Decimal                    @db.Decimal(18, 2)
+  releaseCondition   String
+  releaseDueDate     DateTime                   @db.Date
+  status             SubcontractRetentionStatus @default(HELD)
+  /// Liberation anticipee contre caution bancaire : reference obligatoire.
+  guaranteeReference String?
+  releasedByUserId   String?
+  releasedAt         DateTime?
+  releaseNote        String?
+  releaseInvoiceId   String?                    @unique
+  createdAt          DateTime                   @default(now())
+
+  package   SubcontractPackage   @relation(fields: [packageId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  statement SubcontractStatement @relation(fields: [statementId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([statementId, organizationId, companyId])
+  @@map("subcontract_retentions")
+}

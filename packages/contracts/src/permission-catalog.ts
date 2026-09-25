@@ -137,6 +137,12 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "fleet.assignment.manage": "Affecter véhicules et engins aux chauffeurs",
   "fleet.fuel.record": "Enregistrer les pleins de carburant",
   "fleet.incident.report": "Déclarer et clôturer les incidents de parc",
+  "subcontracting.package.read": "Consulter les sous-traitants, lots et situations",
+  "subcontracting.package.manage": "Gérer les sous-traitants et les lots confiés",
+  "subcontracting.subcontractor.qualify": "Qualifier ou suspendre un sous-traitant",
+  "subcontracting.statement.prepare": "Préparer les situations de sous-traitance",
+  "subcontracting.statement.approve": "Approuver les situations de sous-traitance",
+  "subcontracting.retention.release": "Libérer les retenues de garantie",
 };
 
 export function registerResourceLabels(labels: Record<string, string>): void {

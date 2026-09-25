@@ -14,6 +14,7 @@ import {
   UserCog,
   IdCard,
   HardHat,
+  Handshake,
   FileStack,
   ShieldPlus,
   Cpu,
@@ -66,6 +67,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/field", label: "Chantier", icon: HardHat, permission: "field.site.read", keywords: "journal reserves photos terrain hors ligne punch list" },
       { href: "/qhse", label: "QHSE", icon: ShieldPlus, permission: "qhse.inspection.read", keywords: "securite qualite environnement ncr non-conformite incident accident permis feu inspection" },
       { href: "/documents", label: "Documents (GED)", icon: FileStack, permission: "documents.document.read", keywords: "ged plans visa revisions indices fichiers" },
+      { href: "/subcontracting", label: "Sous-traitance", icon: Handshake, permission: "subcontracting.package.read", keywords: "sous-traitants lots situations retenue de garantie vigilance" },
     ],
   },
   {

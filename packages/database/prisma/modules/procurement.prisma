@@ -48,9 +48,10 @@ model Supplier {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  quotes      SupplierQuote[]
-  orders      PurchaseOrder[]
-  evaluations SupplierEvaluation[]
+  quotes               SupplierQuote[]
+  orders               PurchaseOrder[]
+  evaluations          SupplierEvaluation[]
+  subcontractorProfile SubcontractorProfile?
 
   @@unique([companyId, code])
   @@unique([companyId, name])
@@ -171,10 +172,11 @@ model PurchaseOrder {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  supplier Supplier            @relation(fields: [supplierId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
-  request  PurchaseRequest?    @relation(fields: [requestId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
-  lines    PurchaseOrderLine[]
-  receipts GoodsReceipt[]
+  supplier           Supplier            @relation(fields: [supplierId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  request            PurchaseRequest?    @relation(fields: [requestId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  lines              PurchaseOrderLine[]
+  receipts           GoodsReceipt[]
+  subcontractPackage SubcontractPackage?
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])

@@ -478,6 +478,8 @@ export class ProcurementService {
       if (order.status !== "DRAFT" && order.status !== "ISSUED") {
         throw new BadRequestException("An order with receipts (or already cancelled) cannot be cancelled");
       }
+      const backing = await tx.subcontractPackage.findFirst({ where: { purchaseOrderId: order.id }, select: { code: true } });
+      if (backing) throw new BadRequestException(`This order backs the subcontract package ${backing.code}: terminate the package instead`);
       await tx.purchaseOrder.update({
         where: { id: order.id },
         data: { status: "CANCELLED", cancelledAt: new Date(), cancelReason: reason },
@@ -523,6 +525,9 @@ export class ProcurementService {
       if (order.status !== "ISSUED" && order.status !== "PARTIALLY_RECEIVED") {
         throw new BadRequestException("Only an issued order can be received");
       }
+      // Un lot de sous-traitance s'avance par situations certifiees, jamais par reception (pas de double compte).
+      const backing = await tx.subcontractPackage.findFirst({ where: { purchaseOrderId: order.id }, select: { code: true } });
+      if (backing) throw new BadRequestException(`This order backs the subcontract package ${backing.code}: progress is certified through statements`);
       const lines = await tx.purchaseOrderLine.findMany({ where: { orderId: order.id } });
       const byId = new Map(lines.map((line) => [line.id, line]));
       const seen = new Set<string>();

@@ -67,10 +67,16 @@ export async function projectCostFigures(
     where: { ...scope, projectId, status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID"] } },
     _sum: { total: true, paidAmount: true },
   });
+  // Sous-traitance : situations certifiees (brut HT, retenue comprise) — la commande support n'est jamais receptionnee.
+  const subcontracted = await prisma.subcontractStatement.aggregate({
+    where: { ...scope, status: "APPROVED", package: { projectId } },
+    _sum: { grossAmount: true },
+  });
   const totals = rows[0];
   const consumed = new Prisma.Decimal(totals?.received ?? 0)
     .plus(new Prisma.Decimal(stock[0]?.consumed ?? 0))
-    .plus(new Prisma.Decimal(labor._sum.costAmount ?? 0));
+    .plus(new Prisma.Decimal(labor._sum.costAmount ?? 0))
+    .plus(new Prisma.Decimal(subcontracted._sum.grossAmount ?? 0));
   return {
     committed: {
       amount: money(totals?.committed ?? 0),
@@ -80,7 +86,7 @@ export async function projectCostFigures(
     consumed: {
       amount: money(consumed),
       available: true,
-      source: "Réceptions directes chantier (Achats) + sorties de stock nettes des retours (Stock) + temps passés validés (RH)",
+      source: "Réceptions directes chantier (Achats) + sorties de stock nettes des retours (Stock) + temps passés validés (RH) + situations de sous-traitance certifiées",
     },
     invoiced: { amount: money(invoiced), available: true, source: "Factures fournisseurs approuvées (HT)" },
     paid: { amount: money(paid), available: true, source: "Paiements fournisseurs, ramenés au HT" },
