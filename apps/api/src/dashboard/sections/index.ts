@@ -3,6 +3,7 @@ import { crmSection, salesSection } from "./commercial.js";
 import { projectsSection } from "./projects.js";
 import { procurementSection } from "./procurement.js";
 import { inventorySection } from "./inventory.js";
+import { financeSection } from "./finance.js";
 
 /** Ordre d'affichage des indicateurs de la vue d'ensemble. */
-export const DASHBOARD_SECTIONS: DashboardSection[] = [crmSection, salesSection, projectsSection, procurementSection, inventorySection];
+export const DASHBOARD_SECTIONS: DashboardSection[] = [crmSection, salesSection, projectsSection, procurementSection, inventorySection, financeSection];

@@ -65,6 +65,11 @@ const RESOURCE_LABELS: Record<string, string> = {
   movement: "les mouvements de stock",
   adjustment: "les ajustements de stock",
   count: "les inventaires",
+  invoice: "les factures clients",
+  payable: "les factures fournisseurs",
+  payment: "les paiements",
+  bank: "les banques et caisses",
+  settings: "les paramètres",
 };
 
 const ACTION_LABELS: Record<string, string> = {

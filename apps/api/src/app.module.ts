@@ -11,8 +11,9 @@ import { AdminModule } from "./admin/admin.module.js";
 import { ProjectsModule } from "./projects/projects.module.js";
 import { ProcurementModule } from "./procurement/procurement.module.js";
 import { InventoryModule } from "./inventory/inventory.module.js";
+import { FinanceModule } from "./finance/finance.module.js";
 
 @Module({
-  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule],
+  imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule],
 })
 export class AppModule {}

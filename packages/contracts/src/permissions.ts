@@ -83,6 +83,18 @@ export const INVENTORY_PERMISSIONS = {
   COUNT_MANAGE: "inventory.count.manage",
 } as const;
 
+/** INC-08 — Finance. Saisie, approbation et paiement des factures fournisseurs sont separes. */
+export const FINANCE_PERMISSIONS = {
+  INVOICE_READ: "finance.invoice.read",
+  INVOICE_MANAGE: "finance.invoice.manage",
+  PAYABLE_READ: "finance.payable.read",
+  PAYABLE_MANAGE: "finance.payable.manage",
+  PAYABLE_APPROVE: "finance.payable.approve",
+  PAYMENT_CREATE: "finance.payment.create",
+  BANK_MANAGE: "finance.bank.manage",
+  SETTINGS_MANAGE: "finance.settings.manage",
+} as const;
+
 /** Vue d'ensemble : chaque section reste soumise a la permission de lecture de son module. */
 export const DASHBOARD_PERMISSIONS = {
   OVERVIEW_READ: "dashboard.overview.read",
@@ -101,6 +113,7 @@ export const ALL_PERMISSIONS = {
   ...PROJECT_PERMISSIONS,
   ...PROCUREMENT_PERMISSIONS,
   ...INVENTORY_PERMISSIONS,
+  ...FINANCE_PERMISSIONS,
   ...DASHBOARD_PERMISSIONS,
 } as const;
 

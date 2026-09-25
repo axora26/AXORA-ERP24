@@ -581,3 +581,47 @@ a.user-menu:hover strong { color: var(--blue-600); }
   .line-editor-row { grid-template-columns: 1fr 1fr; }
   .line-editor-row input:first-child { grid-column: 1 / -1; }
 }
+
+/* --- INC-08 : finance ---------------------------------------------------- */
+.invoice-totals { display: grid; gap: 6px; justify-content: end; margin: 0; padding: 14px 21px 18px; }
+.invoice-totals div { display: grid; grid-template-columns: 160px 170px; gap: 12px; font-size: 12.5px; }
+.invoice-totals dt { color: #667085; text-align: right; }
+.invoice-totals dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: #182230; }
+.invoice-totals .grand dt, .invoice-totals .grand dd { font-weight: 700; color: #0b1f3a; font-size: 13.5px; }
+a.btn { text-decoration: none; }
+
+.print-status { padding: 40px; font: 14px Inter, sans-serif; color: #475467; }
+.print-page { min-height: 100vh; padding: 24px 16px; background: #eef1f6; font-family: Inter, sans-serif; }
+.print-actions { max-width: 210mm; margin: 0 auto 14px; display: flex; justify-content: flex-end; }
+.print-actions button { border: 0; border-radius: 8px; padding: 10px 16px; color: #fff; background: var(--blue-600); font-weight: 600; }
+.print-sheet { max-width: 210mm; min-height: 280mm; margin: 0 auto; padding: 18mm 16mm; background: #fff; color: #111827; box-shadow: 0 10px 30px rgba(15, 34, 70, .12); display: flex; flex-direction: column; gap: 22px; }
+.print-sheet header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 2px solid #1e3a8a; padding-bottom: 14px; }
+.print-sheet header > div:first-child { display: flex; flex-direction: column; gap: 4px; color: #475467; font-size: 11px; }
+.print-company { color: #1e3a8a; font: 800 18px Montserrat, sans-serif; }
+.print-title { text-align: right; }
+.print-title h1 { margin: 0; font: 800 26px Montserrat, sans-serif; color: #111827; letter-spacing: .02em; text-transform: uppercase; }
+.print-title p { margin: 4px 0 0; font-weight: 700; color: #1e3a8a; }
+.print-parties { display: flex; justify-content: space-between; gap: 24px; font-size: 12px; }
+.print-parties h2 { margin: 0 0 6px; color: #667085; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.print-parties p { margin: 0 0 3px; }
+.print-parties dl { margin: 0; display: grid; gap: 4px; }
+.print-parties dl div { display: grid; grid-template-columns: 110px auto; gap: 8px; }
+.print-parties dt { color: #667085; }
+.print-parties dd { margin: 0; font-weight: 600; }
+.print-sheet table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 11.5px; }
+.print-sheet th { padding: 8px; background: #1e3a8a; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; text-align: right; }
+.print-sheet th:first-child, .print-sheet td:first-child { text-align: left; }
+.print-sheet td { display: table-cell; padding: 8px; border-bottom: 1px solid #e4e7ec; color: #111827; font-size: 11.5px; text-align: right; font-variant-numeric: tabular-nums; }
+.print-totals { align-self: flex-end; margin: 0; display: grid; gap: 5px; min-width: 280px; font-size: 12px; }
+.print-totals div { display: flex; justify-content: space-between; gap: 20px; }
+.print-totals dt { color: #475467; }
+.print-totals dd { margin: 0; font-variant-numeric: tabular-nums; }
+.print-totals .grand { border-top: 1px solid #111827; padding-top: 5px; font-weight: 800; }
+.print-notes { margin: 0; font-size: 11px; color: #475467; }
+.print-sheet footer { margin-top: auto; border-top: 1px solid #e4e7ec; padding-top: 10px; color: #98a2b3; font-size: 9.5px; text-align: center; }
+@media print {
+  @page { size: A4; margin: 0; }
+  .print-page { padding: 0; background: #fff; }
+  .print-actions { display: none; }
+  .print-sheet { box-shadow: none; min-height: auto; }
+}

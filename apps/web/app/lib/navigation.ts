@@ -9,6 +9,7 @@ import {
   ScrollText,
   ShoppingCart,
   Boxes,
+  Landmark,
   ShieldCheck,
   UserCog,
   UsersRound,
@@ -58,6 +59,12 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/procurement", label: "Achats", icon: ShoppingCart, permission: "procurement.request.read", keywords: "demandes commandes fournisseurs receptions" },
       { href: "/inventory", label: "Stock & logistique", icon: Boxes, permission: "inventory.item.read", keywords: "articles magasins inventaire sorties transferts" },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { href: "/finance", label: "Finance & trésorerie", icon: Landmark, permission: "finance.invoice.read", keywords: "factures paiements banques encaissements creances dettes" },
     ],
   },
   {

@@ -65,6 +65,16 @@ const LABELS: Record<string, string> = {
   "inventory.adjustment.posted": "Ajustement de stock",
   "inventory.count.opened": "Inventaire ouvert",
   "inventory.count.closed": "Inventaire clôturé",
+  "finance.taxrate.created": "Taux de taxe créé",
+  "finance.bank.created": "Compte de trésorerie créé",
+  "finance.invoice.drafted": "Facture client préparée",
+  "finance.invoice.issued": "Facture client émise",
+  "finance.invoice.cancelled": "Brouillon de facture annulé",
+  "finance.payable.recorded": "Facture fournisseur enregistrée",
+  "finance.payable.approved": "Facture fournisseur validée",
+  "finance.payable.rejected": "Facture fournisseur rejetée",
+  "finance.payment.received": "Encaissement client",
+  "finance.payment.sent": "Paiement fournisseur",
 };
 
 export function describeAudit(action: string): string {

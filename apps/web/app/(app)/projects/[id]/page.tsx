@@ -554,6 +554,8 @@ function Cockpit({ project }: { project: ProjectDetailView }): React.ReactElemen
           <FigureCard label="Consommé" figure={cockpit.consumed} currency={project.currency} />
           <FigureCard label="Facturé" figure={cockpit.invoiced} currency={project.currency} />
           <FigureCard label="Payé" figure={cockpit.paid} currency={project.currency} />
+          <FigureCard label="Facturé au client" figure={cockpit.billed} currency={project.currency} />
+          <FigureCard label="Encaissé" figure={cockpit.collected} currency={project.currency} />
         </div>
       </Panel>
       <div className="module-grid cols-2">

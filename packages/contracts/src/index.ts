@@ -19,3 +19,4 @@ export * from "./permission-catalog.js";
 export * from "./projects.js";
 export * from "./procurement.js";
 export * from "./inventory.js";
+export * from "./finance.js";

@@ -29,6 +29,9 @@ export interface ProjectCockpitView {
   consumed: ProjectBudgetFigure;
   invoiced: ProjectBudgetFigure;
   paid: ProjectBudgetFigure;
+  /** Cote client : facture emis et encaisse sur le projet (montants TTC). */
+  billed: ProjectBudgetFigure;
+  collected: ProjectBudgetFigure;
   /** Avancement physique derive des taches (0-100, 1 decimale). */
   physicalProgress: string;
   taskCounts: Record<ProjectTaskStatus, number>;

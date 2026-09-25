@@ -18,7 +18,14 @@ export async function projectCostFigures(
   prisma: PrismaService,
   scope: CompanyScope,
   projectId: string,
-): Promise<{ committed: ProjectBudgetFigure; consumed: ProjectBudgetFigure; invoiced: ProjectBudgetFigure; paid: ProjectBudgetFigure }> {
+): Promise<{
+  committed: ProjectBudgetFigure;
+  consumed: ProjectBudgetFigure;
+  invoiced: ProjectBudgetFigure;
+  paid: ProjectBudgetFigure;
+  billed: ProjectBudgetFigure;
+  collected: ProjectBudgetFigure;
+}> {
   const rows = await prisma.$queryRaw<Array<{ committed: Prisma.Decimal | null; received: Prisma.Decimal | null }>>`
     SELECT
       COALESCE(SUM(l."lineTotal"), 0) AS "committed",
@@ -38,6 +45,23 @@ export async function projectCostFigures(
       AND "companyId" = ${scope.companyId}
       AND "type"::text IN ('ISSUE', 'RETURN')
   `;
+  // Factures fournisseurs approuvees du projet : facture HT, et paye ramene au HT
+  // (paye x HT / TTC) pour rester comparable au budget de couts (HT).
+  const payables = await prisma.supplierInvoice.findMany({
+    where: { ...scope, projectId, status: { in: ["APPROVED", "PARTIALLY_PAID", "PAID"] } },
+    select: { subtotal: true, total: true, paidAmount: true },
+  });
+  let invoiced = new Prisma.Decimal(0);
+  let paid = new Prisma.Decimal(0);
+  for (const invoice of payables) {
+    invoiced = invoiced.plus(invoice.subtotal);
+    const total = new Prisma.Decimal(invoice.total);
+    if (!total.isZero()) paid = paid.plus(new Prisma.Decimal(invoice.paidAmount).mul(invoice.subtotal).div(total).toDecimalPlaces(2));
+  }
+  const receivables = await prisma.customerInvoice.aggregate({
+    where: { ...scope, projectId, status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID"] } },
+    _sum: { total: true, paidAmount: true },
+  });
   const totals = rows[0];
   const consumed = new Prisma.Decimal(totals?.received ?? 0).plus(new Prisma.Decimal(stock[0]?.consumed ?? 0));
   return {
@@ -51,7 +75,9 @@ export async function projectCostFigures(
       available: true,
       source: "Réceptions directes chantier (Achats) + sorties de stock nettes des retours (Stock)",
     },
-    invoiced: { amount: "0.00", available: false, source: "Finance — factures fournisseurs (INC-08)" },
-    paid: { amount: "0.00", available: false, source: "Finance — paiements (INC-08)" },
+    invoiced: { amount: money(invoiced), available: true, source: "Factures fournisseurs approuvées (HT)" },
+    paid: { amount: money(paid), available: true, source: "Paiements fournisseurs, ramenés au HT" },
+    billed: { amount: money(receivables._sum.total ?? 0), available: true, source: "Factures clients émises (TTC)" },
+    collected: { amount: money(receivables._sum.paidAmount ?? 0), available: true, source: "Encaissements clients" },
   };
 }

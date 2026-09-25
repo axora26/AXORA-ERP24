@@ -1,0 +1,234 @@
+// ---------------------------------------------------------------------------
+// INC-08 — Finance (docs/foundation/02-domain-model.md BC-07)
+//
+// INVARIANTS :
+// 1. Decimal strict partout ; aucun taux de taxe code en dur : les taux sont
+//    parametres par entreprise et figes sur chaque ligne de facture.
+// 2. Facture fournisseur rapprochee (3-way match) commande <-> reception <->
+//    facture : quantite facturee cumulee <= quantite recue, prix unitaire =
+//    prix commande ; tout ecart exige une justification a l'approbation.
+// 3. Une facture fournisseur n'est payable qu'APPROUVEE, par une personne
+//    distincte de celle qui l'a saisie ; une meme reference fournisseur ne
+//    peut etre saisie deux fois (anti double facturation).
+// 4. Anti double paiement : verrou pessimiste sur la facture, montant <= reste
+//    du, cle d'idempotence unique par entreprise.
+// 5. Cumul facture a un client sur un contrat <= montant du contrat.
+// ---------------------------------------------------------------------------
+
+enum CustomerInvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum SupplierInvoiceStatus {
+  RECORDED
+  APPROVED
+  PARTIALLY_PAID
+  PAID
+  REJECTED
+}
+
+enum MatchStatus {
+  MATCHED
+  DISCREPANCY
+  NO_ORDER
+}
+
+enum PaymentDirection {
+  IN
+  OUT
+}
+
+enum PaymentMethod {
+  TRANSFER
+  CHECK
+  CASH
+  MOBILE_MONEY
+  CARD
+}
+
+enum BankAccountKind {
+  BANK
+  CASH
+}
+
+/// Taux de taxe parametres par l'entreprise (aucune regle fiscale presumee).
+model TaxRate {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  name           String
+  /// Pourcentage (ex. 16.00).
+  rate           Decimal  @db.Decimal(5, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@unique([companyId, name])
+  @@index([organizationId, companyId])
+  @@map("tax_rates")
+}
+
+model BankAccount {
+  id             String          @id @default(cuid())
+  organizationId String
+  companyId      String
+  code           String
+  name           String
+  kind           BankAccountKind @default(BANK)
+  currency       String          @db.Char(3)
+  iban           String?
+  openingBalance Decimal         @default(0) @db.Decimal(18, 2)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+
+  payments Payment[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId])
+  @@map("bank_accounts")
+}
+
+model CustomerInvoice {
+  id              String                @id @default(cuid())
+  organizationId  String
+  companyId       String
+  code            String?
+  customerName    String
+  customerAddress String?
+  contractId      String?
+  projectId       String?
+  currency        String                @db.Char(3)
+  issueDate       DateTime?
+  dueDate         DateTime?
+  status          CustomerInvoiceStatus @default(DRAFT)
+  subtotal        Decimal               @default(0) @db.Decimal(18, 2)
+  taxTotal        Decimal               @default(0) @db.Decimal(18, 2)
+  total           Decimal               @default(0) @db.Decimal(18, 2)
+  paidAmount      Decimal               @default(0) @db.Decimal(18, 2)
+  notes           String?
+  createdByUserId String
+  issuedByUserId  String?
+  cancelReason    String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  lines    CustomerInvoiceLine[]
+  payments Payment[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@index([contractId])
+  @@index([projectId])
+  @@map("customer_invoices")
+}
+
+model CustomerInvoiceLine {
+  id             String  @id @default(cuid())
+  organizationId String
+  companyId      String
+  invoiceId      String
+  position       Int
+  description    String
+  quantity       Decimal @db.Decimal(18, 3)
+  unitPrice      Decimal @db.Decimal(18, 2)
+  taxRate        Decimal @default(0) @db.Decimal(5, 2)
+  lineTotal      Decimal @db.Decimal(18, 2)
+  lineTax        Decimal @db.Decimal(18, 2)
+
+  invoice CustomerInvoice @relation(fields: [invoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@unique([invoiceId, position])
+  @@map("customer_invoice_lines")
+}
+
+model SupplierInvoice {
+  id                String                @id @default(cuid())
+  organizationId    String
+  companyId         String
+  code              String
+  supplierId        String
+  orderId           String?
+  projectId         String?
+  supplierReference String
+  currency          String                @db.Char(3)
+  invoiceDate       DateTime
+  dueDate           DateTime
+  status            SupplierInvoiceStatus @default(RECORDED)
+  matchStatus       MatchStatus
+  matchNotes        String?
+  subtotal          Decimal               @db.Decimal(18, 2)
+  taxTotal          Decimal               @db.Decimal(18, 2)
+  total             Decimal               @db.Decimal(18, 2)
+  paidAmount        Decimal               @default(0) @db.Decimal(18, 2)
+  recordedByUserId  String
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  lines    SupplierInvoiceLine[]
+  payments Payment[]
+
+  @@unique([companyId, code])
+  @@unique([supplierId, supplierReference])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, status])
+  @@index([orderId])
+  @@index([projectId])
+  @@map("supplier_invoices")
+}
+
+model SupplierInvoiceLine {
+  id             String  @id @default(cuid())
+  organizationId String
+  companyId      String
+  invoiceId      String
+  position       Int
+  orderLineId    String?
+  description    String
+  quantity       Decimal @db.Decimal(18, 3)
+  unitPrice      Decimal @db.Decimal(18, 2)
+  taxRate        Decimal @default(0) @db.Decimal(5, 2)
+  lineTotal      Decimal @db.Decimal(18, 2)
+  lineTax        Decimal @db.Decimal(18, 2)
+
+  invoice SupplierInvoice @relation(fields: [invoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+
+  @@unique([invoiceId, position])
+  @@index([orderLineId])
+  @@map("supplier_invoice_lines")
+}
+
+model Payment {
+  id                String           @id @default(cuid())
+  organizationId    String
+  companyId         String
+  code              String
+  direction         PaymentDirection
+  customerInvoiceId String?
+  supplierInvoiceId String?
+  bankAccountId     String
+  amount            Decimal          @db.Decimal(18, 2)
+  currency          String           @db.Char(3)
+  paidAt            DateTime
+  method            PaymentMethod
+  reference         String?
+  idempotencyKey    String
+  createdByUserId   String
+  createdAt         DateTime         @default(now())
+
+  bankAccount     BankAccount      @relation(fields: [bankAccountId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  customerInvoice CustomerInvoice? @relation(fields: [customerInvoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  supplierInvoice SupplierInvoice? @relation(fields: [supplierInvoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([companyId, code])
+  @@unique([companyId, idempotencyKey])
+  @@index([organizationId, companyId, paidAt])
+  @@map("payments")
+}

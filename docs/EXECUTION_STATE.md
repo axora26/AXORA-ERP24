@@ -16,6 +16,7 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 - INC-05 : projets (contrat -> projet, WBS, budget par feuilles, baseline, avenants, taches, Gantt, jalons, risques).
 - INC-06 : achats (DA, approbation par un tiers, comparatif fournisseurs, commandes, receptions partielles idempotentes, engagement projet).
 - INC-07 : stock (grand livre append-only et soldes non negatifs garantis en base, cout moyen pondere, sorties chantier, transferts, inventaires) ; devise de reference par entreprise.
+- INC-08 : finance (facturation client et situations, 3-way match, validation par un tiers, paiements anti-doublon, tresorerie, facture PDF).
 - Polices auto-hebergees (@fontsource) : plus aucune requete vers un CDN tiers.
 
 ## Bloque (externe)
@@ -25,4 +26,4 @@ Developpement continu, increment par increment (`docs/foundation/06-product-back
 
 ## Prochaine etape
 
-INC-08 — Finance (factures clients et fournisseurs, rapprochement 3-way commande/reception/facture, validation avant paiement, paiements partiels, anti double paiement, facture imprimable).
+INC-09 — Ressources humaines (employes, pointages, feuilles de temps validees par un responsable, conges ; paie sans regle fiscale presumee), puis INC-10 Chantier + GED et INC-11 QHSE.
