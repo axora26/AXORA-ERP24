@@ -49,7 +49,9 @@ model Company {
   organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branches     Branch[]
   users        CompanyMembership[]
+  payrollPolicy CompanyPayrollPolicy?
 
+  @@unique([id, organizationId])
   @@unique([organizationId, name])
   @@index([organizationId])
   @@map("companies")
@@ -75,6 +77,8 @@ model Branch {
 // ---------------------------------------------------------------------------
 
 model User {
+  mfaRecoveryCodeHashes String[] @default([])
+  themePreference     String    @default("system")
   id                  String    @id @default(cuid())
   organizationId      String
   email               String
@@ -263,6 +267,8 @@ enum CrmActivityType {
 }
 
 model CrmAccount {
+  archivedAt DateTime?
+  version Int @default(1)
   id             String   @id @default(cuid())
   organizationId String
   companyId      String
@@ -283,10 +289,13 @@ model CrmAccount {
 
   @@unique([companyId, name])
   @@index([organizationId, companyId])
+  @@index([organizationId, companyId, archivedAt])
   @@map("crm_accounts")
 }
 
 model CrmContact {
+  archivedAt DateTime?
+  version Int @default(1)
   id             String   @id @default(cuid())
   organizationId String
   companyId      String
@@ -304,6 +313,7 @@ model CrmContact {
 
   @@index([organizationId, companyId])
   @@index([accountId])
+  @@index([organizationId, companyId, archivedAt])
   @@map("crm_contacts")
 }
 
@@ -441,6 +451,7 @@ model EstimationStudy {
   objective       String
   sourceReference String?
   status          EstimationStudyStatus @default(DRAFT)
+  version         Int                   @default(1)
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
@@ -483,6 +494,7 @@ model DqeDocument {
   currency       String    @default("USD") @db.Char(3)
   status         DqeStatus @default(DRAFT)
   revision       Int       @default(1)
+  version        Int       @default(1)
   finalizedAt    DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

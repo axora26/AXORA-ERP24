@@ -11,7 +11,8 @@ import { projectsApi } from "../../lib/modules/projects";
 import { formatDateTime, formatMoney, formatQuantity, sumMoney } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import {
+import { BusinessPrintLink } from "../../components/business-print-link";
+import { DataUnavailable,
   Button,
   DataTable,
   DecimalField,
@@ -60,6 +61,8 @@ export default function InventoryPage(): React.ReactElement {
   const itemOptions = items.filter((item) => item.isActive).map((item) => ({ value: item.id, label: `${item.code} — ${item.name} (${item.unitCode})` }));
   const warehouseOptions = warehouses.filter((warehouse) => warehouse.isActive).map((warehouse) => ({ value: warehouse.id, label: `${warehouse.code} — ${warehouse.name}` }));
   const totalValue = sumMoney(warehouses.map((warehouse) => warehouse.totalValue));
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Stock & logistique" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>
@@ -248,6 +251,7 @@ export default function InventoryPage(): React.ReactElement {
                     },
                     { key: "value", header: "Valeur", align: "right", render: (movement) => <span className="num">{formatMoney(movement.valueDelta)}</span> },
                     { key: "by", header: "Par", render: (movement) => movement.createdByName ?? "—" },
+                    { key: "document", header: "Bon", render: movement => ["ISSUE", "RETURN"].includes(movement.type) ? <BusinessPrintLink kind="stock-movements" id={movement.id} companyId={session.activeCompanyId ?? undefined}>Imprimer le bon</BusinessPrintLink> : "—" },
                   ]}
                 />
               </Panel>

@@ -5,14 +5,13 @@ export const procurementSection: DashboardSection = {
   key: "procurement",
   permission: PROCUREMENT_PERMISSIONS.ORDER_READ,
   async build(prisma, scope) {
-    const [openByCurrency, openCount, pendingRequests] = await Promise.all([
+    const [openByCurrency, openCount] = await Promise.all([
       prisma.purchaseOrder.groupBy({
         by: ["currency"],
         where: { ...scope, status: { in: ["ISSUED", "PARTIALLY_RECEIVED"] } },
         _sum: { total: true },
       }),
       prisma.purchaseOrder.count({ where: { ...scope, status: { in: ["ISSUED", "PARTIALLY_RECEIVED"] } } }),
-      prisma.purchaseRequest.count({ where: { ...scope, status: "SUBMITTED" } }),
     ]);
     return [
       moneyKpi({
@@ -23,6 +22,16 @@ export const procurementSection: DashboardSection = {
         amounts: amountsByCurrency(openByCurrency, "total"),
         detail: `${openCount} commande(s) émise(s) non soldée(s)`,
       }),
+    ];
+  },
+};
+
+export const procurementRequestsSection: DashboardSection = {
+  key: "procurementRequests",
+  permission: PROCUREMENT_PERMISSIONS.REQUEST_READ,
+  async build(prisma, scope) {
+    const pendingRequests = await prisma.purchaseRequest.count({ where: { ...scope, status: "SUBMITTED" } });
+    return [
       countKpi({
         key: "procurement.pendingRequests",
         label: "Demandes d'achat à valider",

@@ -11,6 +11,7 @@ export class CreateStudyDto {
 
 export class CreateStudyRequirementDto {
   companyId?: string;
+  expectedVersion?: number;
   position!: number;
   category!: string;
   statement!: string;
@@ -27,12 +28,47 @@ export class CreateDqeDto {
 
 export class CreateDqeLineDto {
   companyId?: string;
+  expectedVersion?: number;
   position!: number;
   reference?: string;
   designation!: string;
   unitCode!: string;
   quantity!: string;
   unitPrice!: string;
+}
+
+export class DraftVersionDto {
+  companyId?: string;
+  expectedVersion?: number;
+}
+export class UpdateStudyRequirementDto {
+  companyId?: string;
+  expectedVersion!: number;
+  position?: number;
+  category?: string;
+  statement?: string;
+  sourceReference?: string | null;
+}
+export class UpdateDqeLineDto {
+  companyId?: string;
+  expectedVersion!: number;
+  position?: number;
+  reference?: string | null;
+  designation?: string;
+  unitCode?: string;
+  quantity?: string;
+  unitPrice?: string;
+}
+
+export function assertDraftFields(input: object, allowed: readonly string[]): void {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new BadRequestException("A JSON object is required");
+  const unknown = Object.keys(input).find((key) => !allowed.includes(key));
+  if (unknown) throw new BadRequestException(`Unknown field: ${unknown}`);
+}
+export function draftVersion(value: unknown, required = true): number | undefined {
+  if (value === undefined && !required) return undefined;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) throw new BadRequestException("expectedVersion must be a positive integer");
+  return value;
 }
 
 export const STUDY_REQUIREMENT_CATEGORIES = [

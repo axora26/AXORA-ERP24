@@ -4,12 +4,13 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { ProjectWbsNodeView, TimesheetView } from "@axora24/contracts";
-import { CheckCircle2, Plus, Save, Send, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Download, Plus, Save, Send, Trash2, XCircle } from "lucide-react";
 import { TIMESHEET_STATUS_LABEL, addDays, hrApi } from "../../../../lib/modules/hr";
 import { projectsApi } from "../../../../lib/modules/projects";
 import { formatDate, formatDateTime, formatMoney } from "../../../../lib/format";
 import { useMutation, useResource } from "../../../../lib/hooks";
 import { useSession } from "../../../../lib/session";
+import { BusinessPrintLink } from "../../../../components/business-print-link";
 import { ActionBar, Button, DataTable, DetailList, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, StatusChip, TextAreaField } from "../../../../components/ui";
 
 interface DraftEntry {
@@ -44,7 +45,7 @@ export default function TimesheetPage(): React.ReactElement {
   const [override, setOverride] = useState<TimesheetView | null>(null);
   const [drafts, setDrafts] = useState<DraftEntry[] | null>(null);
   const [leaves, setLeaves] = useState<Record<string, ProjectWbsNodeView[]>>({});
-  const [dialog, setDialog] = useState<"validate" | "reject" | null>(null);
+  const [dialog, setDialog] = useState<"validate" | "reject" | "attendance" | null>(null);
   const sheet = override ?? resource.data;
 
   const editable = Boolean(sheet && session.can("hr.timesheet.manage") && (sheet.status === "DRAFT" || sheet.status === "REJECTED"));
@@ -107,7 +108,7 @@ export default function TimesheetPage(): React.ReactElement {
         breadcrumb={`RH / Feuilles de temps / ${sheet.employeeName}`}
         title={`Semaine du ${formatDate(sheet.weekStart)}`}
         subtitle={`${sheet.employeeName} · ${sheet.totalHours} h déclarées · ${sheet.attendanceHours} h pointées`}
-        actions={<StatusChip status={sheet.status === "SUBMITTED" ? "pending" : sheet.status} label={TIMESHEET_STATUS_LABEL[sheet.status]} />}
+        actions={<><BusinessPrintLink kind="timesheets" id={sheet.id} companyId={session.activeCompanyId ?? undefined} /><StatusChip status={sheet.status === "SUBMITTED" ? "pending" : sheet.status} label={TIMESHEET_STATUS_LABEL[sheet.status]} /></>}
       />
       <Feedback error={mutation.error} notice={mutation.notice} />
       <Panel title="Synthèse">
@@ -115,7 +116,7 @@ export default function TimesheetPage(): React.ReactElement {
           items={[
             { label: "Heures déclarées", value: <strong>{sheet.totalHours} h</strong> },
             {
-              label: "Heures pointées (badge)",
+              label: "Heures pointées",
               value: sheet.attendanceHours === sheet.totalHours ? `${sheet.attendanceHours} h` : <StatusChip status="warning" label={`${sheet.attendanceHours} h — écart à justifier`} />,
             },
             { label: "Soumise le", value: formatDateTime(sheet.submittedAt) },
@@ -123,18 +124,18 @@ export default function TimesheetPage(): React.ReactElement {
           ]}
         />
         {sheet.status === "REJECTED" && <p className="inline-warning">Feuille rejetée : corrigez les heures puis soumettez-la à nouveau.</p>}
-        {(sheet.status === "SUBMITTED" || sheet.status === "DRAFT") && (
+        {(sheet.status === "SUBMITTED" || editable) && (
           <ActionBar
             note={
-              sheet.status === "DRAFT"
+              editable
                 ? "Brouillon : les heures ne sont ni valorisées ni prises en paie avant validation."
                 : isEmployee || isSubmitter
                   ? "Vous êtes l'employé ou l'auteur de la soumission : la validation revient à un autre responsable."
                   : "La validation fige le coût des heures (heures × coût horaire) et l'impute aux projets."
             }
           >
-            {sheet.status === "DRAFT" && session.can("hr.timesheet.manage") && (
-              <Button variant="primary" onClick={() => void apply(() => hrApi.submitTimesheet(sheet.id), "Feuille soumise pour validation.")} disabled={drafts !== null || sheet.entries.length === 0}>
+            {editable && (
+              <Button variant="primary" onClick={() => void apply(() => hrApi.submitTimesheet(sheet.id), "Feuille soumise pour validation.")} disabled={mutation.saving || drafts !== null || sheet.entries.length === 0}>
                 <Send size={14} aria-hidden="true" /> Soumettre
               </Button>
             )}
@@ -159,7 +160,11 @@ export default function TimesheetPage(): React.ReactElement {
           actions={
             editable && (
               <>
+                <Button disabled={mutation.saving} onClick={() => setDialog("attendance")}>
+                  <Download size={14} aria-hidden="true" /> Préparer depuis les pointages
+                </Button>
                 <Button
+                  disabled={mutation.saving}
                   onClick={() => {
                     draftCounter += 1;
                     setDrafts([...rows, { key: `new-${draftCounter}`, workDate: sheet.weekStart.slice(0, 10), hours: "", projectId: "", wbsItemId: "", description: "" }]);
@@ -182,12 +187,12 @@ export default function TimesheetPage(): React.ReactElement {
                 <table className="data-table entry-editor">
                   <thead>
                     <tr>
-                      <th>Jour</th>
-                      <th>Heures</th>
-                      <th>Chantier</th>
-                      <th>Élément WBS</th>
-                      <th>Description</th>
-                      <th aria-label="Actions" />
+                      <th scope="col">Jour</th>
+                      <th scope="col">Heures</th>
+                      <th scope="col">Chantier</th>
+                      <th scope="col">Élément WBS</th>
+                      <th scope="col">Description</th>
+                      <th scope="col" aria-label="Actions" />
                     </tr>
                   </thead>
                   <tbody>
@@ -261,7 +266,17 @@ export default function TimesheetPage(): React.ReactElement {
         </Panel>
       </div>
 
-      {dialog && (
+      {dialog === "attendance" && (
+        <Modal title="Préparer la feuille depuis les pointages" onClose={() => !mutation.saving && setDialog(null)}>
+          <Feedback error={mutation.error} />
+          <Form columns={1} submitLabel="Importer les heures pointées" saving={mutation.saving} onSubmit={() => apply(() => hrApi.timesheetFromAttendance(sheet.id, sheet.entries.length > 0), "Brouillon préparé depuis les pointages. Vérifiez les imputations avant de soumettre.")}>
+            <p className="inline-note">Les paires Entrée / Sortie de cette semaine préparent les heures en UTC. Les pointages incomplets ou incohérents doivent être corrigés avant l’importation. Vérifiez les chantiers et les éléments WBS avant la soumission.</p>
+            {(sheet.entries.length > 0 || drafts !== null) && <p className="inline-warning">Cette importation remplace toutes les lignes actuelles et les modifications non enregistrées.</p>}
+            <p className="inline-note">La préparation reste un brouillon. Un autre responsable doit valider les heures pour qu’elles alimentent les coûts projet et la paie.</p>
+          </Form>
+        </Modal>
+      )}
+      {(dialog === "validate" || dialog === "reject") && (
         <Modal title={dialog === "validate" ? "Valider la feuille de temps" : "Rejeter la feuille de temps"} onClose={() => setDialog(null)}>
           <Feedback error={mutation.error} />
           <DecisionForm

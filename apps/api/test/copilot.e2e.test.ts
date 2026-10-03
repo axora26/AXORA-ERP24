@@ -117,11 +117,13 @@ describe("INC-22 Copilote IA (e2e)", () => {
     expect(evidence.mode).toBe("BRIEFING");
     const byTool = new Map(evidence.permissionChecks.map((check) => [check.tool, check.granted]));
     expect(byTool.get("dashboard.procurement")).toBe(true);
+    expect(byTool.get("dashboard.procurementRequests")).toBe(true);
     expect(byTool.get("dashboard.finance")).toBe(false);
+    expect(byTool.get("dashboard.payables")).toBe(false);
     expect(byTool.get("dashboard.hr")).toBe(false);
     expect(byTool.get("dashboard.qhse")).toBe(false);
     expect(evidence.sources.length).toBeGreaterThan(0);
-    expect(evidence.sources.every((source) => source.tool === "dashboard.procurement")).toBe(true);
+    expect(evidence.sources.every((source) => ["dashboard.procurement", "dashboard.procurementRequests"].includes(source.tool))).toBe(true);
     assertSourcesAuthorized(evidence);
   });
 
@@ -168,6 +170,29 @@ describe("INC-22 Copilote IA (e2e)", () => {
     expect(audit.body.length).toBeGreaterThanOrEqual(8);
     expect(audit.body.every((row: { userName: string }) => row.userName.startsWith("acheteur"))).toBe(true);
     expect((await as(harness, other).get("/copilot/evidence")).body).toEqual([]);
+  });
+
+  it("historical exchanges require current source rights while stored evidence remains unchanged", async () => {
+    const originalPermissions = ["ai.copilot.use", "procurement.request.read", "procurement.order.read"];
+    const reader = await createUserWith(harness, owner, originalPermissions, "history-reader");
+    const request = await ask(reader, "Demandes d'achat");
+    const order = await ask(reader, "Commandes fournisseurs", request.sessionId);
+    const role = await harness.prisma.roleAssignment.findFirstOrThrow({ where: { userId: reader.userId } });
+    expect((await as(harness, reader).get(`/copilot/sessions/${request.sessionId}`)).body.exchangesDetail).toHaveLength(2);
+    expect((await as(harness, owner).put(`/admin/roles/${role.roleId}/permissions`, { permissions: ["ai.copilot.use", "procurement.order.read"] })).status).toBe(200);
+    const filtered = await as(harness, reader).get(`/copilot/sessions/${request.sessionId}`);
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.exchangesDetail.map((entry: Evidence) => entry.id)).toEqual([order.evidence.id]);
+    expect(JSON.stringify(filtered.body)).not.toContain("Câbles cuivre");
+    const index = await as(harness, reader).get("/copilot/sessions");
+    expect(index.body.find((row: { id: string }) => row.id === request.sessionId).exchanges).toBe(1);
+    const original = await harness.prisma.aiInferenceEvidence.findUniqueOrThrow({ where: { id: request.evidence.id } });
+    expect(original.answer).toBe(request.evidence.answer);
+    expect(original.answerSha256).toBe(request.evidence.answerSha256);
+    expect((await as(harness, owner).put(`/admin/roles/${role.roleId}/permissions`, { permissions: originalPermissions })).status).toBe(200);
+    const restored = await as(harness, reader).get(`/copilot/sessions/${request.sessionId}`);
+    expect(restored.body.exchangesDetail).toHaveLength(2);
+    for (const evidence of restored.body.exchangesDetail) assertSourcesAuthorized(evidence);
   });
 
   it("garanties en base : preuve append-only, empreinte verifiee, preuve liee au proprietaire de la session", async () => {

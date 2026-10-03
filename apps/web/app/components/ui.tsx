@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useId, useRef, type FormEvent, type ReactNode } from "react";
+import React, { useId, type FormEvent, type ReactNode } from "react";
 import { Inbox, Loader2, RefreshCw, X } from "lucide-react";
+import { useModalFocus } from "../lib/use-modal-focus";
 
 /* ------------------------------------------------------------------------ */
 /* Structure de page                                                         */
@@ -171,6 +172,11 @@ export function Feedback({ error, notice }: { error?: string; notice?: string })
   );
 }
 
+/** A failed initial load is different from a successful empty result. */
+export function DataUnavailable({ title, error, onRetry }: { title: string; error: string; onRetry: () => void }): React.ReactElement {
+  return <><PageHeader breadcrumb="Espace de travail" title={title} subtitle="Les données de cet écran sont momentanément indisponibles." onRefresh={onRetry}/><Feedback error={error}/><Panel><Empty title="Données indisponibles" body="Réessayez dans quelques instants pour consulter votre espace."/><div className="data-retry"><button type="button" className="secondary-button" onClick={onRetry}><RefreshCw size={15} aria-hidden="true"/>Réessayer le chargement</button></div></Panel></>;
+}
+
 export function StatusChip({ status, label }: { status: string; label?: string }): React.ReactElement {
   return <span className={`status-chip status-${status.toLowerCase()}`}>{label ?? status}</span>;
 }
@@ -209,13 +215,13 @@ export function DataTable<T extends { id: string }>({
 }): React.ReactElement {
   if (rows.length === 0) return <>{empty}</>;
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" role="region" aria-label={caption ?? "Tableau défilant"} tabIndex={0}>
       <table className="data-table">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column.key} style={{ textAlign: column.align ?? "left", width: column.width }}>
+              <th key={column.key} scope="col" style={{ textAlign: column.align ?? "left", width: column.width }}>
                 {column.header}
               </th>
             ))}
@@ -238,14 +244,17 @@ export function DataTable<T extends { id: string }>({
               onKeyDown={
                 onRowClick
                   ? (event) => {
-                      if (event.key === "Enter" && !fromControl(event.target, event.currentTarget)) onRowClick(row);
+                      if ((event.key === "Enter" || event.key === " ") && !fromControl(event.target, event.currentTarget)) {
+                        event.preventDefault();
+                        onRowClick(row);
+                      }
                     }
                   : undefined
               }
               tabIndex={onRowClick ? 0 : undefined}
             >
               {columns.map((column) => (
-                <td key={column.key} style={{ textAlign: column.align ?? "left" }}>
+                <td key={column.key} data-label={column.header} style={{ textAlign: column.align ?? "left" }}>
                   {column.render(row)}
                 </td>
               ))}
@@ -278,6 +287,7 @@ export function Form({
 }): React.ReactElement {
   function handle(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
+    if (saving) return;
     void onSubmit();
   }
   return (
@@ -295,6 +305,7 @@ export function Form({
 }
 
 interface FieldProps {
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -303,6 +314,10 @@ interface FieldProps {
   hint?: string;
   wide?: boolean;
   disabled?: boolean;
+  error?: string;
+  minLength?: number;
+  maxLength?: number;
+  autoComplete?: string;
 }
 
 export function TextField({
@@ -310,7 +325,8 @@ export function TextField({
   inputMode,
   ...props
 }: FieldProps & { type?: string; inputMode?: "decimal" | "numeric" | "email" | "text" }): React.ReactElement {
-  const id = useId();
+  const generatedId = useId();
+  const id = props.id ?? generatedId;
   return (
     <div className={`field ${props.wide ? "wide" : ""}`}>
       <label htmlFor={id}>
@@ -324,10 +340,16 @@ export function TextField({
         value={props.value}
         onChange={(event) => props.onChange(event.currentTarget.value)}
         required={props.required}
+        minLength={props.minLength}
+        maxLength={props.maxLength}
+        autoComplete={props.autoComplete}
         placeholder={props.placeholder}
         disabled={props.disabled}
+        aria-invalid={props.error ? true : undefined}
+        aria-describedby={[props.hint ? `${id}-hint` : "", props.error ? `${id}-error` : ""].filter(Boolean).join(" ") || undefined}
       />
-      {props.hint && <small className="field-note">{props.hint}</small>}
+      {props.hint && <small className="field-note" id={`${id}-hint`}>{props.hint}</small>}
+      {props.error && <small className="field-error" id={`${id}-error`}>{props.error}</small>}
     </div>
   );
 }
@@ -341,7 +363,8 @@ export function DateField(props: FieldProps): React.ReactElement {
 }
 
 export function TextAreaField(props: FieldProps & { rows?: number }): React.ReactElement {
-  const id = useId();
+  const generatedId = useId();
+  const id = props.id ?? generatedId;
   return (
     <div className="field wide">
       <label htmlFor={id}>
@@ -356,8 +379,11 @@ export function TextAreaField(props: FieldProps & { rows?: number }): React.Reac
         required={props.required}
         placeholder={props.placeholder}
         disabled={props.disabled}
+        aria-invalid={props.error ? true : undefined}
+        aria-describedby={[props.hint ? `${id}-hint` : "", props.error ? `${id}-error` : ""].filter(Boolean).join(" ") || undefined}
       />
-      {props.hint && <small className="field-note">{props.hint}</small>}
+      {props.hint && <small className="field-note" id={`${id}-hint`}>{props.hint}</small>}
+      {props.error && <small className="field-error" id={`${id}-error`}>{props.error}</small>}
     </div>
   );
 }
@@ -370,7 +396,8 @@ export function SelectField({
   options: Array<{ value: string; label: string }>;
   emptyLabel?: string;
 }): React.ReactElement {
-  const id = useId();
+  const generatedId = useId();
+  const id = props.id ?? generatedId;
   return (
     <div className={`field ${props.wide ? "wide" : ""}`}>
       <label htmlFor={id}>
@@ -383,6 +410,8 @@ export function SelectField({
         onChange={(event) => props.onChange(event.currentTarget.value)}
         required={props.required}
         disabled={props.disabled}
+        aria-invalid={props.error ? true : undefined}
+        aria-describedby={[props.hint ? `${id}-hint` : "", props.error ? `${id}-error` : ""].filter(Boolean).join(" ") || undefined}
       >
         <option value="">{emptyLabel ?? "— Sélectionner —"}</option>
         {options.map((option) => (
@@ -391,7 +420,8 @@ export function SelectField({
           </option>
         ))}
       </select>
-      {props.hint && <small className="field-note">{props.hint}</small>}
+      {props.hint && <small className="field-note" id={`${id}-hint`}>{props.hint}</small>}
+      {props.error && <small className="field-error" id={`${id}-error`}>{props.error}</small>}
     </div>
   );
 }
@@ -410,15 +440,26 @@ export function Tabs<T extends string>({
   onChange: (id: T) => void;
 }): React.ReactElement {
   return (
-    <div className="tabs" role="tablist">
+    <div className="tabs" role="tablist" aria-orientation="horizontal">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           role="tab"
           type="button"
           aria-selected={tab.id === active}
+          tabIndex={tab.id === active ? 0 : -1}
           className={tab.id === active ? "active" : ""}
           onClick={() => onChange(tab.id)}
+          onKeyDown={(event) => {
+            if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const index = tabs.findIndex((item) => item.id === tab.id);
+            const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+            const next = tabs[nextIndex];
+            if (!next) return;
+            onChange(next.id);
+            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role='tab']")[nextIndex]?.focus();
+          }}
         >
           {tab.label}
           {tab.count !== undefined && <span>{tab.count}</span>}
@@ -439,23 +480,11 @@ export function Modal({
   children: ReactNode;
   wide?: boolean;
 }): React.ReactElement {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>("input, select, textarea, button")?.focus();
-    function onKey(event: KeyboardEvent): void {
-      if (event.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      previous?.focus();
-    };
-  }, [onClose]);
+  const dialogRef = useModalFocus<HTMLDivElement>(true, onClose);
 
   return (
     <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className={`modal ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-label={title} ref={dialogRef}>
+      <div className={`modal ${wide ? "wide" : ""}`} role="dialog" aria-modal="true" aria-label={title} ref={dialogRef} tabIndex={-1}>
         <header>
           <h2>{title}</h2>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Fermer">

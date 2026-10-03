@@ -26,10 +26,13 @@ export const COPILOT_ENGINE = "axora-grounded-v1";
 const SECTION_LABEL: Record<string, string> = {
   crm: "CRM",
   sales: "Devis & contrats",
+  quotes: "Devis",
   projects: "Projets",
   procurement: "Achats",
+  procurementRequests: "Demandes d'achat",
   inventory: "Stock",
   finance: "Finance",
+  payables: "Factures fournisseurs",
   hr: "Ressources humaines",
   field: "Chantier",
   qhse: "QHSE",
@@ -196,22 +199,30 @@ export class CopilotService {
     };
   }
 
-  async sessions(scope: CompanyScope, user: AuthenticatedUser): Promise<CopilotSessionView[]> {
-    const rows = await this.prisma.aiCopilotSession.findMany({ where: { ...scope, userId: user.id }, include: { _count: { select: { evidences: true } } }, orderBy: { lastActivityAt: "desc" }, take: 50 });
-    return rows.map((row) => ({ id: row.id, title: row.title, createdAt: row.createdAt.toISOString(), lastActivityAt: row.lastActivityAt.toISOString(), exchanges: row._count.evidences }));
+  private historyVisible(row: { permissionChecks: Prisma.JsonValue }, permissions: Set<string>): boolean {
+    const checks = row.permissionChecks as unknown as CopilotPermissionCheck[];
+    // Return intact evidence only while each originally granted tool remains
+    // authorized. Reconstructing an answer would invalidate its stored hash.
+    return checks.every((check) => !check.granted || check.permission.split(" | ").some((permission) => permissions.has(permission)));
+  }
+
+  async sessions(scope: CompanyScope, user: AuthenticatedUser, permissions: Set<string>): Promise<CopilotSessionView[]> {
+    const rows = await this.prisma.aiCopilotSession.findMany({ where: { ...scope, userId: user.id }, include: { evidences: { select: { permissionChecks: true } } }, orderBy: { lastActivityAt: "desc" }, take: 50 });
+    return rows.map((row) => ({ id: row.id, title: row.title, createdAt: row.createdAt.toISOString(), lastActivityAt: row.lastActivityAt.toISOString(), exchanges: row.evidences.filter((evidence) => this.historyVisible(evidence, permissions)).length }));
   }
 
   /** Une conversation n'est lisible que par son auteur (meme message qu'une conversation inexistante). */
-  async session(scope: CompanyScope, user: AuthenticatedUser, id: string): Promise<CopilotSessionDetail> {
+  async session(scope: CompanyScope, user: AuthenticatedUser, id: string, permissions: Set<string>): Promise<CopilotSessionDetail> {
     const row = await this.prisma.aiCopilotSession.findFirst({ where: { ...scope, id, userId: user.id }, include: { evidences: { orderBy: { createdAt: "asc" } } } });
     if (!row) throw new NotFoundException("Conversation introuvable");
+    const visible = row.evidences.filter((evidence) => this.historyVisible(evidence, permissions));
     return {
       id: row.id,
       title: row.title,
       createdAt: row.createdAt.toISOString(),
       lastActivityAt: row.lastActivityAt.toISOString(),
-      exchanges: row.evidences.length,
-      exchangesDetail: row.evidences.map((evidence) => this.evidenceView(evidence, user.fullName)),
+      exchanges: visible.length,
+      exchangesDetail: visible.map((evidence) => this.evidenceView(evidence, user.fullName)),
     };
   }
 

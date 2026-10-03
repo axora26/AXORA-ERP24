@@ -1,9 +1,16 @@
-import type { ProjectDetailView, ProjectSummaryView } from "@axora24/contracts";
+import type { ProjectDetailView, ProjectSummaryView, ProjectOperationsQuery, ProjectOperationsView } from "@axora24/contracts";
 import { api } from "../api";
 
 export const projectsApi = {
   list: () => api.get<ProjectSummaryView[]>("/projects"),
   detail: (id: string) => api.get<ProjectDetailView>(`/projects/${id}`),
+  operations: (id: string, query: ProjectOperationsQuery = {}) => {
+    const parameters = new URLSearchParams();
+    if (query.from) parameters.set("from", query.from);
+    if (query.to) parameters.set("to", query.to);
+    if (query.companyId) parameters.set("companyId", query.companyId);
+    return api.get<ProjectOperationsView>(`/projects/${id}/operations${parameters.size ? `?${parameters}` : ""}`);
+  },
   create: (input: {
     name: string;
     contractId?: string;

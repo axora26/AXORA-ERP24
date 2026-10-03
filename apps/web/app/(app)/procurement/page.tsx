@@ -9,7 +9,7 @@ import { projectsApi } from "../../lib/modules/projects";
 import { formatDate, formatMoney } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import {
+import { DataUnavailable,
   Button,
   DataTable,
   DateField,
@@ -47,6 +47,8 @@ export default function ProcurementPage(): React.ReactElement {
   const [requests, orders, suppliers] = data.data ?? [[], [], []];
 
   const openOrders = orders.filter((order) => order.status === "ISSUED" || order.status === "PARTIALLY_RECEIVED");
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Achats" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

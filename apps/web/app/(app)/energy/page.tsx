@@ -10,7 +10,7 @@ import { formatDateTime, formatMoney, formatQuantity } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
 import { StackedBars } from "../../components/bar-chart";
-import { Button, DataTable, DecimalField, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, TextAreaField, TextField, Toggle } from "../../components/ui";
+import { DataUnavailable, Button, DataTable, DecimalField, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, TextAreaField, TextField, Toggle } from "../../components/ui";
 
 type Dialog = "meter" | "storage";
 const STORAGE_KEY = "axora.energy.building";
@@ -65,6 +65,9 @@ export default function EnergyPage(): React.ReactElement {
 
   const buildingOptions = (buildings.data ?? []).map((building) => ({ value: building.id, label: `${building.code} — ${building.name}` }));
   const hasSources = balance?.series.some((row) => SOURCE_SERIES.some((serie) => row.values[serie.key as keyof typeof row.values]));
+
+  if (buildings.error && !buildings.data && !buildings.loading) return <DataUnavailable title="Énergie" error={buildings.error} onRetry={() => void buildings.reload()}/>;
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Énergie" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

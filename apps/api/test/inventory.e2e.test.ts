@@ -160,6 +160,22 @@ describe("Stock & Logistique (e2e)", () => {
     await expect(harness.prisma.stockMovement.delete({ where: { id: movementId } })).rejects.toThrow(/append-only/);
   });
 
+  it("detail d'un mouvement : meme vue que le grand livre, permission et isolation", async () => {
+    const ledger = await api().get(`/inventory/movements?itemId=${cement}`);
+    const movement = ledger.body[0];
+    expect((await api().get(`/inventory/movements/${movement.id}`)).body).toEqual(movement);
+    expect((await harness.http().get(`/api/v1/inventory/movements/${movement.id}`)).status).toBe(401);
+    expect((await as(harness, other).get(`/inventory/movements/${movement.id}`)).status).toBe(404);
+    const reader = await createUserWith(harness, owner, ["inventory.item.read"], "stock-reader");
+    const denied = await createUserWith(harness, owner, ["crm.lead.read"], "stock-denied");
+    expect((await as(harness, reader).get(`/inventory/movements/${movement.id}`)).body).toEqual(movement);
+    expect((await as(harness, denied).get(`/inventory/movements/${movement.id}`)).status).toBe(403);
+    const second = await harness.prisma.company.create({ data: { organizationId: owner.organizationId, name: "Autre magasin" } });
+    expect((await as(harness, reader).get(`/inventory/movements/${movement.id}?companyId=${second.id}`)).status).toBe(403);
+    await harness.prisma.companyMembership.create({ data: { userId: reader.userId, companyId: second.id } });
+    expect((await as(harness, reader).get(`/inventory/movements/${movement.id}?companyId=${second.id}`)).status).toBe(404);
+  });
+
   it("inventaire physique : gel du magasin, ecarts transformes en ajustements traces", async () => {
     await api().post("/inventory/adjustments", { warehouseId: central, itemId: rebar, quantityDelta: "2.5", unitCost: "1000.00", reason: "Reprise" });
     const opened = await api().post("/inventory/counts", { warehouseId: central });

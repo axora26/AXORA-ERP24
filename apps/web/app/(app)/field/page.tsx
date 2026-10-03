@@ -12,7 +12,7 @@ import { useResource } from "../../lib/hooks";
 import { cachedLoad } from "../../lib/offline-cache";
 import { useSession } from "../../lib/session";
 import { SyncPanel, useFieldQueue } from "../../components/field-sync";
-import {
+import { DataUnavailable,
   Button,
   DataTable,
   DateField,
@@ -84,6 +84,9 @@ export default function FieldPage(): React.ReactElement {
   const toVerify = issues.filter((issue) => issue.status === "CORRECTION_SUBMITTED").length;
   const today = new Date().toISOString().slice(0, 10);
   const todayLog = logs.find((log) => log.logDate === today) ?? null;
+
+  if (projects.error && !projects.data && !projects.loading) return <DataUnavailable title="Chantier" error={projects.error} onRetry={() => void projects.reload()}/>;
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Chantier" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

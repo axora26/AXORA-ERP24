@@ -7,6 +7,7 @@ import { decryptSecret } from "@axora24/security";
 import { PrismaService } from "../core/prisma.service.js";
 import { CrmService } from "../crm/crm.service.js";
 import { LoginThrottleService } from "../auth/login-throttle.service.js";
+import { resolveDelegatedPermissions } from "../auth/delegated-permissions.js";
 import { writeAudit } from "../common/audit.js";
 import { integrationKey } from "../workflow/automation.service.js";
 import { verifyWebhook } from "../workflow/engine.js";
@@ -82,6 +83,8 @@ export class InboundController {
     }
 
     const scope = { organizationId: endpoint.organizationId, companyId: endpoint.companyId };
+    const permissions = await resolveDelegatedPermissions(this.prisma, scope, endpoint.createdByUserId);
+    if (!permissions?.has("crm.lead.manage")) throw new UnauthorizedException("Point d'entrée suspendu : son créateur n'a plus le droit de créer des prospects dans cette entreprise");
     const parsed = parseLeadEvent(request.body);
     if (!parsed.externalId) throw new BadRequestException(parsed.error);
     const existing = await this.prisma.inboundEvent.findUnique({ where: { endpointId_externalId: { endpointId, externalId: parsed.externalId } } });

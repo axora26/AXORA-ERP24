@@ -6,12 +6,13 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { hashPassword } from "@axora24/security";
-import { isKnownPermission, permissionCatalog, type AuditLogPage } from "@axora24/contracts";
+import { CORE_PERMISSIONS, isKnownPermission, permissionCatalog, type AuditLogPage } from "@axora24/contracts";
 import type { Prisma } from "@axora24/database";
 import { PrismaService } from "../core/prisma.service.js";
 import type { AuthenticatedUser } from "../auth/session.guard.js";
 import { writeAudit } from "../common/audit.js";
 import { DEFAULT_PIPELINE_STAGES } from "../crm/pipeline.defaults.js";
+import { credentialPassword } from "../auth/credentials.js";
 import {
   assertBody,
   currencyCode,
@@ -68,8 +69,7 @@ export class AdminService {
     const input = assertBody(body);
     const email = requiredEmail(input.email, "email");
     const fullName = requiredText(input.fullName, "fullName", 120);
-    const password = requiredText(input.password, "password", 128);
-    if (password.length < 8) throw new BadRequestException("password must be at least 8 characters");
+    const password = credentialPassword(input.password, "password", 12);
     const roleIds = idList(input.roleIds, "roleIds");
     const companyIds = idList(input.companyIds, "companyIds");
     if (companyIds.length === 0) throw new BadRequestException("companyIds must contain at least one company");
@@ -85,6 +85,9 @@ export class AdminService {
     const passwordHash = await hashPassword(password);
 
     const userId = await this.prisma.$transaction(async (tx) => {
+      await this.lockOrganization(tx, actor.organizationId);
+      if (roleIds.length) await this.assertRoleAssignmentAllowed(tx, actor, roleIds);
+      await this.assertActorAuthorized(tx, actor, CORE_PERMISSIONS.USER_MANAGE);
       const user = await tx.user.create({
         data: { organizationId: actor.organizationId, email, fullName, passwordHash },
       });
@@ -129,6 +132,9 @@ export class AdminService {
     if (companyIds !== undefined) await this.assertCompaniesInOrganization(actor.organizationId, companyIds);
 
     await this.prisma.$transaction(async (tx) => {
+      await this.lockOrganization(tx, actor.organizationId);
+      if (roleIds !== undefined) await this.assertRoleAssignmentAllowed(tx, actor, roleIds);
+      await this.assertActorAuthorized(tx, actor, CORE_PERMISSIONS.USER_MANAGE);
       if (fullName !== undefined || isActive !== null) {
         await tx.user.update({
           where: { id: target.id },
@@ -216,6 +222,9 @@ export class AdminService {
     if (duplicate) throw new ConflictException(`A role named "${name}" already exists`);
 
     const roleId = await this.prisma.$transaction(async (tx) => {
+      await this.lockOrganization(tx, actor.organizationId);
+      await this.assertPermissionsDelegable(tx, actor, keys);
+      await this.assertActorAuthorized(tx, actor, CORE_PERMISSIONS.ROLE_MANAGE);
       const role = await tx.role.create({ data: { organizationId: actor.organizationId, name } });
       await this.replacePermissions(tx, role.id, keys);
       await writeAudit(tx, actor, actor.id, "core.role.created", "Role", role.id, { name, permissions: keys });
@@ -230,6 +239,9 @@ export class AdminService {
     const role = await this.findMutableRole(actor, roleId);
 
     await this.prisma.$transaction(async (tx) => {
+      await this.lockOrganization(tx, actor.organizationId);
+      await this.assertPermissionsDelegable(tx, actor, keys);
+      await this.assertActorAuthorized(tx, actor, CORE_PERMISSIONS.ROLE_MANAGE);
       const before = await tx.rolePermission.findMany({
         where: { roleId: role.id },
         include: { permission: { select: { key: true } } },
@@ -251,6 +263,9 @@ export class AdminService {
       throw new BadRequestException("This role is still assigned to users; remove the assignments first");
     }
     await this.prisma.$transaction(async (tx) => {
+      await this.lockOrganization(tx, actor.organizationId);
+      await this.assertActorAuthorized(tx, actor, CORE_PERMISSIONS.ROLE_MANAGE);
+      if (await tx.roleAssignment.count({ where: { roleId: role.id } })) throw new BadRequestException("This role is still assigned to users");
       await tx.role.delete({ where: { id: role.id } });
       await writeAudit(tx, actor, actor.id, "core.role.deleted", "Role", role.id, { name: role.name });
     });
@@ -312,6 +327,8 @@ export class AdminService {
     if (duplicate) throw new ConflictException(`A company named "${name}" already exists`);
 
     const companyId = await this.prisma.$transaction(async (tx) => {
+      await this.lockOrganization(tx, actor.organizationId);
+      await this.assertActorAuthorized(tx, actor, CORE_PERMISSIONS.COMPANY_MANAGE);
       const company = await tx.company.create({
         data: { organizationId: actor.organizationId, name, legalName, currency },
       });
@@ -402,6 +419,8 @@ export class AdminService {
   private async assertOwnerRemains(tx: Prisma.TransactionClient, organizationId: string) {
     const activeOwners = await tx.roleAssignment.count({
       where: {
+        companyId: null,
+        projectId: null,
         role: { organizationId, name: OWNER_ROLE, isSystem: true },
         user: { isActive: true },
       },
@@ -409,6 +428,38 @@ export class AdminService {
     if (activeOwners === 0) {
       throw new BadRequestException("The organization must keep at least one active OWNER");
     }
+  }
+
+  private async lockOrganization(tx: Prisma.TransactionClient, organizationId: string): Promise<void> {
+    // Serialise concurrent edits so two OWNERs cannot each remove the other
+    // after observing the same pre-update owner count.
+    await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${organizationId} FOR UPDATE`;
+  }
+
+  private async assertActorAuthorized(tx: Prisma.TransactionClient, actor: AuthenticatedUser, permission: string): Promise<void> {
+    const active = await tx.user.findFirst({ where: { id: actor.id, organizationId: actor.organizationId, isActive: true }, select: { id: true } });
+    if (!active || !(await this.delegablePermissions(tx, actor)).has(permission)) throw new ForbiddenException("Administrative access was revoked");
+  }
+
+  private async delegablePermissions(tx: Prisma.TransactionClient, actor: AuthenticatedUser): Promise<Set<string>> {
+    const assignments = await tx.roleAssignment.findMany({
+      where: { userId: actor.id, companyId: null, projectId: null, role: { organizationId: actor.organizationId } },
+      include: { role: { include: { permissions: { include: { permission: true } } } } },
+    });
+    return new Set(assignments.flatMap((assignment) => assignment.role.permissions.map(({ permission }) => permission.key)));
+  }
+
+  private async assertPermissionsDelegable(tx: Prisma.TransactionClient, actor: AuthenticatedUser, keys: string[]): Promise<void> {
+    const allowed = await this.delegablePermissions(tx, actor);
+    if (keys.some((key) => !allowed.has(key))) throw new ForbiddenException("Cannot grant permissions you do not hold");
+  }
+
+  private async assertRoleAssignmentAllowed(tx: Prisma.TransactionClient, actor: AuthenticatedUser, roleIds: string[]): Promise<void> {
+    const allowed = await this.delegablePermissions(tx, actor);
+    if (!allowed.has(CORE_PERMISSIONS.ROLE_MANAGE)) throw new ForbiddenException("Role management permission is required to assign roles");
+    const roles = await tx.role.findMany({ where: { id: { in: roleIds }, organizationId: actor.organizationId }, include: { permissions: { include: { permission: true } } } });
+    if (roles.length !== roleIds.length) throw new BadRequestException("One or more roles do not exist");
+    if (roles.some((role) => role.permissions.some(({ permission }) => !allowed.has(permission.key)))) throw new ForbiddenException("Cannot grant permissions you do not hold");
   }
 }
 

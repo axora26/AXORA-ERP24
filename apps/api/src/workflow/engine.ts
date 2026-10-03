@@ -1,4 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { isIP } from "node:net";
+import { isPublicWebhookAddress } from "./webhook-transport.js";
 import { Prisma } from "@axora24/database";
 import type { AutomationFieldType, WorkflowCondition } from "@axora24/contracts";
 
@@ -77,7 +79,6 @@ export function nextRetryDelayMs(attempts: number): number | null {
   return attempts <= schedule.length ? schedule[attempts - 1]! : null;
 }
 
-const PRIVATE_V4 = [/^10\./, /^127\./, /^169\.254\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./, /^0\./, /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./];
 
 /**
  * Politique de cible d'un webhook sortant (anti-SSRF) : HTTPS obligatoire,
@@ -95,7 +96,7 @@ export function webhookTargetRefusal(raw: string, allowPrivateTargets: boolean):
   if (url.username || url.password) return "identifiants interdits dans l'URL";
   if (url.protocol !== "https:" && !(allowPrivateTargets && url.protocol === "http:")) return "HTTPS obligatoire";
   const host = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
-  const local = host === "localhost" || host.endsWith(".localhost") || host.endsWith(".internal") || host.endsWith(".local") || PRIVATE_V4.some((pattern) => pattern.test(host)) || host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80") || host === "::" || host.startsWith("::ffff:");
+  const local = host === "localhost" || host.endsWith(".localhost") || host.endsWith(".internal") || host.endsWith(".local") || (isIP(host) !== 0 && !isPublicWebhookAddress(host));
   if (local && !allowPrivateTargets) return "adresse locale ou privée interdite";
   return null;
 }

@@ -54,6 +54,8 @@ export class StockLedgerService {
   async post(tx: Tx, scope: CompanyScope, input: PostMovementInput): Promise<PostedMovement> {
     if (!input.quantity.greaterThan(0)) throw new BadRequestException("Movement quantity must be greater than zero");
 
+    await lockWarehouses(tx, scope, [input.warehouseId]);
+
     const [item, warehouse] = await Promise.all([
       tx.inventoryItem.findFirst({ where: { id: input.itemId, ...scope } }),
       tx.warehouse.findFirst({ where: { id: input.warehouseId, ...scope } }),
@@ -137,4 +139,16 @@ export class StockLedgerService {
     });
     return { id: movement.id, quantityDelta, valueDelta, unitCost };
   }
+}
+
+/** Serialize movements with physical-count snapshots; sorted locking also prevents reverse-transfer deadlocks. */
+export async function lockWarehouses(tx: Tx, scope: CompanyScope, warehouseIds: string[]): Promise<void> {
+  const ids = [...new Set(warehouseIds)].sort();
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT "id" FROM "warehouses"
+    WHERE "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId}
+      AND "id" IN (${Prisma.join(ids)})
+    ORDER BY "id" FOR UPDATE
+  `);
+  if (rows.length !== ids.length) throw new NotFoundException("Warehouse not found");
 }

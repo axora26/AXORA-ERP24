@@ -8,6 +8,7 @@ import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
 import { allConditionsHold, nextRetryDelayMs, render, signWebhook, webhookTargetRefusal } from "./engine.js";
+import { postWebhook } from "./webhook-transport.js";
 
 type Tx = Prisma.TransactionClient;
 type Client = Tx | PrismaService;
@@ -347,15 +348,10 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
       const refusal = webhookTargetRefusal(delivery.url, allowPrivateWebhookTargets());
       if (refusal) throw new Error(`Cible refusée : ${refusal}`);
       const event = (JSON.parse(delivery.body) as { type?: string }).type ?? "";
-      const response = await fetch(delivery.url, {
-        method: "POST",
-        headers: { "content-type": "application/json", "user-agent": "AXORA-ERP24-Webhooks/1", "x-axora-delivery": delivery.id, "x-axora-event": event, "x-axora-timestamp": timestamp, "x-axora-signature": signature },
-        body: delivery.body,
-        redirect: "manual",
-        signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
-      });
+      const response = await postWebhook(delivery.url, delivery.body,
+        { "content-type": "application/json", "user-agent": "AXORA-ERP24-Webhooks/1", "x-axora-delivery": delivery.id, "x-axora-event": event, "x-axora-timestamp": timestamp, "x-axora-signature": signature },
+        { allowPrivateTargets: allowPrivateWebhookTargets(), timeoutMs: DELIVERY_TIMEOUT_MS });
       statusCode = response.status;
-      await response.body?.cancel().catch(() => undefined);
       if (statusCode < 200 || statusCode >= 300) error = `Réponse HTTP ${statusCode}`;
     } catch (caught) {
       error = caught instanceof Error && caught.name === "TimeoutError" ? `Délai dépassé (${DELIVERY_TIMEOUT_MS / 1000} s)` : message(caught).replace(/^fetch failed$/, "Connexion impossible");
@@ -363,12 +359,12 @@ export class AutomationService implements OnModuleInit, OnModuleDestroy {
       if (cause && error === "Connexion impossible") error = `Connexion impossible : ${cause}`.slice(0, 300);
     }
     if (!error) {
-      await this.prisma.webhookDelivery.update({ where: { id: delivery.id }, data: { status: "DELIVERED", deliveredAt: new Date(), lastStatusCode: statusCode, lastError: null, nextAttemptAt: null, timestamp, signature } });
+      await this.prisma.webhookDelivery.updateMany({ where: { id: delivery.id, status: "PENDING", attempts }, data: { status: "DELIVERED", deliveredAt: new Date(), lastStatusCode: statusCode, lastError: null, nextAttemptAt: null, timestamp, signature } });
       return true;
     }
     const delay = nextRetryDelayMs(attempts);
-    await this.prisma.webhookDelivery.update({
-      where: { id: delivery.id },
+    await this.prisma.webhookDelivery.updateMany({
+      where: { id: delivery.id, status: "PENDING", attempts },
       data: { status: delay === null ? "FAILED" : "PENDING", nextAttemptAt: delay === null ? null : new Date(Date.now() + delay), lastStatusCode: statusCode, lastError: error.slice(0, 300), timestamp, signature },
     });
     return true;

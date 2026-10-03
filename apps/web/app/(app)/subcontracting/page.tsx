@@ -18,7 +18,7 @@ import { projectsApi } from "../../lib/modules/projects";
 import { formatDate, formatMoney, formatPercent } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import { Button, DataTable, DecimalField, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextAreaField, TextField } from "../../components/ui";
+import { DataUnavailable, Button, DataTable, DecimalField, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextAreaField, TextField } from "../../components/ui";
 
 type TabId = "subcontractors" | "packages" | "statements" | "retentions";
 type Dialog = "subcontractor" | "package";
@@ -45,6 +45,8 @@ export default function SubcontractingPage(): React.ReactElement {
       else await data.reload();
     }
   }
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Sous-traitance" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

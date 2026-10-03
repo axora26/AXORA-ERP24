@@ -5,6 +5,31 @@
  * `{x}` de la cle. Couverture verifiee par test (test/error-messages.test.ts).
  */
 export const CORE_MESSAGES: Record<string, string> = {
+  "This role is still assigned to users": "Ce rôle est encore attribué à des utilisateurs",
+  "Missing required permission": "La permission requise est absente",
+  "MFA is not configured on this server (MFA_ENCRYPTION_KEY missing or invalid)": "L’authentification à deux facteurs n’est pas configurée sur ce serveur : clé de chiffrement absente ou invalide",
+  "MFA is required for this account but not configured on this server": "L’authentification à deux facteurs est obligatoire pour ce compte, mais elle n’est pas configurée sur ce serveur",
+  "{x} must be YYYY-MM-DD": "{1} doit respecter le format AAAA-MM-JJ",
+  "{x} must be a valid calendar date": "{1} doit être une date de calendrier valide",
+  "Administrative access was revoked": "Vos droits d'administration ont été révoqués",
+  "Conflicting companyId values": "Les identifiants d'entreprise de la requête sont contradictoires",
+  "JSON body must be an object": "Le corps de la requête doit être un objet JSON",
+  "Provide exactly one authentication code or recovery code": "Saisissez un code d'authentification ou un code de secours",
+  "Account changed; authenticate again": "Votre compte a changé ; reconnectez-vous",
+  "Too many registration attempts. Try again later.": "Trop de tentatives d'inscription ; réessayez plus tard",
+  "MFA setup changed; start again": "La configuration de l'authentification a changé ; recommencez l'activation",
+  "Company not found": "Entreprise introuvable",
+  "Unknown preference": "Cette préférence n'est pas reconnue",
+  "Invalid theme preference": "Choisissez un thème clair, sombre ou automatique",
+  "Cannot grant permissions you do not hold": "Vous ne pouvez pas accorder des droits que vous ne possédez pas",
+  "Role management permission is required to assign roles": "La gestion des rôles est requise pour attribuer des rôles",
+  "{x} is not allowed": "{1} n'est pas autorisé",
+  "{x} must contain {x} to 256 characters": "{1} doit contenir entre {2} et 256 caractères",
+  "organizationSlug is invalid": "L'identifiant de l'organisation est invalide",
+  "Untrusted request origin": "L'origine de la requête n'est pas autorisée",
+  "Cross-site request denied": "La requête depuis un autre site est refusée",
+  "JSON content type required": "Le format JSON est requis",
+  "A new opportunity must start in an open pipeline stage": "Une nouvelle opportunité doit commencer dans une étape ouverte du pipeline",
   // --- Validation commune -------------------------------------------------
   "{x} exceeds {x} characters": "{1} dépasse {2} caractères",
   "{x} is not a valid date": "{1} n'est pas une date valide",
@@ -52,7 +77,6 @@ export const CORE_MESSAGES: Record<string, string> = {
   "Too many failed login attempts. Try again later.": "Trop de tentatives de connexion échouées : réessayez plus tard.",
   "Too many invalid codes. Sign in again.": "Trop de codes invalides : reconnectez-vous.",
   "User is disabled": "Compte désactivé",
-  "newPassword must be at least 8 characters": "Le nouveau mot de passe doit contenir au moins 8 caractères",
   "newPassword must differ from the current one": "Le nouveau mot de passe doit différer de l'actuel",
 
   // --- Administration -----------------------------------------------------
@@ -70,7 +94,6 @@ export const CORE_MESSAGES: Record<string, string> = {
   "User not found": "Utilisateur introuvable",
   "You cannot deactivate your own account": "Vous ne pouvez pas désactiver votre propre compte",
   "companyIds must contain at least one company": "companyIds doit contenir au moins une entreprise",
-  "password must be at least 8 characters": "Le mot de passe doit contenir au moins 8 caractères",
   "{x} must be an array of identifiers": "{1} doit être une liste d'identifiants",
 
   // --- Actifs & GMAO ------------------------------------------------------

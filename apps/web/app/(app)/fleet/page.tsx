@@ -21,7 +21,7 @@ import { projectsApi } from "../../lib/modules/projects";
 import { formatDateTime, formatMoney, formatQuantity, todayIso } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import { Button, DataTable, DateField, DecimalField, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextAreaField, TextField, Toggle } from "../../components/ui";
+import { DataUnavailable, Button, DataTable, DateField, DecimalField, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextAreaField, TextField, Toggle } from "../../components/ui";
 
 type TabId = "vehicles" | "assignments" | "fuel" | "incidents" | "projects";
 type Dialog = "vehicle" | "assign" | "fuel" | "incident";
@@ -52,6 +52,8 @@ export default function FleetPage(): React.ReactElement {
       await data.reload();
     }
   }
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Parc véhicules & engins" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

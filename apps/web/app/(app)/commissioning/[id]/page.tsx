@@ -11,6 +11,7 @@ import { assetUrl } from "../../../lib/api";
 import { formatDateTime } from "../../../lib/format";
 import { useMutation, useResource } from "../../../lib/hooks";
 import { useSession } from "../../../lib/session";
+import { BusinessPrintLink } from "../../../components/business-print-link";
 import { ActionBar, Button, CheckboxGroup, DataTable, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, SelectField, StatusChip, TextAreaField, TextField } from "../../../components/ui";
 
 type Dialog = { kind: "test" } | { kind: "correct"; punchItemId: string } | { kind: "accept" } | { kind: "handover" };
@@ -56,6 +57,7 @@ export default function CommissioningActivityPage(): React.ReactElement {
         subtitle={`${activity.code} · système ${activity.systemCode} · ${activity.projectCode ?? ""}`}
         actions={
           <>
+            <BusinessPrintLink kind="commissioning" id={activity.id} companyId={session.activeCompanyId ?? undefined} />
             <StatusChip status={STAGE_CHIP[activity.stage] ?? "planned"} label={STAGE_LABEL[activity.stage]} />
             {canManage && (
               <Button variant="primary" onClick={() => setDialog({ kind: "test" })}>

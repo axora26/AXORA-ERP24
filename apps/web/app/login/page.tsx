@@ -2,28 +2,26 @@
 
 import React, { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { Brand } from "../components/brand";
+import { safeNext } from "../lib/safe-next";
 
 const SHOW_DEMO_HINT = process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === "true";
-
-/** Redirection post-connexion limitee aux chemins internes (pas d'open redirect). */
-function safeNext(next: string | null): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/";
-  return next;
-}
 
 function LoginForm(): React.ReactElement {
   const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [organizationSlug, setOrganizationSlug] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [challengeToken, setChallengeToken] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  const [useRecovery, setUseRecovery] = useState(false);
 
   useEffect(() => {
     // Session deja ouverte : inutile de se reconnecter.
@@ -35,12 +33,14 @@ function LoginForm(): React.ReactElement {
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
     try {
       const result = await api.post<{ mfaRequired?: boolean; challengeToken?: string }>("/auth/login", {
         email,
         password,
+        ...(organizationSlug.trim() ? { organizationSlug: organizationSlug.trim() } : {}),
       });
       if (result.mfaRequired && result.challengeToken) {
         setChallengeToken(result.challengeToken);
@@ -62,10 +62,11 @@ function LoginForm(): React.ReactElement {
 
   async function verify(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
     try {
-      await api.post("/auth/mfa/verify", { challengeToken, code });
+      await api.post("/auth/mfa/verify", { challengeToken, ...(useRecovery ? { recoveryCode: code } : { code: code.replace(/\s/g, "") }) });
       router.replace(safeNext(params.get("next")));
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 429) {
@@ -90,18 +91,19 @@ function LoginForm(): React.ReactElement {
           <ShieldCheck size={15} /> Double authentification
         </span>
         <h2>Code de vérification</h2>
-        <p className="login-intro">Saisissez le code à 6 chiffres de votre application d&apos;authentification.</p>
+        <p className="login-intro">Saisissez le code à  6 chiffres de votre application d&apos;authentification.</p>
         <form onSubmit={verify}>
-          <label htmlFor="mfa-code">Code</label>
+          <label htmlFor="mfa-code">{useRecovery ? "Code de récupération" : "Code à 6 chiffres"}</label>
           <input
             id="mfa-code"
             name="code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            pattern="[0-9 ]{6,7}"
+            inputMode={useRecovery ? "text" : "numeric"}
+            autoComplete={useRecovery ? "off" : "one-time-code"}
+            pattern={useRecovery ? undefined : "[0-9 ]{6,7}"}
+            maxLength={useRecovery ? 128 : 7}
             value={code}
             onChange={(event) => setCode(event.currentTarget.value)}
-            placeholder="123 456"
+            placeholder={useRecovery ? "XXXX-XXXX-…" : "123 456"}
             autoFocus
             required
           />
@@ -113,17 +115,19 @@ function LoginForm(): React.ReactElement {
           <button className="primary-button" type="submit" disabled={loading}>
             {loading ? "Vérification…" : "Vérifier"}
           </button>
+          <button type="button" className="link-button mfa-mode-toggle" disabled={loading} onClick={() => { setUseRecovery(v => !v); setCode(""); setError(""); }}>{useRecovery ? "Utiliser l’application d’authentification" : "Utiliser un code de récupération"}</button>
           <button
             type="button"
             className="link-button"
             style={{ marginTop: 14 }}
             onClick={() => {
               setChallengeToken(null);
+              setUseRecovery(false);
               setCode("");
               setError("");
             }}
           >
-            Revenir à la connexion
+            Revenir à  la connexion
           </button>
         </form>
       </div>
@@ -136,7 +140,7 @@ function LoginForm(): React.ReactElement {
         <ShieldCheck size={15} /> Accès sécurisé
       </span>
       <h2>Bienvenue</h2>
-      <p className="login-intro">Connectez-vous à votre espace de travail AXORA.</p>
+      <p className="login-intro">Connectez-vous à  votre espace de travail AXORA.</p>
 
       <form onSubmit={submit}>
         <label htmlFor="email">Adresse e-mail</label>
@@ -175,6 +179,10 @@ function LoginForm(): React.ReactElement {
           </button>
         </div>
 
+        <label htmlFor="organization-slug" className="organization-login-label">Organisation <span>(facultatif)</span></label>
+        <input id="organization-slug" value={organizationSlug} onChange={event => setOrganizationSlug(event.currentTarget.value)} autoComplete="organization" placeholder="Identifiant de votre organisation" aria-describedby="organization-login-hint"/>
+        <p id="organization-login-hint" className="organization-login-hint">À renseigner si cet e-mail appartient à  plusieurs organisations.</p>
+
         {error && (
           <div className="form-error" role="alert">
             {error}
@@ -195,13 +203,13 @@ function LoginForm(): React.ReactElement {
         <div className="demo-login-hint" role="note">
           <strong>Environnement local de démonstration</strong>
           <span>
-            demo@axora-erp24.local · <code>Demo2026!</code>
+            demo@axora-erp24.local · <code>Demo2026!Axora</code>
           </span>
           <button
             type="button"
             onClick={() => {
               setEmail("demo@axora-erp24.local");
-              setPassword("Demo2026!");
+              setPassword("Demo2026!Axora");
             }}
           >
             Remplir
@@ -213,9 +221,10 @@ function LoginForm(): React.ReactElement {
         <ShieldCheck size={18} />
         <span>
           <strong>Connexion protégée</strong>
-          <small>Session opaque, contrôle RBAC et journal d&apos;audit.</small>
+          <small>Vos accès sont contrôlés et les opérations sont tracées.</small>
         </span>
       </div>
+      <p className="registration-login">Vous démarrez sur AXORA ? <Link href="/register">Créer une organisation</Link></p>
     </div>
   );
 }

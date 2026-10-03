@@ -26,6 +26,8 @@ export interface EstimationStudyView {
   objective: string;
   sourceReference: string | null;
   status: EstimationStudyStatus;
+  version: number;
+  updatedAt: string;
   createdAt: string;
   requirements: EstimationRequirementView[];
 }
@@ -63,6 +65,8 @@ export interface DqeView {
   currency: string;
   status: DqeStatus;
   revision: number;
+  version: number;
+  updatedAt: string;
   finalizedAt: string | null;
   createdAt: string;
   /** Somme exacte des lignes, calculée côté serveur. */
@@ -72,3 +76,23 @@ export interface DqeView {
 }
 
 export type DqeSummaryView = DqeView;
+
+/** Optimistic version belongs to the containing draft, not the individual row. */
+export interface EstimationDraftVersionInput {
+  companyId?: string;
+  expectedVersion: number;
+}
+export interface EstimationRequirementUpdateInput extends EstimationDraftVersionInput {
+  position?: number;
+  category?: StudyRequirementCategory;
+  statement?: string;
+  sourceReference?: string | null;
+}
+export interface DqeLineUpdateInput extends EstimationDraftVersionInput {
+  position?: number;
+  reference?: string | null;
+  designation?: string;
+  unitCode?: string;
+  quantity?: string;
+  unitPrice?: string;
+}

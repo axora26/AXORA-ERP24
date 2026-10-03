@@ -23,7 +23,7 @@ import { assetsApi } from "../../lib/modules/assets";
 import { formatDateTime } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import { Button, DataTable, DecimalField, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextAreaField, TextField, Toggle } from "../../components/ui";
+import { DataUnavailable, Button, DataTable, DecimalField, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextAreaField, TextField, Toggle } from "../../components/ui";
 import { TokenReveal } from "../../components/token-reveal";
 
 type TabId = "alarms" | "points" | "gateways" | "setpoints";
@@ -51,6 +51,8 @@ export default function SmartBuildingPage(): React.ReactElement {
     }
     return result;
   }
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Smart Building (GTB)" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

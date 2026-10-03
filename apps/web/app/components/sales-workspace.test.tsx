@@ -27,6 +27,8 @@ const finalizedDqe = {
   title: "DQE Campus solaire",
   currency: "USD",
   revision: 1,
+  version: 1,
+  updatedAt: "2026-09-22T00:00:00.000Z",
   status: "FINALIZED" as const,
   subtotal: "1000.000000",
   lines: [

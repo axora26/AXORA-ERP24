@@ -5,6 +5,7 @@ import { SessionGuard } from "../auth/session.guard.js";
 import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequirePermission } from "../auth/require-permission.decorator.js";
 import { CompanyScopeService } from "../common/company-scope.service.js";
+import { CompanyScopeGuard } from "../common/scope.guard.js";
 import { CrmService } from "./crm.service.js";
 import type {
   ConvertLeadDto,
@@ -16,6 +17,11 @@ import type {
   CreatePipelineStageDto,
   MoveOpportunityStageDto,
   UpdateLeadStatusDto,
+  UpdateAccountDto,
+  UpdateContactDto,
+  VersionDto,
+  DirectoryQueryDto,
+  ActivityQueryDto,
 } from "./crm.dto.js";
 
 /**
@@ -29,7 +35,7 @@ import type {
  *   de la session avant toute lecture ou ecriture.
  */
 @Controller("crm")
-@UseGuards(SessionGuard, PermissionGuard)
+@UseGuards(SessionGuard, CompanyScopeGuard, PermissionGuard)
 export class CrmController {
   constructor(
     private readonly crm: CrmService,
@@ -54,6 +60,41 @@ export class CrmController {
 
   // --- Comptes --------------------------------------------------------------
 
+  @Get("accounts/page")
+  @RequirePermission(CRM_PERMISSIONS.ACCOUNT_READ)
+  async pageAccounts(@Req() request: Request, @Query() query: DirectoryQueryDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, query.companyId);
+    return this.crm.pageAccounts(scope, query);
+  }
+
+  @Get("accounts/:id")
+  @RequirePermission(CRM_PERMISSIONS.ACCOUNT_READ)
+  async getAccount(@Req() request: Request, @Param("id") id: string, @Query("companyId") companyId?: string) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+    return this.crm.getAccount(scope, id);
+  }
+
+  @Patch("accounts/:id")
+  @RequirePermission(CRM_PERMISSIONS.ACCOUNT_MANAGE)
+  async updateAccount(@Req() request: Request, @Param("id") id: string, @Body() body: UpdateAccountDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
+    return this.crm.updateAccount(scope, id, body, request.axoraUser!.id);
+  }
+
+  @Post("accounts/:id/archive")
+  @RequirePermission(CRM_PERMISSIONS.ACCOUNT_MANAGE)
+  async archiveAccount(@Req() request: Request, @Param("id") id: string, @Body() body: VersionDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
+    return this.crm.archiveAccount(scope, id, body, request.axoraUser!.id);
+  }
+
+  @Post("accounts/:id/restore")
+  @RequirePermission(CRM_PERMISSIONS.ACCOUNT_MANAGE)
+  async restoreAccount(@Req() request: Request, @Param("id") id: string, @Body() body: VersionDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
+    return this.crm.archiveAccount(scope, id, body, request.axoraUser!.id, true);
+  }
+
   @Get("accounts")
   @RequirePermission(CRM_PERMISSIONS.ACCOUNT_READ)
   async listAccounts(@Req() request: Request, @Query("companyId") companyId?: string) {
@@ -65,10 +106,45 @@ export class CrmController {
   @RequirePermission(CRM_PERMISSIONS.ACCOUNT_MANAGE)
   async createAccount(@Req() request: Request, @Body() body: CreateAccountDto) {
     const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
-    return this.crm.createAccount(scope, body);
+    return this.crm.createAccount(scope, body, request.axoraUser!.id);
   }
 
   // --- Contacts -------------------------------------------------------------
+
+  @Get("contacts/page")
+  @RequirePermission(CRM_PERMISSIONS.CONTACT_READ)
+  async pageContacts(@Req() request: Request, @Query() query: DirectoryQueryDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, query.companyId);
+    return this.crm.pageContacts(scope, query);
+  }
+
+  @Get("contacts/:id")
+  @RequirePermission(CRM_PERMISSIONS.CONTACT_READ)
+  async getContact(@Req() request: Request, @Param("id") id: string, @Query("companyId") companyId?: string) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+    return this.crm.getContact(scope, id);
+  }
+
+  @Patch("contacts/:id")
+  @RequirePermission(CRM_PERMISSIONS.CONTACT_MANAGE)
+  async updateContact(@Req() request: Request, @Param("id") id: string, @Body() body: UpdateContactDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
+    return this.crm.updateContact(scope, id, body, request.axoraUser!.id);
+  }
+
+  @Post("contacts/:id/archive")
+  @RequirePermission(CRM_PERMISSIONS.CONTACT_MANAGE)
+  async archiveContact(@Req() request: Request, @Param("id") id: string, @Body() body: VersionDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
+    return this.crm.archiveContact(scope, id, body, request.axoraUser!.id);
+  }
+
+  @Post("contacts/:id/restore")
+  @RequirePermission(CRM_PERMISSIONS.CONTACT_MANAGE)
+  async restoreContact(@Req() request: Request, @Param("id") id: string, @Body() body: VersionDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
+    return this.crm.archiveContact(scope, id, body, request.axoraUser!.id, true);
+  }
 
   @Get("contacts")
   @RequirePermission(CRM_PERMISSIONS.CONTACT_READ)
@@ -81,7 +157,7 @@ export class CrmController {
   @RequirePermission(CRM_PERMISSIONS.CONTACT_MANAGE)
   async createContact(@Req() request: Request, @Body() body: CreateContactDto) {
     const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
-    return this.crm.createContact(scope, body);
+    return this.crm.createContact(scope, body, request.axoraUser!.id);
   }
 
   // --- Prospects ------------------------------------------------------------
@@ -156,6 +232,13 @@ export class CrmController {
 
   // --- Activites (append-only : aucune route PUT/PATCH/DELETE) --------------
 
+  @Get("activities/page")
+  @RequirePermission(CRM_PERMISSIONS.ACTIVITY_READ)
+  async pageActivities(@Req() request: Request, @Query() query: ActivityQueryDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, query.companyId);
+    return this.crm.pageActivities(scope, query);
+  }
+
   @Get("activities")
   @RequirePermission(CRM_PERMISSIONS.ACTIVITY_READ)
   async listActivities(
@@ -182,6 +265,6 @@ export class CrmController {
   @RequirePermission(CRM_PERMISSIONS.OPPORTUNITY_READ)
   async dashboard(@Req() request: Request, @Query("companyId") companyId?: string) {
     const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
-    return this.crm.dashboard(scope);
+    return this.crm.dashboard(scope, request.axoraPermissions ?? new Set());
   }
 }

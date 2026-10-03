@@ -20,6 +20,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ApiError, crmApi, estimationApi } from "../lib/api";
+import { useSession } from "../lib/session";
+import { EstimationDraftEditor, type EstimationDraftSelection } from "./estimation-draft-editor";
+import { FileDownloadButton } from "./file-download-button";
 
 interface EstimationData {
   opportunities: CrmOpportunityView[];
@@ -62,6 +65,8 @@ const EMPTY_LINE_FORM = {
  * Les listes et compteurs proviennent exclusivement de l'API du tenant.
  */
 export function EstimationWorkspace(): React.ReactElement {
+  const { can } = useSession();
+  const [draftEditor, setDraftEditor] = useState<{ selection: EstimationDraftSelection; deleting: boolean } | null>(null);
   const [data, setData] = useState<EstimationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -139,6 +144,7 @@ export function EstimationWorkspace(): React.ReactElement {
     try {
       await estimationApi.addRequirement(selectedStudy.id, {
         position: Number(requirementForm.position),
+        expectedVersion: selectedStudy.version,
         category: requirementForm.category,
         statement: requirementForm.statement,
         ...(requirementForm.sourceReference.trim()
@@ -147,7 +153,7 @@ export function EstimationWorkspace(): React.ReactElement {
       });
       setRequirementForm({
         ...EMPTY_REQUIREMENT_FORM,
-        position: String(selectedStudy.requirements.length + 2),
+        position: String(Math.max(0, ...selectedStudy.requirements.map(row => row.position), Number(requirementForm.position)) + 1),
       });
       setSelectedStudy(await estimationApi.study(selectedStudy.id));
       setNotice("Exigence ajoutée à l'étude.");
@@ -165,7 +171,7 @@ export function EstimationWorkspace(): React.ReactElement {
     setError("");
     setNotice("");
     try {
-      setSelectedStudy(await estimationApi.markStudyReady(selectedStudy.id));
+      setSelectedStudy(await estimationApi.markStudyReady(selectedStudy.id, selectedStudy.version));
       setNotice("Étude validée. Ses exigences sont désormais figées.");
       await load();
     } catch (caught) {
@@ -215,13 +221,14 @@ export function EstimationWorkspace(): React.ReactElement {
     try {
       await estimationApi.addDqeLine(selectedDqe.id, {
         position: Number(lineForm.position),
+        expectedVersion: selectedDqe.version,
         ...(lineForm.reference.trim() ? { reference: lineForm.reference.trim() } : {}),
         designation: lineForm.designation,
         unitCode: lineForm.unitCode,
         quantity: lineForm.quantity,
         unitPrice: lineForm.unitPrice,
       });
-      setLineForm({ ...EMPTY_LINE_FORM, position: String(selectedDqe.lines.length + 2) });
+      setLineForm({ ...EMPTY_LINE_FORM, position: String(Math.max(0, ...selectedDqe.lines.map(row => row.position), Number(lineForm.position)) + 1) });
       setSelectedDqe(await estimationApi.dqe(selectedDqe.id));
       setNotice("Ligne ajoutée au DQE.");
       await load();
@@ -238,7 +245,7 @@ export function EstimationWorkspace(): React.ReactElement {
     setError("");
     setNotice("");
     try {
-      setSelectedDqe(await estimationApi.finalizeDqe(selectedDqe.id));
+      setSelectedDqe(await estimationApi.finalizeDqe(selectedDqe.id, selectedDqe.version));
       setNotice("DQE finalisé. Les lignes et montants sont désormais figés.");
       await load();
     } catch (caught) {
@@ -463,10 +470,11 @@ export function EstimationWorkspace(): React.ReactElement {
               <table>
                 <thead>
                   <tr>
-                    <th>Position</th>
-                    <th>Catégorie</th>
-                    <th>Énoncé</th>
-                    <th>Source</th>
+                    <th scope="col">Position</th>
+                    <th scope="col">Catégorie</th>
+                    <th scope="col">Énoncé</th>
+                    <th scope="col">Source</th>
+                    {selectedStudy.status === "DRAFT" && can("estimation.study.manage") && <th scope="col">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -476,6 +484,7 @@ export function EstimationWorkspace(): React.ReactElement {
                       <td>{requirement.category}</td>
                       <td>{requirement.statement}</td>
                       <td>{requirement.sourceReference ?? "—"}</td>
+                      {selectedStudy.status === "DRAFT" && can("estimation.study.manage") && <td><div className="crm-row-actions"><button type="button" className="link-button" aria-label={`Modifier l’exigence ${requirement.position}`} onClick={() => setDraftEditor({ selection: { kind: "requirement", parent: selectedStudy, row: requirement }, deleting: false })}>Modifier</button><button type="button" className="link-button" aria-label={`Supprimer l’exigence ${requirement.position}`} onClick={() => setDraftEditor({ selection: { kind: "requirement", parent: selectedStudy, row: requirement }, deleting: true })}>Supprimer</button></div></td>}
                     </tr>
                   ))}
                 </tbody>
@@ -626,11 +635,11 @@ export function EstimationWorkspace(): React.ReactElement {
             <table>
               <thead>
                 <tr>
-                  <th>Document</th>
-                  <th>Statut</th>
-                  <th>Lignes</th>
-                  <th>Total</th>
-                  <th>Action</th>
+                  <th scope="col">Document</th>
+                  <th scope="col">Statut</th>
+                  <th scope="col">Lignes</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -682,6 +691,7 @@ export function EstimationWorkspace(): React.ReactElement {
                 {selectedDqe.status === "FINALIZED" ? "Finalisé" : "Brouillon"}
               </span>
               <strong>{selectedDqe.subtotal} {selectedDqe.currency}</strong>
+              {can("estimation.dqe.read") && <div className="crm-row-actions"><FileDownloadButton path={`/estimation/dqes/${selectedDqe.id}/export.xlsx`} filename={`${selectedDqe.code}.xlsx`} onError={setError}>Exporter Excel</FileDownloadButton><FileDownloadButton path={`/estimation/dqes/${selectedDqe.id}/export.pdf`} filename={`${selectedDqe.code}.pdf`} onError={setError}>Exporter PDF</FileDownloadButton></div>}
             </div>
           </div>
 
@@ -692,13 +702,14 @@ export function EstimationWorkspace(): React.ReactElement {
               <table>
                 <thead>
                   <tr>
-                    <th>Pos.</th>
-                    <th>Référence</th>
-                    <th>Désignation</th>
-                    <th>Unité</th>
-                    <th>Quantité</th>
-                    <th>Prix unitaire</th>
-                    <th>Total ligne</th>
+                    <th scope="col">Pos.</th>
+                    <th scope="col">Référence</th>
+                    <th scope="col">Désignation</th>
+                    <th scope="col">Unité</th>
+                    <th scope="col">Quantité</th>
+                    <th scope="col">Prix unitaire</th>
+                    <th scope="col">Total ligne</th>
+                    {selectedDqe.status === "DRAFT" && can("estimation.dqe.manage") && <th scope="col">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -711,6 +722,7 @@ export function EstimationWorkspace(): React.ReactElement {
                       <td className="numeric-cell">{line.quantity}</td>
                       <td className="numeric-cell">{line.unitPrice}</td>
                       <td className="numeric-cell">{line.lineTotal}</td>
+                      {selectedDqe.status === "DRAFT" && can("estimation.dqe.manage") && <td><div className="crm-row-actions"><button type="button" className="link-button" aria-label={`Modifier la ligne ${line.position}`} onClick={() => setDraftEditor({ selection: { kind: "line", parent: selectedDqe, row: line }, deleting: false })}>Modifier</button><button type="button" className="link-button" aria-label={`Supprimer la ligne ${line.position}`} onClick={() => setDraftEditor({ selection: { kind: "line", parent: selectedDqe, row: line }, deleting: true })}>Supprimer</button></div></td>}
                     </tr>
                   ))}
                 </tbody>
@@ -805,6 +817,7 @@ export function EstimationWorkspace(): React.ReactElement {
           )}
         </section>
       )}
+      {draftEditor && <EstimationDraftEditor selection={draftEditor.selection} deleting={draftEditor.deleting} onClose={() => setDraftEditor(null)} onSaved={async result => { if ("requirements" in result) setSelectedStudy(result); else setSelectedDqe(result); setDraftEditor(null); setNotice("Brouillon actualisé."); await load(); }} />}
     </>
   );
 }

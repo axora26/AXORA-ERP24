@@ -25,7 +25,7 @@ import {
   requiredId,
   requiredText,
 } from "../common/validation.js";
-import { StockLedgerService } from "./stock-ledger.service.js";
+import { StockLedgerService, lockWarehouses } from "./stock-ledger.service.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -202,6 +202,22 @@ export class InventoryService {
       orderBy: { createdAt: "desc" },
       take: limit,
     });
+    return this.movementViews(scope, movements);
+  }
+
+  async getMovement(scope: CompanyScope, id: string): Promise<StockMovementView> {
+    const movement = await this.prisma.stockMovement.findFirst({
+      where: { id, ...scope },
+      include: { item: true, warehouse: true },
+    });
+    if (!movement) throw new NotFoundException("Stock movement not found");
+    return (await this.movementViews(scope, [movement]))[0]!;
+  }
+
+  private async movementViews(
+    scope: CompanyScope,
+    movements: Prisma.StockMovementGetPayload<{ include: { item: true; warehouse: true } }>[],
+  ): Promise<StockMovementView[]> {
     const [projectCodes, userNames] = await Promise.all([
       this.projectCodes(scope, movements.map((movement) => movement.projectId)),
       this.userNames(scope, movements.map((movement) => movement.createdByUserId)),
@@ -289,6 +305,7 @@ export class InventoryService {
     const lines = parseLines(input.lines);
 
     return this.withIdempotency(scope, idempotencyKey, async (tx) => {
+      await lockWarehouses(tx, scope, [fromWarehouseId, toWarehouseId]);
       const transferGroupId = randomUUID();
       for (const line of lines) {
         const out = await this.ledger.post(tx, scope, {
@@ -396,6 +413,7 @@ export class InventoryService {
   async openCount(scope: CompanyScope, body: unknown, actorUserId: string) {
     const warehouseId = requiredId(assertBody(body).warehouseId, "warehouseId");
     const id = await this.prisma.$transaction(async (tx) => {
+      await lockWarehouses(tx, scope, [warehouseId]);
       const warehouse = await tx.warehouse.findFirst({ where: { id: warehouseId, ...scope } });
       if (!warehouse) throw new NotFoundException("Warehouse not found");
       const open = await tx.stockCount.findFirst({ where: { warehouseId, status: "OPEN" }, select: { code: true } });
@@ -418,22 +436,30 @@ export class InventoryService {
     const input = assertBody(body);
     const itemId = requiredId(input.itemId, "itemId");
     const countedQuantity = requiredDecimal(input.countedQuantity, "countedQuantity");
-    const count = await this.prisma.stockCount.findFirst({ where: { id: countId, ...scope } });
-    if (!count) throw new NotFoundException("Stock count not found");
-    if (count.status !== "OPEN") throw new BadRequestException("This stock count is closed");
-    const item = await this.prisma.inventoryItem.findFirst({ where: { id: itemId, ...scope } });
-    if (!item) throw new NotFoundException("Inventory item not found");
-    await this.prisma.stockCountLine.upsert({
-      where: { countId_itemId: { countId, itemId } },
-      create: { countId, itemId, systemQuantity: 0, countedQuantity },
-      update: { countedQuantity },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      const target = await tx.stockCount.findFirst({ where: { id: countId, ...scope }, select: { warehouseId: true } });
+      if (!target) throw new NotFoundException("Stock count not found");
+      await lockWarehouses(tx, scope, [target.warehouseId]);
+      const count = await tx.stockCount.findFirst({ where: { id: countId, ...scope } });
+      if (!count) throw new NotFoundException("Stock count not found");
+      if (count.status !== "OPEN") throw new BadRequestException("This stock count is closed");
+      const item = await tx.inventoryItem.findFirst({ where: { id: itemId, ...scope } });
+      if (!item) throw new NotFoundException("Inventory item not found");
+      await tx.stockCountLine.upsert({
+        where: { countId_itemId: { countId, itemId } },
+        create: { countId, itemId, systemQuantity: 0, countedQuantity },
+        update: { countedQuantity },
+      });
+      });
     return this.getCount(scope, countId);
   }
 
   /** Cloture : chaque ecart compte devient un ajustement trace ; toutes les lignes doivent etre comptees. */
   async closeCount(scope: CompanyScope, countId: string, actorUserId: string) {
     await this.prisma.$transaction(async (tx) => {
+      const target = await tx.stockCount.findFirst({ where: { id: countId, ...scope }, select: { warehouseId: true } });
+      if (!target) throw new NotFoundException("Stock count not found");
+      await lockWarehouses(tx, scope, [target.warehouseId]);
       const count = await tx.stockCount.findFirst({ where: { id: countId, ...scope }, include: { lines: true } });
       if (!count) throw new NotFoundException("Stock count not found");
       if (count.status !== "OPEN") throw new BadRequestException("This stock count is already closed");

@@ -20,6 +20,42 @@ export class CreateAccountDto {
   email?: string;
 }
 
+export class UpdateAccountDto {
+  companyId?: string;
+  expectedVersion!: number;
+  name?: string;
+  industry?: string | null;
+  city?: string | null;
+  country?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  email?: string | null;
+}
+
+export class VersionDto {
+  companyId?: string;
+  expectedVersion!: number;
+}
+
+export class DirectoryQueryDto {
+  companyId?: string;
+  q?: string;
+  archived?: string;
+  accountId?: string;
+  page?: string;
+  pageSize?: string;
+}
+
+export class ActivityQueryDto {
+  companyId?: string;
+  q?: string;
+  relatedType?: string;
+  relatedId?: string;
+  type?: string;
+  page?: string;
+  pageSize?: string;
+}
+
 export class CreateContactDto {
   companyId?: string;
   accountId?: string;
@@ -27,6 +63,17 @@ export class CreateContactDto {
   email?: string;
   phone?: string;
   jobTitle?: string;
+  isPrimary?: boolean;
+}
+
+export class UpdateContactDto {
+  companyId?: string;
+  expectedVersion!: number;
+  accountId?: string | null;
+  fullName?: string;
+  email?: string | null;
+  phone?: string | null;
+  jobTitle?: string | null;
   isPrimary?: boolean;
 }
 
@@ -46,6 +93,8 @@ export class UpdateLeadStatusDto {
 
 export class ConvertLeadDto {
   companyId?: string;
+  accountId?: string;
+  contactId?: string;
   opportunityName?: string;
   /** Montant decimal EN CHAINE (jamais un number : pas de flottant sur un prix). */
   amount?: string;
@@ -154,11 +203,53 @@ export function optionalDate(value: unknown, field: string): Date | null {
   if (value === undefined || value === null || value === "") {
     return null;
   }
-  const date = new Date(String(value));
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2}))?$/.test(value)) {
+    throw new BadRequestException(`${field} must be an ISO date`);
+  }
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     throw new BadRequestException(`${field} is not a valid date`);
   }
+  const calendar = new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
+  if (calendar.toISOString().slice(0, 10) !== value.slice(0, 10)) {
+    throw new BadRequestException(`${field} is not a valid calendar date`);
+  }
   return date;
+}
+
+export function assertFields(input: object, allowed: readonly string[]): void {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new BadRequestException("A JSON object is required");
+  const unknown = Object.keys(input).find((key) => !allowed.includes(key));
+  if (unknown) throw new BadRequestException(`Unknown field: ${unknown}`);
+}
+
+export function expectedVersion(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
+    throw new BadRequestException("expectedVersion must be a positive integer");
+  }
+  return value;
+}
+
+export function strictBoolean(value: unknown, field: string, fallback = false): boolean {
+  if (value === undefined) return fallback;
+  if (typeof value !== "boolean") throw new BadRequestException(`${field} must be a boolean`);
+  return value;
+}
+
+export function optionalEmail(value: unknown): string | null {
+  const email = optionalString(value, "email", 180);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BadRequestException("email is not valid");
+  return email;
+}
+
+export function optionalWebsite(value: unknown): string | null {
+  const website = optionalString(value, "website", 300);
+  if (!website) return null;
+  try {
+    const url = new URL(website);
+    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) throw new Error();
+  } catch { throw new BadRequestException("website must be an HTTP or HTTPS URL without credentials"); }
+  return website;
 }
 
 export function enumValue<T extends string>(

@@ -37,7 +37,7 @@ const inWindow = (date: Date | null, from: Date, to: Date): date is Date => Bool
 export const METRICS: MetricDefinition[] = [
   {
     key: "finance.invoiced",
-    label: "Facturation émise",
+    label: "Facturation nette des avoirs",
     domain: "finance",
     domainLabel: "Finance",
     unit: "money",
@@ -45,7 +45,9 @@ export const METRICS: MetricDefinition[] = [
     permission: FINANCE_PERMISSIONS.INVOICE_READ,
     async rows(prisma, scope, from, to) {
       const invoices = await prisma.customerInvoice.findMany({ where: { ...scope, status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID"] }, issueDate: within(from, to) }, select: { issueDate: true, total: true, currency: true } });
-      return { rows: invoices.map((invoice) => ({ at: invoice.issueDate!, series: invoice.currency.trim(), value: invoice.total })), sourceRows: invoices.length };
+      const credits = await prisma.customerCreditNote.findMany({ where: { ...scope, status: "ISSUED", issueDate: within(from, to) }, select: { issueDate: true, total: true, currency: true } });
+      return { rows: [...invoices.map((invoice) => ({ at: invoice.issueDate!, series: invoice.currency.trim(), value: invoice.total })),
+        ...credits.map((credit) => ({ at: credit.issueDate!, series: credit.currency.trim(), value: credit.total.negated() }))], sourceRows: invoices.length + credits.length };
     },
   },
   {
@@ -54,11 +56,13 @@ export const METRICS: MetricDefinition[] = [
     domain: "finance",
     domainLabel: "Finance",
     unit: "money",
-    description: "Paiements clients reçus, par date de paiement.",
+    description: "Paiements clients reçus moins remboursements clients, par date de flux.",
     permission: FINANCE_PERMISSIONS.INVOICE_READ,
     async rows(prisma, scope, from, to) {
       const payments = await prisma.payment.findMany({ where: { ...scope, direction: "IN", paidAt: within(from, to) }, select: { paidAt: true, amount: true, currency: true } });
-      return { rows: payments.map((payment) => ({ at: payment.paidAt, series: payment.currency.trim(), value: payment.amount })), sourceRows: payments.length };
+      const refunds = await prisma.creditRefund.findMany({ where: { ...scope, direction: "OUT", customerCreditNoteId: { not: null }, refundedAt: within(from, to) }, select: { refundedAt: true, amount: true, currency: true } });
+      return { rows: [...payments.map((payment) => ({ at: payment.paidAt, series: payment.currency.trim(), value: payment.amount })),
+        ...refunds.map((refund) => ({ at: refund.refundedAt, series: refund.currency.trim(), value: refund.amount.negated() }))], sourceRows: payments.length + refunds.length };
     },
   },
   {
@@ -67,11 +71,13 @@ export const METRICS: MetricDefinition[] = [
     domain: "finance",
     domainLabel: "Finance",
     unit: "money",
-    description: "Paiements émis vers les fournisseurs, par date de paiement.",
+    description: "Paiements aux fournisseurs moins remboursements reçus, par date de flux.",
     permission: FINANCE_PERMISSIONS.PAYABLE_READ,
     async rows(prisma, scope, from, to) {
       const payments = await prisma.payment.findMany({ where: { ...scope, direction: "OUT", paidAt: within(from, to) }, select: { paidAt: true, amount: true, currency: true } });
-      return { rows: payments.map((payment) => ({ at: payment.paidAt, series: payment.currency.trim(), value: payment.amount })), sourceRows: payments.length };
+      const refunds = await prisma.creditRefund.findMany({ where: { ...scope, direction: "IN", supplierCreditNoteId: { not: null }, refundedAt: within(from, to) }, select: { refundedAt: true, amount: true, currency: true } });
+      return { rows: [...payments.map((payment) => ({ at: payment.paidAt, series: payment.currency.trim(), value: payment.amount })),
+        ...refunds.map((refund) => ({ at: refund.refundedAt, series: refund.currency.trim(), value: refund.amount.negated() }))], sourceRows: payments.length + refunds.length };
     },
   },
   {

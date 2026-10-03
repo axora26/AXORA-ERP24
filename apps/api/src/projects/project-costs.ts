@@ -1,96 +1,85 @@
-import type { ProjectBudgetFigure } from "@axora24/contracts";
+import { FINANCE_PERMISSIONS, HR_PERMISSIONS, INVENTORY_PERMISSIONS, PROCUREMENT_PERMISSIONS, SUBCONTRACTING_PERMISSIONS, type ProjectBudgetFigure } from "@axora24/contracts";
 import { Prisma } from "@axora24/database";
 import type { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
-import { money } from "../common/decimal.js";
+import { money, sumDecimals } from "../common/decimal.js";
+import { invoiceCreditTotals, netInvoiceFigures, zeroCredits, type CreditTotals } from "../finance/credit-ledger.js";
 
-/** Statuts de commande qui engagent le budget (emise, en reception, recue). */
 export const COMMITTING_ORDER_STATUSES = ["ISSUED", "PARTIALLY_RECEIVED", "RECEIVED"] as const;
+const hidden = (source: string): ProjectBudgetFigure => ({ amount: "0.00", available: false, source });
+const figure = (amount: Prisma.Decimal, source: string): ProjectBudgetFigure => ({ amount: money(amount), available: true, source });
 
-/**
- * Chaine budgetaire aval du projet (engage, consomme, facture, paye).
- *
- * Chaque figure provient d'evenements sources reels d'autres modules. Tant
- * qu'un module source n'est pas livre, la figure est marquee
- * `available: false` — jamais un zero presente comme une mesure reelle.
- */
+/** A complete cost measure is withheld when any constituent source is forbidden or incompatible. */
 export async function projectCostFigures(
   prisma: PrismaService,
   scope: CompanyScope,
   projectId: string,
-): Promise<{
-  committed: ProjectBudgetFigure;
-  consumed: ProjectBudgetFigure;
-  invoiced: ProjectBudgetFigure;
-  paid: ProjectBudgetFigure;
-  billed: ProjectBudgetFigure;
-  collected: ProjectBudgetFigure;
-}> {
-  const rows = await prisma.$queryRaw<Array<{ committed: Prisma.Decimal | null; received: Prisma.Decimal | null }>>`
-    SELECT
-      COALESCE(SUM(l."lineTotal"), 0) AS "committed",
-      COALESCE(SUM(CASE WHEN l."inventoryItemId" IS NULL THEN ROUND(l."receivedQuantity" * l."unitPrice", 2) ELSE 0 END), 0) AS "received"
-    FROM "purchase_order_lines" l
-    JOIN "purchase_orders" o ON o."id" = l."orderId"
-    WHERE l."projectId" = ${projectId}
-      AND o."organizationId" = ${scope.organizationId}
-      AND o."companyId" = ${scope.companyId}
-      AND o."status"::text IN ('ISSUED', 'PARTIALLY_RECEIVED', 'RECEIVED')
-  `;
-  const stock = await prisma.$queryRaw<Array<{ consumed: Prisma.Decimal | null }>>`
-    SELECT COALESCE(-SUM("valueDelta"), 0) AS "consumed"
-    FROM "stock_movements"
-    WHERE "projectId" = ${projectId}
-      AND "organizationId" = ${scope.organizationId}
-      AND "companyId" = ${scope.companyId}
-      AND "type"::text IN ('ISSUE', 'RETURN')
-  `;
-  // Main d'oeuvre : uniquement les heures VALIDEES, valorisees au cout fige a la validation.
-  const labor = await prisma.timesheetEntry.aggregate({
-    where: { ...scope, projectId, timesheet: { status: "VALIDATED" } },
-    _sum: { costAmount: true },
-  });
-  // Factures fournisseurs approuvees du projet : facture HT, et paye ramene au HT
-  // (paye x HT / TTC) pour rester comparable au budget de couts (HT).
-  const payables = await prisma.supplierInvoice.findMany({
-    where: { ...scope, projectId, status: { in: ["APPROVED", "PARTIALLY_PAID", "PAID"] } },
-    select: { subtotal: true, total: true, paidAmount: true },
-  });
-  let invoiced = new Prisma.Decimal(0);
-  let paid = new Prisma.Decimal(0);
-  for (const invoice of payables) {
-    invoiced = invoiced.plus(invoice.subtotal);
-    const total = new Prisma.Decimal(invoice.total);
-    if (!total.isZero()) paid = paid.plus(new Prisma.Decimal(invoice.paidAmount).mul(invoice.subtotal).div(total).toDecimalPlaces(2));
+  currency: string,
+  permissions: Set<string>,
+): Promise<{ committed: ProjectBudgetFigure; consumed: ProjectBudgetFigure; invoiced: ProjectBudgetFigure; paid: ProjectBudgetFigure; billed: ProjectBudgetFigure; collected: ProjectBudgetFigure }> {
+  const orderRead = permissions.has(PROCUREMENT_PERMISSIONS.ORDER_READ);
+  const stockRead = permissions.has(INVENTORY_PERMISSIONS.ITEM_READ);
+  const payrollRead = permissions.has(HR_PERMISSIONS.PAYROLL_READ);
+  const subcontractRead = permissions.has(SUBCONTRACTING_PERMISSIONS.READ);
+  const payableRead = permissions.has(FINANCE_PERMISSIONS.PAYABLE_READ);
+  const invoiceRead = permissions.has(FINANCE_PERMISSIONS.INVOICE_READ);
+  const [orders, stock, labor, subcontracted, payables, receivables] = await Promise.all([
+    orderRead ? prisma.purchaseOrderLine.findMany({
+      where: { ...scope, projectId, order: { ...scope, status: { in: [...COMMITTING_ORDER_STATUSES] } } },
+      select: { lineTotal: true, receivedQuantity: true, unitPrice: true, inventoryItemId: true, order: { select: { currency: true } } },
+    }) : null,
+    stockRead ? prisma.stockMovement.aggregate({ where: { ...scope, projectId, type: { in: ["ISSUE", "RETURN"] } }, _sum: { valueDelta: true } }) : null,
+    payrollRead ? prisma.timesheetEntry.findMany({
+      where: { ...scope, projectId, timesheet: { ...scope, status: "VALIDATED" } },
+      select: { costAmount: true, timesheet: { select: { employee: { select: { currency: true } } } } },
+    }) : null,
+    subcontractRead ? prisma.subcontractStatement.findMany({
+      where: { ...scope, status: "APPROVED", package: { ...scope, projectId } },
+      select: { grossAmount: true, package: { select: { purchaseOrder: { select: { currency: true } } } } },
+    }) : null,
+    payableRead ? prisma.supplierInvoice.findMany({
+      where: { ...scope, projectId, status: { in: ["APPROVED", "PARTIALLY_PAID", "PAID"] } },
+      select: { id: true, currency: true, subtotal: true, total: true, paidAmount: true },
+    }) : null,
+    invoiceRead ? prisma.customerInvoice.findMany({
+      where: { ...scope, projectId, status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID"] } },
+      select: { id: true, currency: true, total: true, paidAmount: true },
+    }) : null,
+  ]);
+  const compatible = (value: string) => value.trim() === currency.trim();
+  const ordersMixed = orders?.some((row) => !compatible(row.order.currency)) ?? false;
+  const directMixed = orders?.some((row) => row.inventoryItemId === null && !row.receivedQuantity.isZero() && !compatible(row.order.currency)) ?? false;
+  const laborMixed = labor?.some((row) => !compatible(row.timesheet.employee.currency)) ?? false;
+  const laborMissing = labor?.some((row) => row.costAmount === null) ?? false;
+  const subcontractMixed = subcontracted?.some((row) => !compatible(row.package.purchaseOrder.currency)) ?? false;
+  const payablesMixed = payables?.some((row) => !compatible(row.currency)) ?? false;
+  const receivablesMixed = receivables?.some((row) => !compatible(row.currency)) ?? false;
+
+  const supplierCredits = payableRead && !payablesMixed ? await invoiceCreditTotals(prisma, scope, "SUPPLIER", (payables ?? []).map((row) => row.id)) : new Map<string, CreditTotals>();
+  let invoiced = new Prisma.Decimal(0); let paid = new Prisma.Decimal(0);
+  if (!payablesMixed) for (const invoice of payables ?? []) {
+    const credits = supplierCredits.get(invoice.id) ?? zeroCredits();
+    const figures = netInvoiceFigures(invoice, credits);
+    const subtotal = invoice.subtotal.minus(credits.subtotal);
+    invoiced = invoiced.plus(subtotal);
+    const total = new Prisma.Decimal(figures.netTotal);
+    const paidAmount = Prisma.Decimal.min(figures.netPaidAmount, total);
+    if (!total.isZero()) paid = paid.plus(paidAmount.mul(subtotal).div(total).toDecimalPlaces(2));
   }
-  const receivables = await prisma.customerInvoice.aggregate({
-    where: { ...scope, projectId, status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID"] } },
-    _sum: { total: true, paidAmount: true },
-  });
-  // Sous-traitance : situations certifiees (brut HT, retenue comprise) — la commande support n'est jamais receptionnee.
-  const subcontracted = await prisma.subcontractStatement.aggregate({
-    where: { ...scope, status: "APPROVED", package: { projectId } },
-    _sum: { grossAmount: true },
-  });
-  const totals = rows[0];
-  const consumed = new Prisma.Decimal(totals?.received ?? 0)
-    .plus(new Prisma.Decimal(stock[0]?.consumed ?? 0))
-    .plus(new Prisma.Decimal(labor._sum.costAmount ?? 0))
-    .plus(new Prisma.Decimal(subcontracted._sum.grossAmount ?? 0));
+  const customerCredits = invoiceRead && !receivablesMixed ? await invoiceCreditTotals(prisma, scope, "CUSTOMER", (receivables ?? []).map((row) => row.id)) : new Map<string, CreditTotals>();
+  const billed = sumDecimals((receivablesMixed ? [] : receivables ?? []).map((invoice) => netInvoiceFigures(invoice, customerCredits.get(invoice.id)).netTotal));
+  const collected = sumDecimals((receivablesMixed ? [] : receivables ?? []).map((invoice) => netInvoiceFigures(invoice, customerCredits.get(invoice.id)).netPaidAmount));
+  const consumed = sumDecimals((orders ?? []).filter((row) => row.inventoryItemId === null).map((row) => row.receivedQuantity.mul(row.unitPrice).toDecimalPlaces(2)))
+    .minus(stock?._sum.valueDelta ?? 0).plus(sumDecimals((labor ?? []).map((row) => row.costAmount))).plus(sumDecimals((subcontracted ?? []).map((row) => row.grossAmount)));
+  const consumedSource = "Réceptions directes chantier (Achats) + sorties de stock nettes des retours (Stock) + temps passés validés (RH) + situations de sous-traitance certifiées";
+  const consumedVisible = orderRead && stockRead && payrollRead && subcontractRead;
+  const consumedCompatible = !directMixed && !laborMixed && !subcontractMixed;
   return {
-    committed: {
-      amount: money(totals?.committed ?? 0),
-      available: true,
-      source: "Commandes fournisseurs émises (Achats)",
-    },
-    consumed: {
-      amount: money(consumed),
-      available: true,
-      source: "Réceptions directes chantier (Achats) + sorties de stock nettes des retours (Stock) + temps passés validés (RH) + situations de sous-traitance certifiées",
-    },
-    invoiced: { amount: money(invoiced), available: true, source: "Factures fournisseurs approuvées (HT)" },
-    paid: { amount: money(paid), available: true, source: "Paiements fournisseurs, ramenés au HT" },
-    billed: { amount: money(receivables._sum.total ?? 0), available: true, source: "Factures clients émises (TTC)" },
-    collected: { amount: money(receivables._sum.paidAmount ?? 0), available: true, source: "Encaissements clients" },
+    committed: !orderRead ? hidden("Permission Commandes requise") : ordersMixed ? hidden("Commandes : devises différentes, conversion non configurée") : figure(sumDecimals((orders ?? []).map((row) => row.lineTotal)), "Commandes fournisseurs émises (Achats)"),
+    consumed: !consumedVisible ? hidden("Coût consommé protégé : permissions Commandes, Stock, Paie et Sous-traitance requises") : !consumedCompatible ? hidden("Coût consommé : devises différentes, conversion non configurée") : laborMissing ? hidden("Coût consommé : temps validés sans valorisation figée") : figure(consumed, consumedSource),
+    invoiced: !payableRead ? hidden("Permission Factures fournisseurs requise") : payablesMixed ? hidden("Factures fournisseurs : devises différentes, conversion non configurée") : figure(invoiced, "Factures fournisseurs approuvées nettes des avoirs (HT)"),
+    paid: !payableRead ? hidden("Permission Factures fournisseurs requise") : payablesMixed ? hidden("Paiements fournisseurs : devises différentes, conversion non configurée") : figure(paid, "Paiements fournisseurs nets des remboursements, ramenés au HT"),
+    billed: !invoiceRead ? hidden("Permission Factures clients requise") : receivablesMixed ? hidden("Factures clients : devises différentes, conversion non configurée") : figure(billed, "Factures clients nettes des avoirs (TTC)"),
+    collected: !invoiceRead ? hidden("Permission Factures clients requise") : receivablesMixed ? hidden("Encaissements clients : devises différentes, conversion non configurée") : figure(collected, "Encaissements clients nets des remboursements"),
   };
 }

@@ -11,8 +11,8 @@ const KEY_LENGTH = 64;
 const SALT_LENGTH = 16;
 
 export async function hashPassword(plainPassword: string): Promise<string> {
-  if (plainPassword.length < 8) {
-    throw new Error("Password must be at least 8 characters");
+  if (typeof plainPassword !== "string" || plainPassword.length < 8 || plainPassword.length > 256) {
+    throw new Error("Password must contain 8 to 256 characters");
   }
   const salt = randomBytes(SALT_LENGTH);
   const derivedKey = (await scrypt(plainPassword, salt, KEY_LENGTH)) as Buffer;
@@ -23,6 +23,7 @@ export async function verifyPassword(
   plainPassword: string,
   storedHash: string,
 ): Promise<boolean> {
+  if (typeof plainPassword !== "string" || plainPassword.length > 256 || typeof storedHash !== "string") return false;
   const [saltHex, keyHex] = storedHash.split(":");
   if (!saltHex || !keyHex) {
     return false;

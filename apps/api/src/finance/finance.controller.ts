@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, Req } from "@nestjs/common";
 import type { Request } from "express";
 import { FINANCE_PERMISSIONS as F } from "@axora24/contracts";
-import { RequirePermission } from "../auth/require-permission.decorator.js";
+import { RequireAnyPermission, RequirePermission } from "../auth/require-permission.decorator.js";
 import { CurrentUser, Scope, ScopedController } from "../common/scope.guard.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import type { AuthenticatedUser } from "../auth/session.guard.js";
@@ -32,7 +32,7 @@ export class FinanceController {
   }
 
   @Get("bank-accounts")
-  @RequirePermission(F.INVOICE_READ)
+  @RequireAnyPermission(F.INVOICE_READ, F.REFUND_MANAGE)
   bankAccounts(@Scope() scope: CompanyScope) {
     return this.finance.listBankAccounts(scope);
   }

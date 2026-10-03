@@ -9,7 +9,7 @@ import { salesApi } from "../../lib/api";
 import { formatCompactMoney, formatDate, formatMoney, sumMoney } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import {
+import { DataUnavailable,
   Button,
   DataTable,
   DateField,
@@ -39,6 +39,8 @@ export default function ProjectsPage(): React.ReactElement {
   const rows = projects.data ?? [];
   const active = rows.filter((project) => ["PLANNED", "IN_PROGRESS", "ON_HOLD"].includes(project.status));
   const canManage = session.can("projects.project.manage");
+
+  if (projects.error && !projects.data && !projects.loading) return <DataUnavailable title="Portefeuille de projets" error={projects.error} onRetry={() => void projects.reload()}/>;
 
   return (
     <>

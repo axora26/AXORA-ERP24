@@ -161,7 +161,10 @@ describe("Ressources humaines (e2e)", () => {
     const validated = await as(harness, manager).post(`/hr/timesheets/${sheetA}/validate`, { note: "OK" });
     expect(validated.status).toBe(201);
     expect(validated.body.status).toBe("VALIDATED");
-    expect(validated.body.entries.map((entry: { costAmount: string }) => entry.costAmount)).toEqual(["200.00", "187.50"]);
+    expect(validated.body.entries.every((entry: { costAmount: string | null }) => entry.costAmount === null)).toBe(true);
+    const ownerSheet = await api().get(`/hr/timesheets/${sheetA}`);
+    expect(ownerSheet.body.entries.map((entry: { costAmount: string }) => entry.costAmount)).toEqual(["200.00", "187.50"]);
+    expect((await as(harness, worker).get(`/hr/timesheets/${sheetA}`)).body.entries.every((entry: { costAmount: string | null }) => entry.costAmount === null)).toBe(true);
     const after = (await api().get(`/projects/${project.projectId}`)).body.cockpit.consumed;
     expect(after.amount).toBe("387.50");
     expect(after.source).toContain("temps passés validés");

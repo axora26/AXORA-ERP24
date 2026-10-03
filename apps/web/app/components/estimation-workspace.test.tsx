@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EstimationWorkspace } from "./estimation-workspace";
 import { crmApi, estimationApi } from "../lib/api";
 
+vi.mock("../lib/session", () => { const session = { can: () => true }; return { useSession: () => session }; });
+
 vi.mock("../lib/api", () => ({
+  api: { downloadUrl: (path: string) => `/api/v1${path}` },
   crmApi: { opportunities: vi.fn() },
   estimationApi: {
     studies: vi.fn(),
@@ -57,6 +60,8 @@ const createdStudy = {
   objective: "Établir le quantitatif initial",
   sourceReference: "DAO-01",
   status: "DRAFT" as const,
+  version: 1,
+  updatedAt: "2026-09-22T00:00:00.000Z",
   createdAt: "2026-09-22T00:00:00.000Z",
   requirements: [],
 };
@@ -70,6 +75,8 @@ const createdDqe = {
   currency: "USD",
   status: "DRAFT" as const,
   revision: 1,
+  version: 1,
+  updatedAt: "2026-09-22T00:00:00.000Z",
   finalizedAt: null,
   createdAt: "2026-09-22T00:00:00.000Z",
   subtotal: "0.000000",
@@ -162,6 +169,7 @@ describe("EstimationWorkspace", () => {
 
     await waitFor(() =>
       expect(estimationApi.addRequirement).toHaveBeenCalledWith("study-1", {
+        expectedVersion: 1,
         position: 1,
         category: "FACT" as const,
         statement: "Fondations en béton armé",
@@ -183,7 +191,7 @@ describe("EstimationWorkspace", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Ouvrir ETU-001" }));
     fireEvent.click(await screen.findByRole("button", { name: "Valider et figer l'étude" }));
 
-    await waitFor(() => expect(estimationApi.markStudyReady).toHaveBeenCalledWith("study-1"));
+    await waitFor(() => expect(estimationApi.markStudyReady).toHaveBeenCalledWith("study-1", 1));
   });
 
   it("crée un DQE uniquement depuis une étude prête", async () => {
@@ -237,6 +245,7 @@ describe("EstimationWorkspace", () => {
 
     await waitFor(() =>
       expect(estimationApi.addDqeLine).toHaveBeenCalledWith("dqe-1", {
+        expectedVersion: 1,
         position: 1,
         reference: "REF-001",
         designation: "Béton de propreté",
@@ -261,7 +270,7 @@ describe("EstimationWorkspace", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Ouvrir DQE-001" }));
     fireEvent.click(await screen.findByRole("button", { name: "Finaliser et figer le DQE" }));
 
-    await waitFor(() => expect(estimationApi.finalizeDqe).toHaveBeenCalledWith("dqe-1"));
+    await waitFor(() => expect(estimationApi.finalizeDqe).toHaveBeenCalledWith("dqe-1", 1));
   });
 
   it("affiche les six décimales sans conversion IEEE-754", async () => {

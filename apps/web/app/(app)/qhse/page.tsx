@@ -22,7 +22,7 @@ import { hrApi } from "../../lib/modules/hr";
 import { formatDate, formatDateTime } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import {
+import { DataUnavailable,
   Button,
   CheckboxGroup,
   DataTable,
@@ -80,6 +80,8 @@ export default function QhsePage(): React.ReactElement {
       else await data.reload();
     }
   }
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="QHSE" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

@@ -55,6 +55,7 @@ export interface PaymentView {
 }
 
 export interface CustomerInvoiceView {
+  credit?: import("./credit-notes.js").InvoiceCreditFigures;
   id: string;
   code: string | null;
   customerName: string;
@@ -81,6 +82,7 @@ export interface CustomerInvoiceView {
 }
 
 export interface SupplierInvoiceView {
+  credit?: import("./credit-notes.js").InvoiceCreditFigures;
   id: string;
   code: string;
   supplierId: string;
@@ -112,6 +114,8 @@ export interface SupplierInvoiceView {
 }
 
 export interface FinanceSummaryView {
+  customerRefundsDue?: string;
+  supplierRefundsDue?: string | null;
   currency: string;
   receivables: string;
   receivablesOverdue: string;

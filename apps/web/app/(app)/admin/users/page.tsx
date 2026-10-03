@@ -7,7 +7,7 @@ import { adminApi } from "../../../lib/modules/admin";
 import { formatDateTime } from "../../../lib/format";
 import { useMutation, useResource } from "../../../lib/hooks";
 import { useSession } from "../../../lib/session";
-import {
+import { DataUnavailable,
   Button,
   CheckboxGroup,
   DataTable,
@@ -39,6 +39,8 @@ export default function UsersPage(): React.ReactElement {
     hint: role.isSystem ? "Rôle système — toutes les permissions" : `${role.permissions.length} permission(s)`,
   }));
   const companyOptions = companies.map((company) => ({ value: company.id, label: company.name }));
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Utilisateurs" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>
@@ -200,7 +202,9 @@ function CreateUserModal({
           value={password}
           onChange={setPassword}
           required
-          hint="8 caractères minimum. Transmettez-le par un canal sûr ; l'utilisateur pourra le changer dans « Mon compte »."
+          minLength={12}
+          autoComplete="new-password"
+          hint="12 caractères minimum. Transmettez-le par un canal sûr ; l'utilisateur pourra le changer dans « Mon compte »."
         />
         <CheckboxGroup label="Rôles" options={roleOptions} selected={roleIds} onChange={setRoleIds} />
         <CheckboxGroup label="Entreprises accessibles" options={companyOptions} selected={companyIds} onChange={setCompanyIds} />

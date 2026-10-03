@@ -1,0 +1,2 @@
+# Fixtures are signed by their documented SHA-256, including original bytes.
+*.ifc -text

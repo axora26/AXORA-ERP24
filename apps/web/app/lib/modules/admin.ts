@@ -32,9 +32,10 @@ export const adminApi = {
 export const accountApi = {
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<{ success: true }>("/auth/password", { currentPassword, newPassword }),
-  mfaStatus: () => api.get<{ enabled: boolean; pendingSetup: boolean; available: boolean }>("/auth/mfa"),
-  startMfaSetup: () => api.post<{ secret: string; otpauthUri: string }>("/auth/mfa/setup"),
-  enableMfa: (code: string) => api.post<{ enabled: boolean }>("/auth/mfa/enable", { code }),
-  disableMfa: (password: string, code: string) =>
-    api.post<{ enabled: boolean }>("/auth/mfa/disable", { password, code }),
+  mfaStatus: () => api.get<{ enabled: boolean; pendingSetup: boolean; available: boolean; recoveryCodesRemaining: number }>("/auth/mfa"),
+  startMfaSetup: (password: string) => api.post<{ secret: string; otpauthUri: string }>("/auth/mfa/setup", { password }),
+  enableMfa: (password: string, code: string) => api.post<{ enabled: boolean; recoveryCodes: string[] }>("/auth/mfa/enable", { password, code }),
+  regenerateRecoveryCodes: (password: string, code: string) => api.post<{ recoveryCodes: string[] }>("/auth/mfa/recovery-codes", { password, code }),
+  disableMfa: (password: string, factor: { code: string } | { recoveryCode: string }) =>
+    api.post<{ enabled: boolean }>("/auth/mfa/disable", { password, ...factor }),
 };

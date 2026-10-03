@@ -1,5 +1,6 @@
 import {
   CanActivate,
+  BadRequestException,
   ExecutionContext,
   Injectable,
   UnauthorizedException,
@@ -23,7 +24,8 @@ declare module "express" {
  * uniquement (le `companyId` eventuel de la requete est revalide contre les
  * CompanyMembership de l'utilisateur — voir CompanyScopeService).
  *
- * Doit s'executer apres SessionGuard et PermissionGuard.
+ * Doit s'executer apres SessionGuard et avant PermissionGuard pour que les
+ * droits soient evalues dans l'entreprise effectivement demandee.
  */
 @Injectable()
 export class CompanyScopeGuard implements CanActivate {
@@ -38,6 +40,10 @@ export class CompanyScopeGuard implements CanActivate {
     const body = request.body as { companyId?: unknown } | undefined;
     const fromBody = typeof body?.companyId === "string" ? body.companyId : undefined;
 
+    // Legacy handlers may read the body while @Scope handlers use the query.
+    // A request must never authorize one company and operate on another.
+    if (fromQuery !== undefined && fromBody !== undefined && fromQuery !== fromBody) throw new BadRequestException("Conflicting companyId values");
+
     request.axoraScope = await this.companyScope.resolve(user, fromQuery ?? fromBody);
     return true;
   }
@@ -47,7 +53,7 @@ export class CompanyScopeGuard implements CanActivate {
  * Controleur metier securise : session obligatoire, permission explicite
  * par route (deny-by-default), perimetre entreprise resolu cote serveur.
  */
-export const ScopedController = () => applyDecorators(UseGuards(SessionGuard, PermissionGuard, CompanyScopeGuard));
+export const ScopedController = () => applyDecorators(UseGuards(SessionGuard, CompanyScopeGuard, PermissionGuard));
 
 /** Perimetre entreprise resolu par CompanyScopeGuard. */
 export const Scope = createParamDecorator((_data: unknown, context: ExecutionContext): CompanyScope => {

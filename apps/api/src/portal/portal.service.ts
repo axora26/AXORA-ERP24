@@ -9,6 +9,8 @@ import { FilesService } from "../files/files.service.js";
 import { assertBody, optionalText, requiredDate, requiredId, requiredText } from "../common/validation.js";
 import { visibleIds } from "./portal-exposure.js";
 import type { PortalContext } from "./portal-session.guard.js";
+import { SESSION_IDLE_MS } from "../auth/session-policy.js";
+import { credentialPassword } from "../auth/credentials.js";
 
 const SESSION_TTL_MS = 12 * 3_600_000;
 const MIN_PASSWORD = 12;
@@ -31,17 +33,19 @@ export class PortalService {
   async activate(body: unknown, ipAddress: string | undefined) {
     const input = assertBody(body);
     const token = requiredText(input.token, "token", 200);
-    const password = requiredText(input.password, "password", 200);
-    if (password.length < MIN_PASSWORD) throw new BadRequestException(`password must be at least ${MIN_PASSWORD} characters`);
+    const password = credentialPassword(input.password, "password", MIN_PASSWORD);
     const passwordHash = await hashPassword(password);
     const session = createSessionToken();
     const principal = await this.prisma.$transaction(async (tx) => {
       const invitation = await tx.portalInvitation.findUnique({ where: { tokenHash: hashSessionToken(token) }, include: { principal: true } });
-      if (!invitation || invitation.usedAt || invitation.revokedAt || invitation.expiresAt < new Date()) throw new UnauthorizedException("Invalid or expired invitation");
+      if (!invitation || invitation.usedAt || invitation.revokedAt || invitation.expiresAt <= new Date()) throw new UnauthorizedException("Invalid or expired invitation");
       if (invitation.principal.status === "SUSPENDED" || invitation.principal.status === "REVOKED") throw new UnauthorizedException("Invalid or expired invitation");
-      await tx.portalInvitation.update({ where: { id: invitation.id }, data: { usedAt: new Date() } });
-      await tx.portalPrincipal.update({ where: { id: invitation.principalId }, data: { passwordHash, status: "ACTIVE", activatedAt: invitation.principal.activatedAt ?? new Date() } });
-      await tx.portalSession.create({ data: { principalId: invitation.principalId, tokenHash: session.tokenHash, expiresAt: new Date(Date.now() + SESSION_TTL_MS), ipAddress: ipAddress ?? null } });
+      const consumed = await tx.portalInvitation.updateMany({ where: { id: invitation.id, usedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, data: { usedAt: new Date() } });
+      if (consumed.count !== 1) throw new UnauthorizedException("Invalid or expired invitation");
+      const activated = await tx.portalPrincipal.updateMany({ where: { id: invitation.principalId, status: { in: ["INVITED", "ACTIVE"] } }, data: { passwordHash, status: "ACTIVE", activatedAt: invitation.principal.activatedAt ?? new Date() } });
+      if (activated.count !== 1) throw new UnauthorizedException("Invalid or expired invitation");
+      await tx.portalSession.updateMany({ where: { principalId: invitation.principalId, revokedAt: null }, data: { revokedAt: new Date() } });
+      await tx.portalSession.create({ data: { principalId: invitation.principalId, tokenHash: session.tokenHash, expiresAt: new Date(Date.now() + SESSION_IDLE_MS), ipAddress: ipAddress ?? null } });
       await writeAudit(tx, invitation.principal, null, "portal.principal.activated", "PortalPrincipal", invitation.principalId, { portalPrincipalId: invitation.principalId });
       return invitation.principal;
     });
@@ -52,7 +56,7 @@ export class PortalService {
     const input = assertBody(body);
     const companyId = requiredId(input.companyId, "companyId");
     const email = requiredText(input.email, "email", 200).toLowerCase();
-    const password = requiredText(input.password, "password", 200);
+    const password = credentialPassword(input.password, "password");
     const key = `portal:${companyId}:${email}`;
     const ip = ipAddress ?? "unknown";
     await this.throttle.enforce(key, ip);
@@ -66,7 +70,7 @@ export class PortalService {
     const session = createSessionToken();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     await this.prisma.$transaction(async (tx) => {
-      await tx.portalSession.create({ data: { principalId: principal.id, tokenHash: session.tokenHash, expiresAt, ipAddress: ipAddress ?? null } });
+      await tx.portalSession.create({ data: { principalId: principal.id, tokenHash: session.tokenHash, expiresAt: new Date(Date.now() + SESSION_IDLE_MS), ipAddress: ipAddress ?? null } });
       await writeAudit(tx, principal, null, "portal.session.opened", "PortalPrincipal", principal.id, { portalPrincipalId: principal.id });
     });
     return { token: session.plainToken, expiresAt, me: await this.me(principal.id) };

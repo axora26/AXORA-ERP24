@@ -31,14 +31,13 @@ export const salesSection: DashboardSection = {
   key: "sales",
   permission: SALES_PERMISSIONS.CONTRACT_READ,
   async build(prisma, scope) {
-    const [contractsByCurrency, activeContracts, pendingQuotes] = await Promise.all([
+    const [contractsByCurrency, activeContracts] = await Promise.all([
       prisma.contract.groupBy({
         by: ["currency"],
         where: { ...scope, status: "ACTIVE" },
         _sum: { subtotal: true },
       }),
       prisma.contract.count({ where: { ...scope, status: "ACTIVE" } }),
-      prisma.quote.count({ where: { ...scope, status: "SUBMITTED" } }),
     ]);
     return [
       moneyKpi({
@@ -49,6 +48,16 @@ export const salesSection: DashboardSection = {
         amounts: amountsByCurrency(contractsByCurrency, "subtotal"),
         detail: `${activeContracts} contrat(s) actif(s)`,
       }),
+    ];
+  },
+};
+
+export const quotesSection: DashboardSection = {
+  key: "quotes",
+  permission: SALES_PERMISSIONS.QUOTE_READ,
+  async build(prisma, scope) {
+    const pendingQuotes = await prisma.quote.count({ where: { ...scope, status: "SUBMITTED" } });
+    return [
       countKpi({
         key: "sales.pendingQuotes",
         label: "Devis en attente de réponse",

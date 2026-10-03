@@ -8,7 +8,7 @@ import { formatDateTime } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
 import { ProjectPicker, useProjectChoice } from "../../components/project-picker";
-import { Button, DataTable, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, SelectField, StatusChip, TextField } from "../../components/ui";
+import { DataUnavailable, Button, DataTable, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, SelectField, StatusChip, TextField } from "../../components/ui";
 
 export default function BimPage(): React.ReactElement {
   const session = useSession();
@@ -18,6 +18,9 @@ export default function BimPage(): React.ReactElement {
   const [creating, setCreating] = useState(false);
   const models = useResource(() => (projectId ? bimApi.models(projectId) : Promise.resolve([])), [projectId]);
   const revit = useResource(() => bimApi.revit());
+
+  if (projects.error && !projects.data && !projects.loading) return <DataUnavailable title="Maquettes BIM" error={projects.error} onRetry={() => void projects.reload()}/>;
+  if (models.error && !models.data && !models.loading) return <DataUnavailable title="Maquettes BIM" error={models.error} onRetry={() => void models.reload()}/>;
 
   return (
     <>

@@ -9,6 +9,7 @@ import { ORDER_STATUS_LABEL, newIdempotencyKey, procurementApi } from "../../../
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from "../../../../lib/format";
 import { useMutation, useResource } from "../../../../lib/hooks";
 import { useSession } from "../../../../lib/session";
+import { BusinessPrintLink } from "../../../../components/business-print-link";
 import {
   Button,
   DataTable,
@@ -62,6 +63,7 @@ export default function PurchaseOrderPage(): React.ReactElement {
         }}
         actions={
           <>
+            <BusinessPrintLink kind="purchase-orders" id={order.id} companyId={session.activeCompanyId ?? undefined} />
             <StatusChip status={order.status} label={ORDER_STATUS_LABEL[order.status]} />
             {canManage && order.status === "DRAFT" && (
               <Button variant="primary" disabled={mutation.saving} onClick={() => void apply(() => procurementApi.issueOrder(order.id), "Commande émise : le budget du projet est engagé.")}>
@@ -144,6 +146,7 @@ export default function PurchaseOrderPage(): React.ReactElement {
                     .join(" · "),
               },
               { key: "note", header: "Note", render: (receipt) => receipt.note ?? "—" },
+              { key: "document", header: "Document", render: receipt => <BusinessPrintLink kind="goods-receipts" id={order.id} receiptId={receipt.id} companyId={session.activeCompanyId ?? undefined}>Imprimer le bon</BusinessPrintLink> },
             ]}
           />
         </Panel>

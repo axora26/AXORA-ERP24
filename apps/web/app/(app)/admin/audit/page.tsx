@@ -7,7 +7,7 @@ import { adminApi } from "../../../lib/modules/admin";
 import { describeAudit } from "../../../lib/audit-labels";
 import { formatDateTime } from "../../../lib/format";
 import { useResource } from "../../../lib/hooks";
-import {
+import { DataUnavailable,
   Button,
   DataTable,
   DateField,
@@ -43,6 +43,8 @@ export default function AuditPage(): React.ReactElement {
     [applied, page],
   );
   const totalPages = logs.data ? Math.max(1, Math.ceil(logs.data.total / logs.data.pageSize)) : 1;
+
+  if (logs.error && !logs.data && !logs.loading) return <DataUnavailable title="Journal d'audit" error={logs.error} onRetry={() => void logs.reload()}/>;
 
   return (
     <>

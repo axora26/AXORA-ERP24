@@ -5,7 +5,7 @@ import type { AdminRoleView } from "@axora24/contracts";
 import { Lock, Plus, Trash2 } from "lucide-react";
 import { adminApi } from "../../../lib/modules/admin";
 import { useMutation, useResource } from "../../../lib/hooks";
-import { ActionBar, Button, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, TextField } from "../../../components/ui";
+import { DataUnavailable, ActionBar, Button, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, TextField } from "../../../components/ui";
 
 export default function RolesPage(): React.ReactElement {
   const data = useResource(() => Promise.all([adminApi.roles(), adminApi.permissions()]));
@@ -34,6 +34,8 @@ export default function RolesPage(): React.ReactElement {
     const allOn = keys.every((key) => draft.includes(key));
     setDraft((current) => (allOn ? current.filter((key) => !keys.includes(key)) : [...new Set([...current, ...keys])]));
   }
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Rôles & permissions" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

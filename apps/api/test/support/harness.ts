@@ -1,4 +1,5 @@
 import { INestApplication } from "@nestjs/common";
+import { randomBytes } from "node:crypto";
 import { Test } from "@nestjs/testing";
 import cookieParser from "cookie-parser";
 import request from "supertest";
@@ -21,6 +22,9 @@ export interface Harness {
 export async function createHarness(): Promise<Harness> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
   const app = moduleRef.createNestApplication({ rawBody: true });
+  // Only this test app trusts its loopback peer, allowing explicit simulated
+  // client addresses to exercise persistent IP budgets without disabling them.
+  app.getHttpAdapter().getInstance().set("trust proxy", "loopback");
   applySecurityHeaders(app);
   app.use(cookieParser());
   app.setGlobalPrefix("api/v1", { exclude: ["health"] });
@@ -54,6 +58,7 @@ export async function registerTenant(harness: Harness, label: string): Promise<T
   const response = await harness
     .http()
     .post("/api/v1/auth/register-organization")
+    .set("X-Forwarded-For", `2001:db8:${randomBytes(12).toString("hex").match(/.{4}/g)!.join(":")}`)
     .send({
       organizationName: `Org ${slug}`,
       organizationSlug: slug,

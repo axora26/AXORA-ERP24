@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@axora24/database";
 import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
@@ -9,10 +9,15 @@ import {
   positiveInteger,
   requiredText,
   requirementCategory,
+  assertDraftFields,
+  draftVersion,
   type CreateDqeDto,
   type CreateDqeLineDto,
   type CreateStudyDto,
   type CreateStudyRequirementDto,
+  type DraftVersionDto,
+  type UpdateStudyRequirementDto,
+  type UpdateDqeLineDto,
 } from "./estimation.dto.js";
 
 /**
@@ -94,30 +99,67 @@ export class EstimationService {
     scope: CompanyScope,
     studyId: string,
     input: CreateStudyRequirementDto,
+    actorUserId: string,
   ) {
-    const study = await this.prisma.estimationStudy.findFirst({
-      where: { id: studyId, ...scope },
-      select: { id: true, status: true },
-    });
-    if (!study) throw new NotFoundException("Study not found");
-    if (study.status !== "DRAFT") {
-      throw new BadRequestException("Requirements can only be added to a draft Study");
-    }
-
-    return this.prisma.estimationStudyRequirement.create({
-      data: {
-        ...scope,
-        studyId,
-        position: positiveInteger(input.position, "position"),
-        category: requirementCategory(input.category),
-        statement: requiredText(input.statement, "statement", 2_000),
-        sourceReference: optionalText(input.sourceReference, "sourceReference", 180),
-      },
+    assertDraftFields(input, ["companyId", "expectedVersion", "position", "category", "statement", "sourceReference"]);
+    const version = draftVersion(input.expectedVersion, false);
+    return this.prisma.$transaction(async (tx) => {
+      const study = await this.lockStudy(tx, scope, studyId);
+      checkDraft(study.status, study.version, version, "Study");
+      const position = positiveInteger(input.position, "position");
+      await this.requirementPosition(tx, scope, studyId, position);
+      const created = await tx.estimationStudyRequirement.create({ data: { ...scope, studyId, position,
+        category: requirementCategory(input.category), statement: requiredText(input.statement, "statement", 2_000),
+        sourceReference: optionalText(input.sourceReference, "sourceReference", 180) } });
+      await this.bumpStudy(tx, scope, studyId, study.version);
+      await this.draftAudit(tx, scope, actorUserId, "study.requirement.created", "EstimationStudyRequirement", created.id, studyId, study.version + 1);
+      return created;
     });
   }
 
-  async markStudyReady(scope: CompanyScope, studyId: string, actorUserId: string) {
+  async updateRequirement(scope: CompanyScope, studyId: string, requirementId: string, input: UpdateStudyRequirementDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "expectedVersion", "position", "category", "statement", "sourceReference"]);
+    const version = draftVersion(input.expectedVersion)!;
+    const data: Prisma.EstimationStudyRequirementUpdateInput = {};
+    if (input.position !== undefined) data.position = positiveInteger(input.position, "position");
+    if (input.category !== undefined) data.category = requirementCategory(input.category);
+    if (input.statement !== undefined) data.statement = requiredText(input.statement, "statement", 2_000);
+    if (input.sourceReference !== undefined) data.sourceReference = optionalText(input.sourceReference, "sourceReference", 180);
+    if (!Object.keys(data).length) throw new BadRequestException("Provide at least one requirement field to update");
     return this.prisma.$transaction(async (tx) => {
+      const study = await this.lockStudy(tx, scope, studyId);
+      checkDraft(study.status, study.version, version, "Study");
+      const current = await tx.estimationStudyRequirement.findFirst({ where: { id: requirementId, studyId, ...scope } });
+      if (!current) throw new NotFoundException("Study requirement not found");
+      if (typeof data.position === "number") await this.requirementPosition(tx, scope, studyId, data.position, requirementId);
+      await tx.estimationStudyRequirement.update({ where: { id: requirementId }, data });
+      await this.bumpStudy(tx, scope, studyId, study.version);
+      await this.draftAudit(tx, scope, actorUserId, "study.requirement.updated", "EstimationStudyRequirement", requirementId, studyId, study.version + 1, Object.keys(data));
+      return toStudyView(await tx.estimationStudy.findUniqueOrThrow({ where: { id: studyId }, include: { requirements: { orderBy: { position: "asc" } } } }));
+    });
+  }
+
+  async deleteRequirement(scope: CompanyScope, studyId: string, requirementId: string, input: DraftVersionDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "expectedVersion"]);
+    const version = draftVersion(input.expectedVersion)!;
+    return this.prisma.$transaction(async (tx) => {
+      const study = await this.lockStudy(tx, scope, studyId);
+      checkDraft(study.status, study.version, version, "Study");
+      const current = await tx.estimationStudyRequirement.findFirst({ where: { id: requirementId, studyId, ...scope } });
+      if (!current) throw new NotFoundException("Study requirement not found");
+      await tx.estimationStudyRequirement.delete({ where: { id: requirementId } });
+      await this.bumpStudy(tx, scope, studyId, study.version);
+      await this.draftAudit(tx, scope, actorUserId, "study.requirement.deleted", "EstimationStudyRequirement", requirementId, studyId, study.version + 1, [],
+        { position: current.position, category: current.category, statement: current.statement, sourceReference: current.sourceReference });
+      return toStudyView(await tx.estimationStudy.findUniqueOrThrow({ where: { id: studyId }, include: { requirements: { orderBy: { position: "asc" } } } }));
+    });
+  }
+
+  async markStudyReady(scope: CompanyScope, studyId: string, actorUserId: string, input: DraftVersionDto = {}) {
+    assertDraftFields(input, ["companyId", "expectedVersion"]);
+    const version = draftVersion(input.expectedVersion, false);
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockStudy(tx, scope, studyId);
       const study = await tx.estimationStudy.findFirst({
         where: { id: studyId, ...scope },
         include: { requirements: { orderBy: { position: "asc" } } },
@@ -126,15 +168,17 @@ export class EstimationService {
       if (study.status !== "DRAFT") {
         throw new BadRequestException("Only a draft Study can be marked ready");
       }
+      checkDraft(study.status, study.version, version, "Study");
       if (study.requirements.length === 0) {
         throw new BadRequestException("At least one immutable requirement is required");
       }
 
-      const updated = await tx.estimationStudy.update({
-        where: { id: study.id },
-        data: { status: "READY_FOR_DQE" },
-        include: { requirements: { orderBy: { position: "asc" } } },
+      const result = await tx.estimationStudy.updateMany({
+        where: { id: study.id, ...scope, status: "DRAFT", version: study.version },
+        data: { status: "READY_FOR_DQE", version: { increment: 1 } },
       });
+      if (result.count !== 1) throw new ConflictException("Study was changed concurrently; reload before saving");
+      const updated = await tx.estimationStudy.findUniqueOrThrow({ where: { id: study.id }, include: { requirements: { orderBy: { position: "asc" } } } });
       await tx.auditLog.create({
         data: {
           organizationId: scope.organizationId,
@@ -223,48 +267,86 @@ export class EstimationService {
     return this.getDqe(scope, createdId);
   }
 
-  async addDqeLine(scope: CompanyScope, dqeId: string, input: CreateDqeLineDto) {
-    const document = await this.prisma.dqeDocument.findFirst({
-      where: { id: dqeId, ...scope },
-      select: { id: true, status: true },
+  async addDqeLine(scope: CompanyScope, dqeId: string, input: CreateDqeLineDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "expectedVersion", "position", "reference", "designation", "unitCode", "quantity", "unitPrice"]);
+    const version = draftVersion(input.expectedVersion, false);
+    return this.prisma.$transaction(async (tx) => {
+      const document = await this.lockDqe(tx, scope, dqeId);
+      checkDraft(document.status, document.version, version, "DQE");
+      const position = positiveInteger(input.position, "position");
+      await this.linePosition(tx, scope, dqeId, position);
+      const line = await tx.dqeLine.create({ data: { ...scope, dqeId, position,
+        reference: optionalText(input.reference, "reference", 120), designation: requiredText(input.designation, "designation", 500),
+        unitCode: requiredText(input.unitCode, "unitCode", 32), quantity: new Prisma.Decimal(decimal6(input.quantity, "quantity", false)),
+        unitPrice: new Prisma.Decimal(decimal6(input.unitPrice, "unitPrice", true)) } });
+      await this.bumpDqe(tx, scope, dqeId, document.version);
+      await this.draftAudit(tx, scope, actorUserId, "dqe.line.created", "DqeLine", line.id, dqeId, document.version + 1);
+      return toDqeLineView(line);
     });
-    if (!document) throw new NotFoundException("DQE not found");
-    if (document.status !== "DRAFT") {
-      throw new BadRequestException("Lines can only be added to a draft DQE");
-    }
-
-    const line = await this.prisma.dqeLine.create({
-      data: {
-        ...scope,
-        dqeId,
-        position: positiveInteger(input.position, "position"),
-        reference: optionalText(input.reference, "reference", 120),
-        designation: requiredText(input.designation, "designation", 500),
-        unitCode: requiredText(input.unitCode, "unitCode", 32),
-        quantity: new Prisma.Decimal(decimal6(input.quantity, "quantity", false)),
-        unitPrice: new Prisma.Decimal(decimal6(input.unitPrice, "unitPrice", true)),
-      },
-    });
-    return toDqeLineView(line);
   }
 
-  async finalizeDqe(scope: CompanyScope, dqeId: string, actorUserId: string) {
+  async updateDqeLine(scope: CompanyScope, dqeId: string, lineId: string, input: UpdateDqeLineDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "expectedVersion", "position", "reference", "designation", "unitCode", "quantity", "unitPrice"]);
+    const version = draftVersion(input.expectedVersion)!;
+    const data: Prisma.DqeLineUpdateInput = {};
+    if (input.position !== undefined) data.position = positiveInteger(input.position, "position");
+    if (input.reference !== undefined) data.reference = optionalText(input.reference, "reference", 120);
+    if (input.designation !== undefined) data.designation = requiredText(input.designation, "designation", 500);
+    if (input.unitCode !== undefined) data.unitCode = requiredText(input.unitCode, "unitCode", 32);
+    if (input.quantity !== undefined) data.quantity = new Prisma.Decimal(decimal6(input.quantity, "quantity", false));
+    if (input.unitPrice !== undefined) data.unitPrice = new Prisma.Decimal(decimal6(input.unitPrice, "unitPrice", true));
+    if (!Object.keys(data).length) throw new BadRequestException("Provide at least one DQE line field to update");
+    return this.prisma.$transaction(async (tx) => {
+      const document = await this.lockDqe(tx, scope, dqeId);
+      checkDraft(document.status, document.version, version, "DQE");
+      const current = await tx.dqeLine.findFirst({ where: { id: lineId, dqeId, ...scope } });
+      if (!current) throw new NotFoundException("DQE line not found");
+      if (typeof data.position === "number") await this.linePosition(tx, scope, dqeId, data.position, lineId);
+      await tx.dqeLine.update({ where: { id: lineId }, data });
+      await this.bumpDqe(tx, scope, dqeId, document.version);
+      await this.draftAudit(tx, scope, actorUserId, "dqe.line.updated", "DqeLine", lineId, dqeId, document.version + 1, Object.keys(data));
+      return toDqeView(await tx.dqeDocument.findUniqueOrThrow({ where: { id: dqeId }, include: dqeInclude }));
+    });
+  }
+
+  async deleteDqeLine(scope: CompanyScope, dqeId: string, lineId: string, input: DraftVersionDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "expectedVersion"]);
+    const version = draftVersion(input.expectedVersion)!;
+    return this.prisma.$transaction(async (tx) => {
+      const document = await this.lockDqe(tx, scope, dqeId);
+      checkDraft(document.status, document.version, version, "DQE");
+      const current = await tx.dqeLine.findFirst({ where: { id: lineId, dqeId, ...scope } });
+      if (!current) throw new NotFoundException("DQE line not found");
+      await tx.dqeLine.delete({ where: { id: lineId } });
+      await this.bumpDqe(tx, scope, dqeId, document.version);
+      await this.draftAudit(tx, scope, actorUserId, "dqe.line.deleted", "DqeLine", lineId, dqeId, document.version + 1, [],
+        { position: current.position, reference: current.reference, designation: current.designation, unitCode: current.unitCode,
+          quantity: current.quantity.toFixed(6), unitPrice: current.unitPrice.toFixed(6) });
+      return toDqeView(await tx.dqeDocument.findUniqueOrThrow({ where: { id: dqeId }, include: dqeInclude }));
+    });
+  }
+
+  async finalizeDqe(scope: CompanyScope, dqeId: string, actorUserId: string, input: DraftVersionDto = {}) {
+    assertDraftFields(input, ["companyId", "expectedVersion"]);
+    const version = draftVersion(input.expectedVersion, false);
     await this.prisma.$transaction(async (tx) => {
+      await this.lockDqe(tx, scope, dqeId);
       const document = await tx.dqeDocument.findFirst({
         where: { id: dqeId, ...scope },
-        select: { id: true, status: true },
+        select: { id: true, status: true, version: true },
       });
       if (!document) throw new NotFoundException("DQE not found");
       if (document.status !== "DRAFT") {
         throw new BadRequestException("Only a draft DQE can be finalized");
       }
+      checkDraft(document.status, document.version, version, "DQE");
 
       const lineCount = await tx.dqeLine.count({ where: { dqeId, ...scope } });
       if (lineCount === 0) throw new BadRequestException("A DQE needs at least one line");
 
       const updated = await tx.dqeDocument.updateMany({
-        where: { id: dqeId, ...scope, status: "DRAFT" },
-        data: { status: "FINALIZED", finalizedAt: new Date() },
+        where: { id: dqeId, ...scope, status: "DRAFT", version: document.version },
+        data: { status: "FINALIZED", finalizedAt: new Date(), version: { increment: 1 } },
       });
       if (updated.count !== 1) {
         throw new BadRequestException("DQE was finalized concurrently");
@@ -284,6 +366,55 @@ export class EstimationService {
 
     return this.getDqe(scope, dqeId);
   }
+
+  private async lockStudy(tx: Prisma.TransactionClient, scope: CompanyScope, studyId: string) {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "estimation_studies"
+      WHERE "id" = ${studyId} AND "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId}
+      FOR UPDATE
+    `;
+    if (!rows.length) throw new NotFoundException("Study not found");
+    return tx.estimationStudy.findUniqueOrThrow({ where: { id: studyId } });
+  }
+
+  private async lockDqe(tx: Prisma.TransactionClient, scope: CompanyScope, dqeId: string) {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "dqe_documents"
+      WHERE "id" = ${dqeId} AND "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId}
+      FOR UPDATE
+    `;
+    if (!rows.length) throw new NotFoundException("DQE not found");
+    return tx.dqeDocument.findUniqueOrThrow({ where: { id: dqeId } });
+  }
+
+  private async requirementPosition(tx: Prisma.TransactionClient, scope: CompanyScope, studyId: string, position: number, exceptId?: string) {
+    if (await tx.estimationStudyRequirement.findFirst({ where: { ...scope, studyId, position, ...(exceptId ? { id: { not: exceptId } } : {}) }, select: { id: true } })) {
+      throw new ConflictException("This requirement position already exists");
+    }
+  }
+  private async linePosition(tx: Prisma.TransactionClient, scope: CompanyScope, dqeId: string, position: number, exceptId?: string) {
+    if (await tx.dqeLine.findFirst({ where: { ...scope, dqeId, position, ...(exceptId ? { id: { not: exceptId } } : {}) }, select: { id: true } })) {
+      throw new ConflictException("This DQE line position already exists");
+    }
+  }
+  private async bumpStudy(tx: Prisma.TransactionClient, scope: CompanyScope, id: string, version: number) {
+    const result = await tx.estimationStudy.updateMany({ where: { id, ...scope, status: "DRAFT", version }, data: { version: { increment: 1 } } });
+    if (result.count !== 1) throw new ConflictException("Study was changed concurrently; reload before saving");
+  }
+  private async bumpDqe(tx: Prisma.TransactionClient, scope: CompanyScope, id: string, version: number) {
+    const result = await tx.dqeDocument.updateMany({ where: { id, ...scope, status: "DRAFT", version }, data: { version: { increment: 1 } } });
+    if (result.count !== 1) throw new ConflictException("DQE was changed concurrently; reload before saving");
+  }
+  private async draftAudit(tx: Prisma.TransactionClient, scope: CompanyScope, actorUserId: string,
+    action: string, resourceType: string, resourceId: string, parentId: string, version: number, fields: string[] = [], deletedSnapshot?: Prisma.InputJsonValue) {
+    await tx.auditLog.create({ data: { organizationId: scope.organizationId, actorUserId, action: `estimation.${action}`,
+      resourceType, resourceId, metadata: { companyId: scope.companyId, parentId, version, fields, ...(deletedSnapshot ? { deletedSnapshot } : {}) } } });
+  }
+}
+
+function checkDraft(status: string, current: number, expected: number | undefined, resource: string) {
+  if (status !== "DRAFT") throw new BadRequestException(`${resource} is frozen; only draft content can be modified`);
+  if (expected !== undefined && current !== expected) throw new ConflictException(`${resource} was changed by another user. Reload before saving.`);
 }
 
 const dqeInclude = {
@@ -311,6 +442,8 @@ function toStudyView(study: StudyWithRequirements) {
     objective: study.objective,
     sourceReference: study.sourceReference,
     status: study.status,
+    version: study.version,
+    updatedAt: study.updatedAt.toISOString(),
     createdAt: study.createdAt.toISOString(),
     requirements: study.requirements.map((requirement) => ({
       id: requirement.id,
@@ -355,6 +488,8 @@ function toDqeView(document: DqeWithDetails) {
     currency: document.currency.trim(),
     status: document.status,
     revision: document.revision,
+    version: document.version,
+    updatedAt: document.updatedAt.toISOString(),
     finalizedAt: document.finalizedAt?.toISOString() ?? null,
     createdAt: document.createdAt.toISOString(),
     subtotal: subtotal.toFixed(6),

@@ -54,6 +54,12 @@ export class InventoryController {
     return this.inventory.movements(scope, query);
   }
 
+  @Get("movements/:id")
+  @RequirePermission(P.ITEM_READ)
+  movement(@Scope() scope: CompanyScope, @Param("id") id: string) {
+    return this.inventory.getMovement(scope, id);
+  }
+
   @Post("issues")
   @RequirePermission(P.MOVEMENT_CREATE)
   issue(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {

@@ -59,7 +59,7 @@ export default function CustomerInvoicePage(): React.ReactElement {
           <>
             <StatusChip status={invoice.overdue ? "overdue" : invoice.status} label={invoice.overdue ? "Échue" : CUSTOMER_STATUS_LABEL[invoice.status]} />
             {invoice.status !== "DRAFT" && invoice.status !== "CANCELLED" && (
-              <Link className="btn btn-secondary" href={`/print/invoices/${invoice.id}`} target="_blank">
+              <Link className="btn btn-secondary" href={`/print/invoices/${invoice.id}${session.activeCompanyId ? `?companyId=${encodeURIComponent(session.activeCompanyId)}` : ""}`} target="_blank" rel="noopener noreferrer">
                 <Printer size={14} aria-hidden="true" /> Imprimer / PDF
               </Link>
             )}

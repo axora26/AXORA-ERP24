@@ -279,9 +279,12 @@ describe("INC-21 Workflow (e2e)", () => {
     // Echec definitif simule, puis relance manuelle : re-signee avec un horodatage frais.
     await harness.prisma.webhookDelivery.update({ where: { id: delivery.id }, data: { status: "FAILED", nextAttemptAt: null } });
     hook.setStatus(200);
-    const retried = await api().post(`/workflow/deliveries/${delivery.id}/retry`);
+    const retries = await Promise.all([api().post(`/workflow/deliveries/${delivery.id}/retry`), api().post(`/workflow/deliveries/${delivery.id}/retry`)]);
+    expect(retries.map((result) => result.status).sort()).toEqual([201, 409]);
+    const retried = retries.find((result) => result.status === 201)!;
     expect(retried.status).toBe(201);
     expect(retried.body).toMatchObject({ status: "DELIVERED", attempts: 2, lastStatusCode: 200 });
+    expect(hook.received.length).toBe(before + 2);
     const last = hook.received[hook.received.length - 1]!;
     expect(verifyWebhook(qhseSecret, String(last.headers["x-axora-timestamp"]), last.body, String(last.headers["x-axora-signature"]))).toBe(true);
     expect((await api().post(`/workflow/deliveries/${delivery.id}/retry`)).status).toBe(409);

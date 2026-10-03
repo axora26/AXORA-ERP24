@@ -3,7 +3,7 @@ import { expect, type Page } from "@playwright/test";
 /** Compte de demonstration cree par `pnpm demo:seed` (organisation marquee DEMO). */
 export const DEMO_USER = {
   email: process.env.E2E_EMAIL ?? "demo@axora-erp24.local",
-  password: process.env.E2E_PASSWORD ?? "Demo2026!",
+  password: process.env.E2E_PASSWORD ?? "Demo2026!Axora",
 };
 
 /** Tous les ecrans de premier niveau de l'application interne. */

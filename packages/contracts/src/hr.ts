@@ -1,4 +1,5 @@
 /** INC-09 — Ressources humaines. Heures a 2 decimales, montants a 2 decimales. */
+import type { EmployeeServiceCardView, PayrollPolicyView, PayrollWarning } from "./hr-operations.js";
 
 export type EmployeeStatus = "ACTIVE" | "SUSPENDED" | "TERMINATED";
 export type ContractTypeHr = "PERMANENT" | "FIXED_TERM" | "TEMPORARY" | "CONTRACTOR" | "INTERN";
@@ -28,6 +29,7 @@ export interface EmployeeView {
   contractType: ContractTypeHr;
   status: EmployeeStatus;
   badgeCode: string | null;
+  serviceCard?: EmployeeServiceCardView | null;
   /** null sans la permission hr.payroll.read (donnees sensibles). */
   hourlyCost: string | null;
   baseSalary: string | null;
@@ -100,6 +102,10 @@ export interface PayrollRunView {
   totalGross: string;
   /** Rappel explicite : aucune retenue legale n'est calculee. */
   statutoryDeductions: "NOT_CONFIGURED";
+  policy?: PayrollPolicyView;
+  warnings?: PayrollWarning[];
+  /** No net salary is claimed before explicit statutory deduction configuration. */
+  netAmount?: null;
   lines: Array<{
     employeeId: string;
     employeeName: string;
@@ -108,5 +114,10 @@ export interface PayrollRunView {
     adjustments: string;
     adjustmentNotes: string | null;
     grossAmount: string;
+    attendanceHours?: string;
+    regularHours?: string;
+    overtimeHours?: string;
+    hourlyRate?: string;
+    automaticAmount?: string;
   }>;
 }

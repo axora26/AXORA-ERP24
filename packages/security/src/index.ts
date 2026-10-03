@@ -13,3 +13,4 @@ export * from "./session.js";
 export * from "./throttle.js";
 export * from "./totp.js";
 export * from "./secret-box.js";
+export * from "./recovery-codes.js";

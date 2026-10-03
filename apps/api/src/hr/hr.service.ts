@@ -5,13 +5,18 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { HR_PERMISSIONS, type EmployeeView, type PayrollRunView, type TimesheetView } from "@axora24/contracts";
+import { HR_PERMISSIONS, type EmployeeView, type PayrollRunView, type TimesheetView, type PayrollPolicyView, type PayrollWarning } from "@axora24/contracts";
 import { Prisma } from "@axora24/database";
 import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
 import { dec, money, sumDecimals } from "../common/decimal.js";
+import { attendanceIntervals, splitIntervalUtc } from "./attendance-intervals.js";
+import { loadAttendanceFacts } from "./project-presence.js";
+import { calculateAutomaticPay } from "./payroll-calculation.js";
+import { payrollPolicyView } from "./payroll-policy.service.js";
+import { serviceCardView } from "./service-card.service.js";
 import {
   assertBody,
   currencyCode,
@@ -33,7 +38,7 @@ type Tx = Prisma.TransactionClient;
 const CONTRACT_TYPES = ["PERMANENT", "FIXED_TERM", "TEMPORARY", "CONTRACTOR", "INTERN"] as const;
 const EMPLOYEE_STATUSES = ["ACTIVE", "SUSPENDED", "TERMINATED"] as const;
 const LEAVE_TYPES = ["PAID", "SICK", "UNPAID", "TRAINING", "OTHER"] as const;
-const SCAN_SOURCES = ["QR", "PIN", "BADGE"] as const;
+const SCAN_SOURCES = ["PIN", "BADGE"] as const;
 const DAY_MS = 86_400_000;
 
 /**
@@ -86,6 +91,9 @@ export class HrService {
       orderBy: [{ status: "asc" }, { lastName: "asc" }],
     });
     const canSeePay = permissions.has(HR_PERMISSIONS.PAYROLL_READ);
+    const cards = await this.prisma.employeeServiceCard.findMany({ where: { ...scope, employeeId: { in: employees.map((employee) => employee.id) } }, orderBy: { issuedAt: "desc" }, select: { id: true, employeeId: true, issuedAt: true, expiresAt: true, revokedAt: true } });
+    const currentCards = new Map<string, (typeof cards)[number]>();
+    for (const card of cards) if (!currentCards.has(card.employeeId)) currentCards.set(card.employeeId, card);
     const now = new Date();
     return employees.map((employee) => ({
       id: employee.id,
@@ -103,6 +111,7 @@ export class HrService {
       contractType: employee.contractType,
       status: employee.status,
       badgeCode: employee.badgeCode,
+      serviceCard: currentCards.has(employee.id) ? serviceCardView(currentCards.get(employee.id)!) : null,
       hourlyCost: canSeePay ? money(employee.hourlyCost) : null,
       baseSalary: canSeePay ? money(employee.baseSalary) : null,
       currency: employee.currency.trim(),
@@ -183,6 +192,10 @@ export class HrService {
     }
     await this.prisma.$transaction(async (tx) => {
       const departmentId = input.departmentId === undefined ? undefined : optionalId(input.departmentId, "departmentId");
+      await tx.$queryRaw`SELECT "id" FROM "hr_employees" WHERE "id" = ${employee.id} AND "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId} FOR UPDATE`;
+      const currentEmployee = await tx.employee.findFirst({ where: { id: employee.id, ...scope } });
+      if (!currentEmployee) throw new NotFoundException("Employee not found");
+      if (currentEmployee.status === "TERMINATED" && status && status !== "TERMINATED") throw new BadRequestException("A terminated employee cannot be reactivated");
       if (departmentId) await this.requireDepartment(tx, scope, departmentId);
       await tx.employee.update({
         where: { id: employee.id },
@@ -298,12 +311,16 @@ export class HrService {
       }
       // Coherence : pas deux entrees (ou deux sorties) consecutives.
       await tx.$queryRaw`SELECT "id" FROM "hr_employees" WHERE "id" = ${employee.id} FOR UPDATE`;
+      const currentEmployee = await tx.employee.findFirst({ where: { id: employee.id, ...scope } });
+      if (!currentEmployee || currentEmployee.status !== "ACTIVE") throw new BadRequestException("Attendance requires an active employee");
       const last = await tx.attendanceEvent.findFirst({
         where: { employeeId: employee.id, occurredAt: { lte: occurredAt } },
         orderBy: { occurredAt: "desc" },
       });
       if (type === "IN" && last?.type === "IN") throw new BadRequestException("Employee is already clocked in");
       if (type === "OUT" && last?.type !== "IN") throw new BadRequestException("Employee is not clocked in");
+      const next = await tx.attendanceEvent.findFirst({ where: { employeeId: employee.id, ...scope, occurredAt: { gte: occurredAt } }, orderBy: { occurredAt: "asc" } });
+      if (next && (next.occurredAt.getTime() === occurredAt.getTime() || next.type === type)) throw new BadRequestException("Attendance must preserve chronological entry and exit pairs");
       const created = await tx.attendanceEvent.create({
         data: {
           ...scope,
@@ -339,7 +356,7 @@ export class HrService {
   // Feuilles de temps
   // ---------------------------------------------------------------------
 
-  async listTimesheets(scope: CompanyScope, query: Record<string, unknown>): Promise<TimesheetView[]> {
+  async listTimesheets(scope: CompanyScope, query: Record<string, unknown>, permissions: Set<string> = new Set()): Promise<TimesheetView[]> {
     const status = optionalEnum(query.status, "status", ["DRAFT", "SUBMITTED", "VALIDATED", "REJECTED"] as const);
     const employeeId = optionalId(query.employeeId, "employeeId");
     const sheets = await this.prisma.timesheet.findMany({
@@ -348,10 +365,10 @@ export class HrService {
       orderBy: [{ weekStart: "desc" }],
       take: 200,
     });
-    return Promise.all(sheets.map((sheet) => this.getTimesheet(scope, sheet.id)));
+    return Promise.all(sheets.map((sheet) => this.getTimesheet(scope, sheet.id, permissions)));
   }
 
-  async getTimesheet(scope: CompanyScope, timesheetId: string): Promise<TimesheetView> {
+  async getTimesheet(scope: CompanyScope, timesheetId: string, permissions: Set<string> = new Set()): Promise<TimesheetView> {
     const sheet = await this.prisma.timesheet.findFirst({
       where: { id: timesheetId, ...scope },
       include: { employee: true, entries: { orderBy: { workDate: "asc" } } },
@@ -362,7 +379,7 @@ export class HrService {
       select: { id: true, code: true },
     });
     const codes = new Map(projects.map((project) => [project.id, project.code]));
-    const attendance = await this.attendanceHours(sheet.employeeId, sheet.weekStart, new Date(sheet.weekStart.getTime() + 7 * DAY_MS));
+    const attendance = await this.attendanceHours(scope, sheet.employeeId, sheet.weekStart, new Date(sheet.weekStart.getTime() + 7 * DAY_MS));
     return {
       id: sheet.id,
       employeeId: sheet.employeeId,
@@ -383,10 +400,41 @@ export class HrService {
         projectCode: entry.projectId ? (codes.get(entry.projectId) ?? null) : null,
         wbsItemId: entry.wbsItemId,
         description: entry.description,
-        costAmount: entry.costAmount === null ? null : money(entry.costAmount),
+        costAmount: permissions.has(HR_PERMISSIONS.PAYROLL_READ) && entry.costAmount !== null ? money(entry.costAmount) : null,
       })),
       attendanceHours: attendance.toFixed(2),
     };
+  }
+
+  async importAttendance(scope: CompanyScope, timesheetId: string, body: unknown, actorUserId: string): Promise<TimesheetView> {
+    const input = assertBody(body);
+    if (input.replaceExisting !== undefined && typeof input.replaceExisting !== "boolean") throw new BadRequestException("replaceExisting must be a boolean");
+    await this.prisma.$transaction(async (tx) => {
+      const sheet = await this.lockTimesheet(tx, scope, timesheetId);
+      if (sheet.status !== "DRAFT" && sheet.status !== "REJECTED") throw new BadRequestException("Only a draft (or rejected) timesheet can be edited");
+      await tx.$queryRaw`SELECT "id" FROM "hr_employees" WHERE "id" = ${sheet.employeeId} AND "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId} FOR UPDATE`;
+      const existing = await tx.timesheetEntry.count({ where: { timesheetId: sheet.id, ...scope } });
+      if (existing && input.replaceExisting !== true) throw new ConflictException("The timesheet already has entries; explicitly confirm replacement before importing attendance");
+      const end = new Date(sheet.weekStart.getTime() + 7 * DAY_MS);
+      const facts = await loadAttendanceFacts(tx, scope, sheet.weekStart, end, [sheet.employeeId]);
+      const intervals = attendanceIntervals(facts, sheet.weekStart, end);
+      if (intervals.some((interval) => !interval.to || interval.anomalies.length)) throw new BadRequestException("Attendance has an open or inconsistent interval; correct the attendance facts before preparing the timesheet");
+      const entries = intervals.flatMap(splitIntervalUtc).map((segment) => ({ ...scope, timesheetId: sheet.id, workDate: new Date(`${segment.date}T00:00:00Z`), hours: new Prisma.Decimal(segment.minutes).div(60).toDecimalPlaces(2), projectId: segment.projectId, description: "Présence issue des pointages", attendanceInId: segment.attendanceInId, attendanceOutId: segment.attendanceOutId })).filter((entry) => entry.hours.greaterThan(0));
+      if (!entries.length) throw new BadRequestException("No closed attendance interval exists in this timesheet week");
+      const projectIds = [...new Set(entries.map((entry) => entry.projectId).filter((id): id is string => id !== null))];
+      const projects = await tx.project.findMany({ where: { ...scope, id: { in: projectIds } }, select: { id: true, status: true } });
+      if (projects.length !== projectIds.length) throw new NotFoundException("Project not found");
+      for (const project of projects) {
+        if (project.status === "COMPLETED" || project.status === "CANCELLED") {
+          throw new BadRequestException(`Time cannot be booked on a ${project.status} project`);
+        }
+      }
+      await tx.timesheetEntry.deleteMany({ where: { timesheetId: sheet.id, ...scope } });
+      await tx.timesheetEntry.createMany({ data: entries });
+      await tx.timesheet.update({ where: { id: sheet.id }, data: { totalHours: sumDecimals(entries.map((entry) => entry.hours)), status: "DRAFT" } });
+      await writeAudit(tx, scope, actorUserId, "hr.timesheet.attendance_imported", "Timesheet", sheet.id, { employeeId: sheet.employeeId, entries: entries.length, replacedEntries: existing });
+    });
+    return this.getTimesheet(scope, timesheetId);
   }
 
   async createTimesheet(scope: CompanyScope, body: unknown, actorUserId: string) {
@@ -629,6 +677,11 @@ export class HrService {
     if (!run) throw new NotFoundException("Payroll run not found");
     const employees = await this.prisma.employee.findMany({ where: { id: { in: run.lines.map((line) => line.employeeId) }, ...scope } });
     const names = new Map(employees.map((employee) => [employee.id, `${employee.firstName} ${employee.lastName}`]));
+    const snapshot = run.policySnapshot && typeof run.policySnapshot === "object" && !Array.isArray(run.policySnapshot) ? run.policySnapshot : {};
+    const policy: PayrollPolicyView = { mode: snapshot.mode === "VALIDATED_HOURS" ? "VALIDATED_HOURS" : "MONTHLY_BASE", version: run.policyVersion ?? 0, configured: snapshot.configured === true, standardMonthlyHours: typeof snapshot.standardMonthlyHours === "string" ? snapshot.standardMonthlyHours : null, overtimeCoefficient: typeof snapshot.overtimeCoefficient === "string" ? snapshot.overtimeCoefficient : null };
+    const warnings: PayrollWarning[] = Array.isArray(snapshot.warnings) ? snapshot.warnings.flatMap((warning) => warning && typeof warning === "object" && !Array.isArray(warning) && typeof warning.employeeId === "string" && typeof warning.code === "string" && typeof warning.message === "string" ? [{ employeeId: warning.employeeId, code: warning.code, message: warning.message }] : []) : [];
+    const frozenNames = new Map<string, string>();
+    if (Array.isArray(snapshot.employees)) for (const employee of snapshot.employees) if (employee && typeof employee === "object" && !Array.isArray(employee) && typeof employee.employeeId === "string" && typeof employee.fullName === "string") frozenNames.set(employee.employeeId, employee.fullName);
     return {
       id: run.id,
       period: run.period,
@@ -637,15 +690,25 @@ export class HrService {
       closedAt: run.closedAt?.toISOString() ?? null,
       totalGross: money(sumDecimals(run.lines.map((line) => line.grossAmount))),
       statutoryDeductions: "NOT_CONFIGURED",
+      policy,
+      warnings,
+      netAmount: null,
       lines: run.lines
         .map((line) => ({
           employeeId: line.employeeId,
-          employeeName: names.get(line.employeeId) ?? "—",
+          employeeName: frozenNames.get(line.employeeId) ?? names.get(line.employeeId) ?? "—",
           baseSalary: money(line.baseSalary),
           validatedHours: dec(line.validatedHours).toFixed(2),
           adjustments: money(line.adjustments),
           adjustmentNotes: line.adjustmentNotes,
           grossAmount: money(line.grossAmount),
+        ...(run.policySnapshot === null ? {} : {
+          attendanceHours: dec(line.attendanceHours).toFixed(2),
+          regularHours: dec(line.regularHours).toFixed(2),
+          overtimeHours: dec(line.overtimeHours).toFixed(2),
+          hourlyRate: dec(line.hourlyRate).toFixed(6),
+        }),
+          automaticAmount: money(line.automaticAmount),
         }))
         .sort((left, right) => left.employeeName.localeCompare(right.employeeName)),
     };
@@ -660,7 +723,8 @@ export class HrService {
     const end = new Date(Date.UTC(Number(match[1]), Number(match[2]), 1));
 
     const id = await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.payrollRun.findFirst({ where: { companyId: scope.companyId, period }, select: { id: true } });
+      await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id" = ${scope.companyId} AND "organizationId" = ${scope.organizationId} FOR UPDATE`;
+      const existing = await tx.payrollRun.findFirst({ where: { ...scope, period }, select: { id: true } });
       if (existing) throw new ConflictException(`Payroll for ${period} already exists`);
       const company = await tx.company.findUniqueOrThrow({ where: { id: scope.companyId }, select: { currency: true } });
       const currency = company.currency.trim();
@@ -701,7 +765,25 @@ export class HrService {
         const employeeId = sheets.find((sheet) => sheet.id === row.timesheetId)?.employeeId;
         if (employeeId) hoursByEmployee.set(employeeId, dec(hoursByEmployee.get(employeeId)).plus(dec(row._sum.hours)));
       }
-      const run = await tx.payrollRun.create({ data: { ...scope, period, currency, createdByUserId: actorUserId } });
+      const policy = payrollPolicyView(await tx.companyPayrollPolicy.findFirst({ where: scope }));
+      const facts = await loadAttendanceFacts(tx, scope, start, end, employees.map((employee) => employee.id));
+      const intervals = attendanceIntervals(facts, start, end);
+      const attendanceByEmployee = new Map<string, Prisma.Decimal>();
+      const warnings: PayrollWarning[] = [];
+      for (const interval of intervals) {
+        if (interval.to) attendanceByEmployee.set(interval.employeeId, dec(attendanceByEmployee.get(interval.employeeId)).plus(new Prisma.Decimal(interval.to.getTime() - interval.from.getTime()).div(3_600_000)));
+        else warnings.push({ employeeId: interval.employeeId, code: "OPEN_ATTENDANCE", message: "Un pointage de la période ne possède pas de sortie ; aucune durée n’a été inventée." });
+      }
+      for (const employee of employees) {
+        const validated = hoursByEmployee.get(employee.id);
+        if (!validated || validated.isZero()) {
+          if (policy.mode === "VALIDATED_HOURS") throw new BadRequestException("Hourly payroll requires validated timesheet hours for every employee of the period");
+          warnings.push({ employeeId: employee.id, code: "NO_VALIDATED_HOURS", message: "Aucune heure validée pour cet employé ; le mode salaire mensuel conserve le salaire de base." });
+        }
+        if (!dec(attendanceByEmployee.get(employee.id)).toDecimalPlaces(2).equals(dec(validated).toDecimalPlaces(2))) warnings.push({ employeeId: employee.id, code: "ATTENDANCE_TIMESHEET_DIFFERENCE", message: "Les heures pointées et les heures validées diffèrent ; la paie utilise uniquement les heures validées." });
+      }
+      const policySnapshot: Prisma.InputJsonObject = { ...policy, warnings: warnings.map((warning) => ({ ...warning })), employees: employees.map((employee) => ({ employeeId: employee.id, code: employee.code, fullName: `${employee.firstName} ${employee.lastName}`, jobTitle: employee.jobTitle, sourceTimesheetIds: sheets.filter((sheet) => sheet.employeeId === employee.id).map((sheet) => sheet.id) })) };
+      const run = await tx.payrollRun.create({ data: { ...scope, period, currency, createdByUserId: actorUserId, policySnapshot, policyVersion: policy.version } });
       if (employees.length > 0) {
         await tx.payrollLine.createMany({
           data: employees.map((employee) => ({
@@ -710,7 +792,9 @@ export class HrService {
             employeeId: employee.id,
             baseSalary: employee.baseSalary,
             validatedHours: hoursByEmployee.get(employee.id) ?? new Prisma.Decimal(0),
-            grossAmount: employee.baseSalary,
+            attendanceHours: dec(attendanceByEmployee.get(employee.id)).toDecimalPlaces(2),
+            ...calculateAutomaticPay(employee.baseSalary, hoursByEmployee.get(employee.id) ?? new Prisma.Decimal(0), policy),
+            grossAmount: calculateAutomaticPay(employee.baseSalary, hoursByEmployee.get(employee.id) ?? new Prisma.Decimal(0), policy).automaticAmount,
           })),
         });
       }
@@ -727,13 +811,14 @@ export class HrService {
     const label = requiredText(input.label, "label", 120);
     if (amount.isZero()) throw new BadRequestException("amount must not be zero");
     await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "hr_payroll_runs" WHERE "id" = ${runId} AND "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId} FOR UPDATE`;
       const run = await tx.payrollRun.findFirst({ where: { id: runId, ...scope } });
       if (!run) throw new NotFoundException("Payroll run not found");
       if (run.status !== "DRAFT") throw new BadRequestException("A closed payroll cannot be modified");
       const line = await tx.payrollLine.findFirst({ where: { runId, employeeId } });
       if (!line) throw new NotFoundException("Employee is not part of this payroll");
       const adjustments = dec(line.adjustments).plus(amount);
-      const gross = dec(line.baseSalary).plus(adjustments);
+      const gross = dec(line.automaticAmount).plus(adjustments);
       if (gross.isNegative()) throw new BadRequestException("Gross amount cannot become negative");
       const note = `${label} : ${amount.greaterThan(0) ? "+" : ""}${money(amount)}`;
       await tx.payrollLine.update({
@@ -762,21 +847,10 @@ export class HrService {
   // ---------------------------------------------------------------------
 
   /** Heures de presence derivees des paires IN/OUT sur une periode. */
-  private async attendanceHours(employeeId: string, from: Date, to: Date): Promise<Prisma.Decimal> {
-    const events = await this.prisma.attendanceEvent.findMany({
-      where: { employeeId, occurredAt: { gte: from, lt: to } },
-      orderBy: { occurredAt: "asc" },
-    });
-    let total = 0;
-    let open: Date | null = null;
-    for (const event of events) {
-      if (event.type === "IN") open = event.occurredAt;
-      else if (open) {
-        total += event.occurredAt.getTime() - open.getTime();
-        open = null;
-      }
-    }
-    return new Prisma.Decimal(total).div(3_600_000).toDecimalPlaces(2);
+  private async attendanceHours(scope: CompanyScope, employeeId: string, from: Date, to: Date): Promise<Prisma.Decimal> {
+    const facts = await loadAttendanceFacts(this.prisma, scope, from, to, [employeeId]);
+    const milliseconds = attendanceIntervals(facts, from, to).reduce((sum, interval) => sum + (interval.to ? interval.to.getTime() - interval.from.getTime() : 0), 0);
+    return new Prisma.Decimal(milliseconds).div(3_600_000).toDecimalPlaces(2);
   }
 
   private async lockTimesheet(tx: Tx, scope: CompanyScope, timesheetId: string) {

@@ -9,7 +9,8 @@ import { salesApi } from "../../lib/api";
 import { formatDate, formatMoney } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import {
+import { FinanceCreditNotes } from "../../components/finance-credit-notes";
+import { DataUnavailable,
   Button,
   DataTable,
   DateField,
@@ -29,25 +30,28 @@ import {
   TextField,
 } from "../../components/ui";
 
-type TabId = "receivables" | "payables" | "payments" | "treasury";
+type TabId = "receivables" | "payables" | "payments" | "treasury" | "credits";
 type Dialog = "invoice" | "payable" | "bank" | "tax";
 
 export default function FinancePage(): React.ReactElement {
   const session = useSession();
   const router = useRouter();
+  const canInvoices = session.can("finance.invoice.read");
   const canPayables = session.can("finance.payable.read");
-  const [tab, setTab] = useState<TabId>("receivables");
+  const canCredits = session.can("finance.credit.read");
+  const [tab, setTab] = useState<TabId>(canInvoices ? "receivables" : canPayables ? "payables" : "credits");
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const mutation = useMutation();
   const data = useResource(() =>
     Promise.all([
-      financeApi.summary(),
-      financeApi.invoices(),
+      canInvoices ? financeApi.summary() : Promise.resolve(null),
+      canInvoices ? financeApi.invoices() : Promise.resolve([]),
       canPayables ? financeApi.payables() : Promise.resolve([]),
-      financeApi.payments(),
-      financeApi.bankAccounts(),
-      financeApi.taxRates(),
+      canInvoices ? financeApi.payments() : Promise.resolve([]),
+      canInvoices ? financeApi.bankAccounts() : Promise.resolve([]),
+      canInvoices ? financeApi.taxRates() : Promise.resolve([]),
     ]),
+    [canInvoices, canPayables],
   );
   const [summary, invoices, payables, payments, accounts, taxRates] = data.data ?? [null, [], [], [], [], []];
 
@@ -60,12 +64,14 @@ export default function FinancePage(): React.ReactElement {
     }
   }
 
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Finance" error={data.error} onRetry={() => void data.reload()}/>;
+
   return (
     <>
       <PageHeader
         breadcrumb="Finance"
         title="Finance"
-        subtitle="Facturation clients, factures fournisseurs rapprochées, paiements et trésorerie. Aucun taux fiscal n'est présumé."
+        subtitle="Factures clients et fournisseurs, avoirs, remboursements et trésorerie. Aucun taux fiscal n'est présumé."
         onRefresh={() => void data.reload()}
         actions={
           <>
@@ -119,15 +125,16 @@ export default function FinancePage(): React.ReactElement {
             active={tab}
             onChange={setTab}
             tabs={[
-              { id: "receivables", label: "Factures clients", count: invoices.length },
+              ...(canInvoices ? [{ id: "receivables" as const, label: "Factures clients", count: invoices.length }] : []),
               ...(canPayables ? [{ id: "payables" as const, label: "Factures fournisseurs", count: payables.length }] : []),
-              { id: "payments", label: "Paiements", count: payments.length },
-              { id: "treasury", label: "Trésorerie & paramètres" },
+              ...(canCredits ? [{ id: "credits" as const, label: "Avoirs & remboursements" }] : []),
+              ...(canInvoices ? [{ id: "payments" as const, label: "Paiements", count: payments.length }, { id: "treasury" as const, label: "Trésorerie & paramètres" }] : []),
             ]}
           />
 
           <div className="stack">
-            {tab === "receivables" && (
+            {tab === "credits" && canCredits && <FinanceCreditNotes onChanged={data.reload} />}
+            {tab === "receivables" && canInvoices && (
               <Panel title="Factures clients" subtitle="Le numéro légal est attribué à l'émission, dans l'ordre chronologique">
                 <DataTable
                   rows={invoices}
@@ -161,7 +168,7 @@ export default function FinancePage(): React.ReactElement {
               </Panel>
             )}
 
-            {tab === "payables" && (
+            {tab === "payables" && canPayables && (
               <Panel title="Factures fournisseurs" subtitle="Rapprochement 3-way commande ↔ réception ↔ facture ; validation par un tiers avant paiement">
                 <DataTable
                   rows={payables}
@@ -201,7 +208,7 @@ export default function FinancePage(): React.ReactElement {
               </Panel>
             )}
 
-            {tab === "payments" && (
+            {tab === "payments" && canInvoices && (
               <Panel title="Paiements" subtitle="Encaissements et décaissements — faits comptables immuables">
                 <DataTable
                   rows={payments}
@@ -238,7 +245,7 @@ export default function FinancePage(): React.ReactElement {
               </Panel>
             )}
 
-            {tab === "treasury" && (
+            {tab === "treasury" && canInvoices && (
               <div className="module-grid cols-2">
                 <Panel
                   title="Comptes bancaires et caisses"

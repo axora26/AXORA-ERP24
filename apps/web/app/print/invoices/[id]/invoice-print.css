@@ -1,0 +1,14 @@
+.invoice-print-page { background: #e8edf4; color: #111827; }
+.invoice-print-page .print-parties { display: flex; flex-wrap: wrap; gap: 24px; }
+.invoice-print-page .print-parties h2,
+.invoice-print-page .print-parties dt,
+.invoice-print-page .print-totals dt,
+.invoice-print-page .print-notes { color: #4b5563; }
+.invoice-print-page .print-totals { margin: 24px 0 0 auto; width: min(100%, 330px); }
+.invoice-print-page .print-totals div { display: flex; gap: 16px; justify-content: space-between; }
+.invoice-print-page .axora-print-content th { color: #111827; background: #eef2ff; }
+.invoice-print-page .axora-print-content td:nth-child(n+2),
+.invoice-print-page .axora-print-content th:nth-child(n+2) { text-align: right; }
+.invoice-print-page .axora-print-content table { table-layout: fixed; }
+.invoice-print-page .axora-print-content th:first-child { width: 35%; }
+@media print { .invoice-print-page { background: white; } }

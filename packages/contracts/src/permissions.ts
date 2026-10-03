@@ -93,11 +93,16 @@ export const FINANCE_PERMISSIONS = {
   PAYMENT_CREATE: "finance.payment.create",
   BANK_MANAGE: "finance.bank.manage",
   SETTINGS_MANAGE: "finance.settings.manage",
+  CREDIT_READ: "finance.credit.read",
+  CREDIT_MANAGE: "finance.credit.manage",
+  CREDIT_ISSUE: "finance.credit.issue",
+  REFUND_MANAGE: "finance.refund.manage",
 } as const;
 
 /** INC-09 — RH. Donnees salariales et paie derriere une permission distincte. */
 export const HR_PERMISSIONS = {
   EMPLOYEE_READ: "hr.employee.read",
+  CARD_MANAGE: "hr.card.manage",
   EMPLOYEE_MANAGE: "hr.employee.manage",
   ATTENDANCE_CREATE: "hr.attendance.create",
   TIMESHEET_MANAGE: "hr.timesheet.manage",
@@ -106,6 +111,7 @@ export const HR_PERMISSIONS = {
   LEAVE_APPROVE: "hr.leave.approve",
   PAYROLL_READ: "hr.payroll.read",
   PAYROLL_MANAGE: "hr.payroll.manage",
+  POLICY_MANAGE: "hr.payrollpolicy.manage",
 } as const;
 
 /** INC-10 — GED : documents versionnes, approbation par un tiers, fichiers immuables. */

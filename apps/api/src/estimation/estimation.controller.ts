@@ -1,20 +1,24 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import type { Request } from "express";
 import { ESTIMATION_PERMISSIONS } from "@axora24/contracts";
 import { SessionGuard } from "../auth/session.guard.js";
 import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequirePermission } from "../auth/require-permission.decorator.js";
 import { CompanyScopeService } from "../common/company-scope.service.js";
+import { CompanyScopeGuard } from "../common/scope.guard.js";
 import { EstimationService } from "./estimation.service.js";
 import type {
   CreateDqeDto,
   CreateDqeLineDto,
   CreateStudyDto,
   CreateStudyRequirementDto,
+  DraftVersionDto,
+  UpdateStudyRequirementDto,
+  UpdateDqeLineDto,
 } from "./estimation.dto.js";
 
 @Controller("estimation")
-@UseGuards(SessionGuard, PermissionGuard)
+@UseGuards(SessionGuard, CompanyScopeGuard, PermissionGuard)
 export class EstimationController {
   constructor(
     private readonly estimation: EstimationService,
@@ -54,8 +58,24 @@ export class EstimationController {
     @Param("id") id: string,
     @Body() body: CreateStudyRequirementDto,
   ) {
-    const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
-    return this.estimation.addRequirement(scope, id, body);
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.addRequirement(scope, id, body, request.axoraUser!.id);
+  }
+
+  @Patch("studies/:id/requirements/:requirementId")
+  @RequirePermission(ESTIMATION_PERMISSIONS.STUDY_MANAGE)
+  async updateRequirement(@Req() request: Request, @Param("id") id: string,
+    @Param("requirementId") requirementId: string, @Body() body: UpdateStudyRequirementDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.updateRequirement(scope, id, requirementId, body, request.axoraUser!.id);
+  }
+
+  @Delete("studies/:id/requirements/:requirementId")
+  @RequirePermission(ESTIMATION_PERMISSIONS.STUDY_MANAGE)
+  async deleteRequirement(@Req() request: Request, @Param("id") id: string,
+    @Param("requirementId") requirementId: string, @Body() body: DraftVersionDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.deleteRequirement(scope, id, requirementId, body, request.axoraUser!.id);
   }
 
   @Post("studies/:id/ready")
@@ -64,10 +84,11 @@ export class EstimationController {
     @Req() request: Request,
     @Param("id") id: string,
     @Query("companyId") companyId?: string,
+    @Body() body: DraftVersionDto = {},
   ) {
     const user = request.axoraUser!;
-    const scope = await this.companyScope.resolve(user, companyId);
-    return this.estimation.markStudyReady(scope, id, user.id);
+    const scope = await this.companyScope.resolve(user, body?.companyId ?? companyId);
+    return this.estimation.markStudyReady(scope, id, user.id, body);
   }
 
   @Get("dqes")
@@ -103,8 +124,24 @@ export class EstimationController {
     @Param("id") id: string,
     @Body() body: CreateDqeLineDto,
   ) {
-    const scope = await this.companyScope.resolve(request.axoraUser!, body.companyId);
-    return this.estimation.addDqeLine(scope, id, body);
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.addDqeLine(scope, id, body, request.axoraUser!.id);
+  }
+
+  @Patch("dqes/:id/lines/:lineId")
+  @RequirePermission(ESTIMATION_PERMISSIONS.DQE_MANAGE)
+  async updateDqeLine(@Req() request: Request, @Param("id") id: string, @Param("lineId") lineId: string,
+    @Body() body: UpdateDqeLineDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.updateDqeLine(scope, id, lineId, body, request.axoraUser!.id);
+  }
+
+  @Delete("dqes/:id/lines/:lineId")
+  @RequirePermission(ESTIMATION_PERMISSIONS.DQE_MANAGE)
+  async deleteDqeLine(@Req() request: Request, @Param("id") id: string, @Param("lineId") lineId: string,
+    @Body() body: DraftVersionDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.deleteDqeLine(scope, id, lineId, body, request.axoraUser!.id);
   }
 
   @Post("dqes/:id/finalize")
@@ -113,9 +150,10 @@ export class EstimationController {
     @Req() request: Request,
     @Param("id") id: string,
     @Query("companyId") companyId?: string,
+    @Body() body: DraftVersionDto = {},
   ) {
     const user = request.axoraUser!;
-    const scope = await this.companyScope.resolve(user, companyId);
-    return this.estimation.finalizeDqe(scope, id, user.id);
+    const scope = await this.companyScope.resolve(user, body?.companyId ?? companyId);
+    return this.estimation.finalizeDqe(scope, id, user.id, body);
   }
 }

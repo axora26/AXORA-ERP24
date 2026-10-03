@@ -36,6 +36,8 @@ const MODULE_LABELS: Record<string, string> = {
 };
 
 const RESOURCE_LABELS: Record<string, string> = {
+  credit: "Avoirs",
+  refund: "Remboursements",
   organization: "l'organisation",
   company: "les entreprises",
   user: "les utilisateurs",

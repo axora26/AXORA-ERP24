@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, "feat/**", "codex/**"]
   pull_request:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", claude/funny-meitner-l317n1]
   workflow_dispatch: {}
 
 concurrency:
@@ -22,9 +22,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install -g pnpm@9
-      - run: pnpm install --no-frozen-lockfile
+      - run: npm install -g pnpm@9.15.9
+      - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
+      - run: pnpm build:packages
       - run: pnpm typecheck
       - run: pnpm lint
 
@@ -36,9 +37,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install -g pnpm@9
-      - run: pnpm install --no-frozen-lockfile
+      - run: npm install -g pnpm@9.15.9
+      - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
+      - run: pnpm build:packages
       - run: pnpm test
 
   build:
@@ -49,8 +51,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install -g pnpm@9
-      - run: pnpm install --no-frozen-lockfile
+      - run: npm install -g pnpm@9.15.9
+      - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm build:packages
       - run: pnpm build
@@ -80,14 +82,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install -g pnpm@9
-      - run: pnpm install --no-frozen-lockfile
+      - run: npm install -g pnpm@9.15.9
+      - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm --filter @axora24/database exec prisma migrate deploy
       - name: Cles MFA et integrations ephemeres (jamais committees)
         run: |
           echo "MFA_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
           echo "INTEGRATION_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "SERVICE_CARD_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: pnpm build:packages
       - run: pnpm test:e2e
 
@@ -112,21 +115,25 @@ jobs:
       DATABASE_URL: postgresql://axora:axora_ci_password@localhost:5432/axora_erp24_ci?schema=public
       SESSION_COOKIE_NAME: axora_erp24_session
       API_PORT: "4000"
+      CORS_ORIGIN: http://localhost:3200
       AUTOMATION_AUTORUN: "false"
       E2E_BASE_URL: http://localhost:3200
+      # Base CI ephemere : seed DEMO et tenants de qualification independants.
+      REGISTRATION_LIMIT: "100"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install -g pnpm@9
-      - run: pnpm install --no-frozen-lockfile
+      - run: npm install -g pnpm@9.15.9
+      - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm --filter @axora24/database exec prisma migrate deploy
       - name: Cles MFA et integrations ephemeres (jamais committees)
         run: |
           echo "MFA_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
           echo "INTEGRATION_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "SERVICE_CARD_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: pnpm build:packages
       - run: pnpm build
       - name: API et interface de production (service worker actif)
@@ -138,7 +145,7 @@ jobs:
         run: pnpm demo:seed
       - run: pnpm --filter @axora24/web exec playwright install --with-deps chromium
       - run: pnpm test:browser
-      - if: failure()
+      - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: browser-report
@@ -147,3 +154,14 @@ jobs:
             apps/web/test-results
             api.log
             web.log
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g pnpm@9.15.9
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod

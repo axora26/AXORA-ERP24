@@ -7,7 +7,7 @@ import { CONNECTOR_STATUS_CHIP, CONNECTOR_STATUS_LABEL, KEY_STATUS_CHIP, KEY_STA
 import { formatDateTime } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import { Button, CheckboxGroup, DataTable, DateField, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, StatusChip, Tabs, TextAreaField, TextField, Toggle } from "../../components/ui";
+import { DataUnavailable, Button, CheckboxGroup, DataTable, DateField, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, StatusChip, Tabs, TextAreaField, TextField, Toggle } from "../../components/ui";
 
 type TabId = "keys" | "inbound" | "connectors" | "docs";
 
@@ -35,6 +35,8 @@ export default function IntegrationsPage(): React.ReactElement {
     if (result !== undefined) await data.reload();
     return result;
   }
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="API & intégrations" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

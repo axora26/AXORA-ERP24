@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ApiError, estimationApi, salesApi } from "../lib/api";
 import { formatMoney, formatQuantity } from "../lib/format";
+import { BusinessPrintLink } from "./business-print-link";
 
 interface SalesData {
   finalizedDqes: DqeSummaryView[];
@@ -354,6 +355,7 @@ export function SalesWorkspace(): React.ReactElement {
                 Source DQE {selectedQuote.source.dqeCode || selectedQuote.source.dqeId} · {formatMoney(selectedQuote.subtotal, selectedQuote.currency)}
               </p>
             </div>
+            <BusinessPrintLink kind="quotes" id={selectedQuote.id} companyId={selectedQuote.companyId}>Imprimer le devis</BusinessPrintLink>
             <span className={`status-chip status-${selectedQuote.status.toLowerCase()}`}>
               {QUOTE_STATUS_LABEL[selectedQuote.status] ?? selectedQuote.status}
             </span>
@@ -491,6 +493,7 @@ export function SalesWorkspace(): React.ReactElement {
                   <th>Lignes</th>
                   <th>Total</th>
                   <th>Devis source</th>
+                  <th scope="col">Document</th>
                 </tr>
               </thead>
               <tbody>
@@ -510,6 +513,7 @@ export function SalesWorkspace(): React.ReactElement {
                       {formatMoney(contract.subtotal, contract.currency)}
                     </td>
                     <td>{contract.source.quoteCode || contract.source.quoteId}</td>
+                    <td><BusinessPrintLink kind="contracts" id={contract.id} companyId={contract.companyId}>Imprimer le contrat</BusinessPrintLink></td>
                   </tr>
                 ))}
               </tbody>
