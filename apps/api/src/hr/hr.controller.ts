@@ -157,6 +157,42 @@ export class HrController {
     return this.hr.decideLeave(scope, id, "CANCELLED", body, user.id);
   }
 
+  @Get("advances")
+  @RequirePermission(H.ADVANCE_READ)
+  advances(@Scope() scope: CompanyScope) {
+    return this.hr.listAdvances(scope);
+  }
+
+  @Post("advances")
+  @RequirePermission(H.ADVANCE_REQUEST)
+  requestAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    return this.hr.requestAdvance(scope, body, user.id);
+  }
+
+  @Post("advances/:id/approve")
+  @RequirePermission(H.ADVANCE_APPROVE)
+  approveAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.hr.decideAdvance(scope, id, "APPROVED", body, user.id);
+  }
+
+  @Post("advances/:id/reject")
+  @RequirePermission(H.ADVANCE_APPROVE)
+  rejectAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.hr.decideAdvance(scope, id, "REJECTED", body, user.id);
+  }
+
+  @Post("advances/:id/cancel")
+  @RequirePermission(H.ADVANCE_REQUEST)
+  cancelAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.hr.decideAdvance(scope, id, "CANCELLED", body, user.id);
+  }
+
+  @Post("advances/:id/repayments")
+  @RequirePermission(H.ADVANCE_REPAY)
+  repayAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.hr.repayAdvance(scope, id, body, user.id);
+  }
+
   @Get("payroll")
   @RequirePermission(H.PAYROLL_READ)
   payrollRuns(@Scope() scope: CompanyScope) {

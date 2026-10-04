@@ -74,6 +74,10 @@ export class CompanyScopeService {
       // divulguer l'existence d'un chantier d'un autre perimetre.
       throw new ForbiddenException("Project not accessible");
     }
-    return { organizationId, companyId, projectId: project.id };
+    const scope: CompanyScope = { organizationId, companyId };
+    // projectId reste un contexte RBAC ; il ne doit pas être injecté par un
+    // spread dans les filtres Prisma des modèles qui n'ont pas cette colonne.
+    Object.defineProperty(scope, "projectId", { value: project.id, enumerable: false, writable: false });
+    return scope;
   }
 }

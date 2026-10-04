@@ -2,7 +2,9 @@ import {
   CanActivate,
   BadRequestException,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
   UseGuards,
   applyDecorators,
@@ -61,7 +63,34 @@ export class CompanyScopeGuard implements CanActivate {
       throw new BadRequestException("Conflicting projectId values");
     }
 
-    request.axoraScope = await this.companyScope.resolve(user, fromQuery ?? fromBody, requestedProjectId);
+    try {
+      request.axoraScope = await this.companyScope.resolve(user, fromQuery ?? fromBody, requestedProjectId);
+    } catch (error) {
+      // Les ressources métier qui portent un projectId dans le corps doivent
+      // conserver leur sémantique d'isolation (404 hors périmètre). Les
+      // routes /projects/:id gardent le refus 403 explicite du garde RBAC.
+      if (requestedProjectId && !projectFromProjectRoute && error instanceof ForbiddenException) {
+        // Les listes filtrées par projectId doivent rester des listes vides
+        // pour un projet hors périmètre, comme avant l'ajout du contexte RBAC.
+        if (request.method === "GET" && projectFromQuery) {
+          request.axoraScope = await this.companyScope.resolve(user, fromQuery ?? fromBody);
+          return true;
+        }
+        throw new NotFoundException("Project not found");
+      }
+      if (requestedProjectId && projectFromProjectRoute && request.method === "GET" && error instanceof ForbiddenException) {
+        if (fromQuery) {
+          // Une entreprise explicitement sélectionnée mais sans ce projet
+          // reste un refus de périmètre (403) pour ses membres. La résolution
+          // de l'entreprise seule laisse ensuite PermissionGuard appliquer
+          // les droits disponibles dans ce périmètre.
+          request.axoraScope = await this.companyScope.resolve(user, fromQuery);
+          return true;
+        }
+        throw new NotFoundException("Project not found");
+      }
+      throw error;
+    }
     return true;
   }
 }

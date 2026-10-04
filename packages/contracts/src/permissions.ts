@@ -122,6 +122,10 @@ export const HR_PERMISSIONS = {
   PAYROLL_READ: "hr.payroll.read",
   PAYROLL_MANAGE: "hr.payroll.manage",
   POLICY_MANAGE: "hr.payrollpolicy.manage",
+  ADVANCE_READ: "hr.advance.read",
+  ADVANCE_REQUEST: "hr.advance.request",
+  ADVANCE_APPROVE: "hr.advance.approve",
+  ADVANCE_REPAY: "hr.advance.repay",
 } as const;
 
 /** INC-10 — GED : documents versionnes, approbation par un tiers, fichiers immuables. */

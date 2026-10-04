@@ -103,6 +103,13 @@ Typecheck API et contrats reconstruits, lint cible passe. Le typecheck web passe
 
 ## Prochaine etape
 
+## Mise à jour du 4 octobre 2026 — avances, comptabilité et responsive
+
+- L'ERP expose maintenant les avances salariés avec persistance Prisma, permissions `hr.advance.*`, audit, approbation à quatre yeux et remboursements bornés au principal. La page RH est ajoutée à la navigation et reste exploitable sur mobile.
+- La comptabilité générale et la facturation signée déjà livrées sont maintenues : écritures équilibrées, états financiers, export CSV, PDF facture A4 AXORA, signature HMAC interne, empreinte SHA-256 et QR de vérification.
+- Le contrôle de périmètre projet a été corrigé pour respecter les réponses 403/404 attendues sans divulgation de données ; la propriété `projectId` du scope reste non énumérable afin d'empêcher son injection dans les filtres Prisma.
+- Contrôles locaux observés : API 108/108 et web 74/74 en unitaires ; avances 1/1, HR 9/9, QHSE 11/11, projets 12/12, exports 6/6 et opérations projet 7/7 en E2E ciblés ; responsive `/hr/advances` validé à 390 et 768 px ; typechecks et builds réussis ; lint web sans erreur avec 8 avertissements d'images existants. La suite E2E globale conserve les contraintes d'environnement documentées et aucun statut CI distant n'est promu `VERIFIED`.
+
 ## Incrément du 4 octobre 2026 — RBAC porté par projet
 
 - Les requêtes métier résolvent désormais `projectId` depuis la requête, le corps ou les routes `/projects/:id`, puis vérifient l'appartenance du projet à l'entreprise et à l'organisation de la session.

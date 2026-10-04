@@ -2,6 +2,15 @@
 export const DOMAIN_MESSAGES: Record<string, string> = {
   // --- RH -----------------------------------------------------------------
   "Payroll employee not found": "Salarié introuvable dans cette paie",
+  "Employee advance not found": "Avance salarié introuvable",
+  "Only the employee or an HR user can request an advance": "Seul le salarié concerné ou un utilisateur RH peut demander une avance",
+  "Only the requester can cancel an advance": "Seul le demandeur peut annuler une avance",
+  "Only a requested advance can be cancelled": "Seule une avance demandée peut être annulée",
+  "Only a requested advance can be decided": "Seule une avance demandée peut être décidée",
+  "An advance is decided by someone other than its requester": "Une avance est décidée par une autre personne que son demandeur",
+  "A note is required to reject an advance": "Un motif est obligatoire pour refuser une avance",
+  "Only an approved advance can be repaid": "Seule une avance approuvée peut être remboursée",
+  "Repayments cannot exceed the advance amount": "Les remboursements ne peuvent pas dépasser le montant de l’avance",
   "A terminated employee cannot be reactivated": "Un employé sorti ne peut pas être réactivé",
   "Attendance requires an active employee": "Le pointage exige un employé actif",
   "Attendance must preserve chronological entry and exit pairs": "Les pointages doivent conserver l’ordre chronologique des entrées et des sorties",
@@ -70,6 +79,7 @@ export const DOMAIN_MESSAGES: Record<string, string> = {
   "Time cannot be booked on a {x} project": "Aucun temps ne peut être imputé sur un projet au statut {1}",
   "Timesheet not found": "Feuille de temps introuvable",
   "amount must not be zero": "Le montant ne peut pas être nul",
+  "amount must have at most two decimals": "Le montant doit comporter au plus deux décimales",
   "endDate must be on or after startDate": "La date de fin doit être postérieure ou égale à la date de début",
   "entries must be an array": "entries doit être une liste",
   "entries[{x}].wbsItemId must be a leaf WBS item of the project": "entries[{1}] : l'élément WBS doit être une feuille du projet",

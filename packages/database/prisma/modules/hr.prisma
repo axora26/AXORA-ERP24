@@ -113,6 +113,7 @@ model Employee {
   skills           EmployeeSkill[]
   timesheets       Timesheet[]
   leaves           LeaveRequest[]
+  advances         EmployeeAdvance[]
   serviceCards     EmployeeServiceCard[]
   attendanceEvents AttendanceEvent[]
 
@@ -352,4 +353,67 @@ model EmployeeServiceCard {
   @@unique([id, employeeId, organizationId, companyId])
   @@index([organizationId, companyId, employeeId, revokedAt])
   @@map("hr_employee_service_cards")
+}
+
+enum EmployeeAdvanceStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PAID
+  PARTIALLY_REPAID
+  SETTLED
+  CANCELLED
+}
+
+enum EmployeeAdvanceRepaymentMethod {
+  PAYROLL
+  BANK
+  CASH
+}
+
+/// INC-09 — avance salarié : le principal et les remboursements restent auditables.
+model EmployeeAdvance {
+  id                String                @id @default(cuid())
+  organizationId    String
+  companyId         String
+  employeeId        String
+  amount            Decimal               @db.Decimal(18, 2)
+  currency          String                @db.Char(3)
+  reason            String
+  status            EmployeeAdvanceStatus @default(REQUESTED)
+  requestedByUserId String
+  requestedAt       DateTime              @default(now())
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  paidAt            DateTime?
+  settledAt         DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  employee    Employee                 @relation(fields: [employeeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  repayments  EmployeeAdvanceRepayment[]
+
+  @@index([organizationId, companyId, status, requestedAt])
+  @@index([organizationId, companyId, employeeId, status])
+  @@map("hr_employee_advances")
+}
+
+/// Journal append-only des remboursements d'avances.
+model EmployeeAdvanceRepayment {
+  id          String                         @id @default(cuid())
+  organizationId String
+  companyId   String
+  advanceId   String
+  amount      Decimal                        @db.Decimal(18, 2)
+  method      EmployeeAdvanceRepaymentMethod
+  repaymentDate DateTime
+  note        String?
+  createdByUserId String
+  createdAt   DateTime                       @default(now())
+
+  advance EmployeeAdvance @relation(fields: [advanceId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId, advanceId, repaymentDate])
+  @@map("hr_employee_advance_repayments")
 }

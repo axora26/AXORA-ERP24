@@ -93,6 +93,38 @@ export interface LeaveRequestView {
   createdAt: string;
 }
 
+export type EmployeeAdvanceStatus = "REQUESTED" | "APPROVED" | "REJECTED" | "PAID" | "PARTIALLY_REPAID" | "SETTLED" | "CANCELLED";
+export type EmployeeAdvanceRepaymentMethod = "PAYROLL" | "BANK" | "CASH";
+
+export interface EmployeeAdvanceRepaymentView {
+  id: string;
+  amount: string;
+  method: EmployeeAdvanceRepaymentMethod;
+  repaymentDate: string;
+  note: string | null;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface EmployeeAdvanceView {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  amount: string;
+  repaidAmount: string;
+  remainingAmount: string;
+  currency: string;
+  reason: string;
+  status: EmployeeAdvanceStatus;
+  requestedAt: string;
+  requestedByUserId: string;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  paidAt: string | null;
+  settledAt: string | null;
+  repayments: EmployeeAdvanceRepaymentView[];
+}
+
 export interface PayrollRunView {
   id: string;
   period: string;

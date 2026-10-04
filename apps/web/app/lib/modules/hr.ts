@@ -1,4 +1,4 @@
-import type { AttendanceEventView, DepartmentView, EmployeeView, LeaveRequestView, PayrollRunView, TimesheetView, EmployeeServiceCardView, EmployeeServiceCardDocument, PayrollPolicyView, PayrollPolicyUpdateInput } from "@axora24/contracts";
+import type { AttendanceEventView, DepartmentView, EmployeeAdvanceView, EmployeeView, LeaveRequestView, PayrollRunView, TimesheetView, EmployeeServiceCardView, EmployeeServiceCardDocument, PayrollPolicyView, PayrollPolicyUpdateInput } from "@axora24/contracts";
 import { api } from "../api";
 
 export const hrApi = {
@@ -28,6 +28,12 @@ export const hrApi = {
   approveLeave: (id: string, note?: string) => api.post<LeaveRequestView[]>(`/hr/leaves/${id}/approve`, { note }),
   rejectLeave: (id: string, note: string) => api.post<LeaveRequestView[]>(`/hr/leaves/${id}/reject`, { note }),
   cancelLeave: (id: string) => api.post<LeaveRequestView[]>(`/hr/leaves/${id}/cancel`),
+  advances: () => api.get<EmployeeAdvanceView[]>("/hr/advances"),
+  requestAdvance: (input: { employeeId: string; amount: string; reason: string }) => api.post<EmployeeAdvanceView>("/hr/advances", input),
+  approveAdvance: (id: string, note?: string) => api.post<EmployeeAdvanceView>(`/hr/advances/${id}/approve`, { note }),
+  rejectAdvance: (id: string, note: string) => api.post<EmployeeAdvanceView>(`/hr/advances/${id}/reject`, { note }),
+  cancelAdvance: (id: string) => api.post<EmployeeAdvanceView>(`/hr/advances/${id}/cancel`),
+  repayAdvance: (id: string, input: { amount: string; method: "PAYROLL" | "BANK" | "CASH"; repaymentDate: string; note?: string }) => api.post<EmployeeAdvanceView>(`/hr/advances/${id}/repayments`, input),
   payrollRuns: () => api.get<PayrollRunView[]>("/hr/payroll"),
   payrollRun: (id: string) => api.get<PayrollRunView>(`/hr/payroll/${id}`),
   payrollPolicy: () => api.get<PayrollPolicyView>("/hr/payroll-policy"),

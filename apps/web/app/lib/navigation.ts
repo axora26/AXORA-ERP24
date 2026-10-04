@@ -119,6 +119,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Ressources humaines",
     items: [
       { href: "/hr", label: "RH & temps", icon: IdCard, permission: "hr.employee.read", keywords: "employes pointage presence feuilles de temps conges paie badge" },
+      { href: "/hr/advances", label: "Avances salariés", icon: Receipt, permission: ["hr.advance.read", "hr.advance.request"], keywords: "avance salaire acompte remboursement retenue paie" },
       { href: "/hr/payroll-policy", label: "Règles de paie", icon: Calculator, permission: ["hr.payroll.read", "hr.payrollpolicy.manage"], keywords: "politique heures mensuelles majoration preparation calcul brut" },
     ],
   },

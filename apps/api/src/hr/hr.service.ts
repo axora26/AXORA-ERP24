@@ -667,6 +667,106 @@ export class HrService {
   // Preparation de paie
   // ---------------------------------------------------------------------
 
+  async listAdvances(scope: CompanyScope): Promise<import("@axora24/contracts").EmployeeAdvanceView[]> {
+    const advances = await this.prisma.employeeAdvance.findMany({
+      where: scope,
+      include: { employee: true, repayments: { orderBy: { repaymentDate: "asc" } } },
+      orderBy: { requestedAt: "desc" },
+      take: 300,
+    });
+    const userIds = [...new Set(advances.flatMap((advance) => [advance.requestedByUserId, advance.decidedByUserId, ...advance.repayments.map((repayment) => repayment.createdByUserId)].filter((id): id is string => Boolean(id))))];
+    const users = await this.prisma.user.findMany({ where: { id: { in: userIds }, organizationId: scope.organizationId }, select: { id: true, fullName: true } });
+    const names = new Map(users.map((user) => [user.id, user.fullName]));
+    return advances.map((advance) => {
+      const amount = dec(advance.amount);
+      const repaidAmount = sumDecimals(advance.repayments.map((repayment) => dec(repayment.amount)));
+      return {
+        id: advance.id,
+        employeeId: advance.employeeId,
+        employeeName: `${advance.employee.firstName} ${advance.employee.lastName}`,
+        amount: money(amount),
+        repaidAmount: money(repaidAmount),
+        remainingAmount: money(Prisma.Decimal.max(amount.minus(repaidAmount), 0)),
+        currency: advance.currency.trim(),
+        reason: advance.reason,
+        status: advance.status,
+        requestedAt: advance.requestedAt.toISOString(),
+        requestedByUserId: advance.requestedByUserId,
+        decidedAt: advance.decidedAt?.toISOString() ?? null,
+        decisionNote: advance.decisionNote,
+        paidAt: advance.paidAt?.toISOString() ?? null,
+        settledAt: advance.settledAt?.toISOString() ?? null,
+        repayments: advance.repayments.map((repayment) => ({
+          id: repayment.id,
+          amount: money(repayment.amount),
+          method: repayment.method,
+          repaymentDate: repayment.repaymentDate.toISOString(),
+          note: repayment.note,
+          createdByName: names.get(repayment.createdByUserId) ?? "Utilisateur",
+          createdAt: repayment.createdAt.toISOString(),
+        })),
+      };
+    });
+  }
+
+  async requestAdvance(scope: CompanyScope, body: unknown, actorUserId: string) {
+    const input = assertBody(body);
+    const employeeId = requiredId(input.employeeId, "employeeId");
+    const amount = requiredDecimal(input.amount, "amount", { positive: true });
+    if (amount.decimalPlaces() > 2) throw new BadRequestException("amount must have at most two decimals");
+    const reason = requiredText(input.reason, "reason", 500);
+    const employee = await this.prisma.employee.findFirst({ where: { id: employeeId, ...scope }, select: { id: true, currency: true, userId: true } });
+    if (!employee) throw new NotFoundException("Employee not found");
+    if (employee.userId && employee.userId !== actorUserId) throw new ForbiddenException("Only the employee or an HR user can request an advance");
+    const advanceId = await this.prisma.$transaction(async (tx) => {
+      const advance = await tx.employeeAdvance.create({ data: { ...scope, employeeId, amount, currency: employee.currency, reason, requestedByUserId: actorUserId } });
+      await writeAudit(tx, scope, actorUserId, "hr.advance.requested", "EmployeeAdvance", advance.id, { employeeId, amount: money(amount) });
+      return advance.id;
+    });
+    return (await this.listAdvances(scope)).find((advance) => advance.id === advanceId)!;
+  }
+
+  async decideAdvance(scope: CompanyScope, advanceId: string, decision: "APPROVED" | "REJECTED" | "CANCELLED", body: unknown, actorUserId: string) {
+    const note = optionalText(assertBody(body ?? {}).note, "note", 500);
+    await this.prisma.$transaction(async (tx) => {
+      const advance = await tx.employeeAdvance.findFirst({ where: { id: advanceId, ...scope } });
+      if (!advance) throw new NotFoundException("Employee advance not found");
+      if (decision === "CANCELLED") {
+        if (advance.requestedByUserId !== actorUserId) throw new ForbiddenException("Only the requester can cancel an advance");
+        if (advance.status !== "REQUESTED") throw new BadRequestException("Only a requested advance can be cancelled");
+      } else {
+        if (advance.status !== "REQUESTED") throw new BadRequestException("Only a requested advance can be decided");
+        if (advance.requestedByUserId === actorUserId) throw new ForbiddenException("An advance is decided by someone other than its requester");
+        if (decision === "REJECTED" && !note) throw new BadRequestException("A note is required to reject an advance");
+      }
+      await tx.employeeAdvance.update({ where: { id: advance.id }, data: { status: decision, decidedByUserId: actorUserId, decidedAt: new Date(), decisionNote: note } });
+      await writeAudit(tx, scope, actorUserId, `hr.advance.${decision.toLowerCase()}`, "EmployeeAdvance", advance.id, { note });
+    });
+    return (await this.listAdvances(scope)).find((advance) => advance.id === advanceId)!;
+  }
+
+  async repayAdvance(scope: CompanyScope, advanceId: string, body: unknown, actorUserId: string) {
+    const input = assertBody(body);
+    const amount = requiredDecimal(input.amount, "amount", { positive: true });
+    if (amount.decimalPlaces() > 2) throw new BadRequestException("amount must have at most two decimals");
+    const method = requiredEnum(input.method, "method", ["PAYROLL", "BANK", "CASH"] as const);
+    const repaymentDate = requiredDate(input.repaymentDate, "repaymentDate");
+    const note = optionalText(input.note, "note", 500);
+    await this.prisma.$transaction(async (tx) => {
+      const advance = await tx.employeeAdvance.findFirst({ where: { id: advanceId, ...scope }, include: { repayments: true } });
+      if (!advance) throw new NotFoundException("Employee advance not found");
+      if (!["APPROVED", "PAID", "PARTIALLY_REPAID"].includes(advance.status)) throw new BadRequestException("Only an approved advance can be repaid");
+      const current = sumDecimals(advance.repayments.map((repayment) => dec(repayment.amount)));
+      if (current.plus(amount).greaterThan(advance.amount)) throw new BadRequestException("Repayments cannot exceed the advance amount");
+      await tx.employeeAdvanceRepayment.create({ data: { organizationId: scope.organizationId, companyId: scope.companyId, advanceId, amount, method, repaymentDate, note, createdByUserId: actorUserId } });
+      const total = current.plus(amount);
+      const status = total.equals(advance.amount) ? "SETTLED" : "PARTIALLY_REPAID";
+      await tx.employeeAdvance.update({ where: { id: advance.id }, data: { status, ...(advance.paidAt ? {} : { paidAt: new Date() }), ...(status === "SETTLED" ? { settledAt: new Date() } : {}) } });
+      await writeAudit(tx, scope, actorUserId, "hr.advance.repaid", "EmployeeAdvance", advance.id, { amount: money(amount), method, status });
+    });
+    return (await this.listAdvances(scope)).find((advance) => advance.id === advanceId)!;
+  }
+
   async listPayrollRuns(scope: CompanyScope): Promise<PayrollRunView[]> {
     const runs = await this.prisma.payrollRun.findMany({ where: scope, select: { id: true }, orderBy: { period: "desc" } });
     return Promise.all(runs.map((run) => this.getPayrollRun(scope, run.id)));

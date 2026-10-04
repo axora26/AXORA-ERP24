@@ -17,6 +17,7 @@ export const SCREENS = [
   "/inventory",
   "/finance",
   "/hr",
+  "/hr/advances",
   "/documents",
   "/field",
   "/qhse",

@@ -12,11 +12,11 @@ describe("CompanyScopeService — projet", () => {
     };
     const service = new CompanyScopeService(prisma as never);
 
-    await expect(service.resolve(user, "company-1", "project-1")).resolves.toEqual({
-      organizationId: "org-1",
-      companyId: "company-1",
-      projectId: "project-1",
-    });
+    const scope = await service.resolve(user, "company-1", "project-1");
+    // projectId is deliberately non-enumerable so spreading the scope into
+    // Prisma filters cannot inject a field into company-scoped models.
+    expect(scope).toMatchObject({ organizationId: "org-1", companyId: "company-1" });
+    expect(scope.projectId).toBe("project-1");
     expect(prisma.project.findFirst).toHaveBeenCalledWith({
       where: { id: "project-1", organizationId: "org-1", companyId: "company-1" },
       select: { id: true },
