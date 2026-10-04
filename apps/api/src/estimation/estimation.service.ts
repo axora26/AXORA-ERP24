@@ -16,12 +16,14 @@ import {
   type CreateDqeDto,
   type CreateDqeLineDto,
   type CreateDqeVariantDto,
+  type CreateDqeLibraryItemDto,
   type CreateStudyDto,
   type CreateStudyRequirementDto,
   type DraftVersionDto,
   type UpdateStudyRequirementDto,
   type UpdateDqeLineDto,
   type UpdateDqePricingDto,
+  type UpdateDqeLibraryItemDto,
 } from "./estimation.dto.js";
 
 /**
@@ -377,6 +379,48 @@ export class EstimationService {
     return variants.map((variant) => toDqeVariantView(variant, current.subtotal, current.total));
   }
 
+  async listDqeLibrary(scope: CompanyScope) {
+    const items = await this.prisma.dqeLibraryItem.findMany({ where: scope, orderBy: [{ isActive: "desc" }, { code: "asc" }] });
+    return items.map(toDqeLibraryItemView);
+  }
+
+  async createDqeLibraryItem(scope: CompanyScope, input: CreateDqeLibraryItemDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "code", "designation", "unitCode", "costCategory", "unitPrice"]);
+    const code = requiredText(input.code, "code", 80).toUpperCase();
+    const designation = requiredText(input.designation, "designation", 500);
+    const unitCode = requiredText(input.unitCode, "unitCode", 32);
+    const item = await this.prisma.$transaction(async (tx) => {
+      const duplicate = await tx.dqeLibraryItem.findFirst({ where: { ...scope, code }, select: { id: true } });
+      if (duplicate) throw new ConflictException("A library item with this code already exists");
+      const created = await tx.dqeLibraryItem.create({ data: { ...scope, code, designation, unitCode, costCategory: costCategory(input.costCategory), unitPrice: new Prisma.Decimal(decimal6(input.unitPrice, "unitPrice", true)) } });
+      await this.draftAudit(tx, scope, actorUserId, "dqe.library.created", "DqeLibraryItem", created.id, created.id, 1, [], { code, designation, unitCode, costCategory: created.costCategory, unitPrice: created.unitPrice.toFixed(6) });
+      return created;
+    });
+    return toDqeLibraryItemView(item);
+  }
+
+  async updateDqeLibraryItem(scope: CompanyScope, itemId: string, input: UpdateDqeLibraryItemDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "designation", "unitCode", "costCategory", "unitPrice", "isActive"]);
+    const data: Prisma.DqeLibraryItemUpdateInput = {};
+    if (input.designation !== undefined) data.designation = requiredText(input.designation, "designation", 500);
+    if (input.unitCode !== undefined) data.unitCode = requiredText(input.unitCode, "unitCode", 32);
+    if (input.costCategory !== undefined) data.costCategory = costCategory(input.costCategory);
+    if (input.unitPrice !== undefined) data.unitPrice = new Prisma.Decimal(decimal6(input.unitPrice, "unitPrice", true));
+    if (input.isActive !== undefined) {
+      if (typeof input.isActive !== "boolean") throw new BadRequestException("isActive must be a boolean");
+      data.isActive = input.isActive;
+    }
+    if (!Object.keys(data).length) throw new BadRequestException("Provide at least one library field to update");
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.dqeLibraryItem.findFirst({ where: { id: itemId, ...scope } });
+      if (!current) throw new NotFoundException("DQE library item not found");
+      const next = await tx.dqeLibraryItem.update({ where: { id: itemId }, data });
+      await this.draftAudit(tx, scope, actorUserId, "dqe.library.updated", "DqeLibraryItem", itemId, itemId, 1, Object.keys(data));
+      return next;
+    });
+    return toDqeLibraryItemView(updated);
+  }
+
   async deleteDqeLine(scope: CompanyScope, dqeId: string, lineId: string, input: DraftVersionDto, actorUserId: string) {
     assertDraftFields(input, ["companyId", "expectedVersion"]);
     const version = draftVersion(input.expectedVersion)!;
@@ -501,6 +545,21 @@ type DqeWithDetails = Prisma.DqeDocumentGetPayload<{
 
 type DqeLineRecord = Prisma.DqeLineGetPayload<Record<string, never>>;
 type DqeVariantRecord = Prisma.DqeVariantGetPayload<Record<string, never>>;
+type DqeLibraryItemRecord = Prisma.DqeLibraryItemGetPayload<Record<string, never>>;
+
+function toDqeLibraryItemView(item: DqeLibraryItemRecord) {
+  return {
+    id: item.id,
+    code: item.code,
+    designation: item.designation,
+    unitCode: item.unitCode,
+    costCategory: item.costCategory,
+    unitPrice: item.unitPrice.toFixed(6),
+    isActive: item.isActive,
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  };
+}
 
 function toDqeVariantView(variant: DqeVariantRecord, currentSubtotal: string, currentTotal: string) {
   return {

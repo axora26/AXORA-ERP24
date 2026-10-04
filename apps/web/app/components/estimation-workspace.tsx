@@ -85,6 +85,7 @@ export function EstimationWorkspace(): React.ReactElement {
   const [lineForm, setLineForm] = useState(EMPTY_LINE_FORM);
   const [pricingForm, setPricingForm] = useState(EMPTY_PRICING_FORM);
   const [variants, setVariants] = useState<DqeVariantView[]>([]);
+  const [libraryItems, setLibraryItems] = useState<import("@axora24/contracts").DqeLibraryItemView[]>([]);
   const [variantForm, setVariantForm] = useState(EMPTY_VARIANT_FORM);
 
   const load = useCallback(async (): Promise<void> => {
@@ -202,6 +203,7 @@ export function EstimationWorkspace(): React.ReactElement {
       });
       setSelectedDqe(created);
       setVariants([]);
+      setLibraryItems([]);
       setVariantForm(EMPTY_VARIANT_FORM);
       setDqeForm(EMPTY_DQE_FORM);
       setNotice("DQE créé avec sa source d'étude figée.");
@@ -219,7 +221,10 @@ export function EstimationWorkspace(): React.ReactElement {
       const dqe = await estimationApi.dqe(dqeId);
       setSelectedDqe(dqe);
       setPricingForm({ overheadRate: dqe.overheadRate ?? "0", marginRate: dqe.marginRate ?? "0", taxRate: dqe.taxRate ?? "0" });
-      setVariants(await estimationApi.dqeVariants(dqeId));
+      setVariants((await estimationApi.dqeVariants(dqeId)) ?? []);
+      if (can("estimation.library.read")) {
+        try { setLibraryItems((await estimationApi.dqeLibrary()) ?? []); } catch { setLibraryItems([]); }
+      }
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Ouverture du DQE impossible.");
     }
@@ -263,7 +268,7 @@ export function EstimationWorkspace(): React.ReactElement {
       const updated = await estimationApi.updateDqePricing(selectedDqe.id, { expectedVersion: selectedDqe.version, ...pricingForm });
       setSelectedDqe(updated);
       setPricingForm({ overheadRate: updated.overheadRate ?? "0", marginRate: updated.marginRate ?? "0", taxRate: updated.taxRate ?? "0" });
-      setVariants(await estimationApi.dqeVariants(updated.id));
+      setVariants((await estimationApi.dqeVariants(updated.id)) ?? []);
       setNotice("Coefficients du DQE enregistrés.");
       await load();
     } catch (caught) {
@@ -271,6 +276,12 @@ export function EstimationWorkspace(): React.ReactElement {
     } finally {
       setSaving(false);
     }
+  }
+
+  function applyLibraryItem(code: string): void {
+    const item = libraryItems.find((candidate) => candidate.code === code);
+    if (!item) return;
+    setLineForm({ ...lineForm, reference: item.code, designation: item.designation, unitCode: item.unitCode, costCategory: item.costCategory, unitPrice: item.unitPrice });
   }
 
   async function createDqeVariant(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -282,7 +293,7 @@ export function EstimationWorkspace(): React.ReactElement {
     try {
       await estimationApi.createDqeVariant(selectedDqe.id, { code: variantForm.code.trim(), title: variantForm.title.trim() });
       setVariantForm(EMPTY_VARIANT_FORM);
-      setVariants(await estimationApi.dqeVariants(selectedDqe.id));
+      setVariants((await estimationApi.dqeVariants(selectedDqe.id)) ?? []);
       setNotice("Variante enregistrée pour comparaison.");
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Création de la variante impossible.");
@@ -819,6 +830,7 @@ export function EstimationWorkspace(): React.ReactElement {
 
           {selectedDqe.status === "DRAFT" && (
             <form className="line-form" onSubmit={addDqeLine}>
+              {libraryItems.length > 0 && <div className="line-library-field"><label htmlFor="line-library">Depuis la bibliothèque</label><select id="line-library" defaultValue="" onChange={(event) => applyLibraryItem(event.currentTarget.value)}><option value="">Choisir un ouvrage…</option>{libraryItems.filter((item) => item.isActive).map((item) => <option key={item.id} value={item.code}>{item.code} — {item.designation}</option>)}</select></div>}
               <div>
                 <label htmlFor="line-position">Position de ligne</label>
                 <input

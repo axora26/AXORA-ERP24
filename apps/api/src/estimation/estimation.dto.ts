@@ -74,6 +74,22 @@ export class CreateDqeVariantDto {
   code!: string;
   title!: string;
 }
+export class CreateDqeLibraryItemDto {
+  companyId?: string;
+  code!: string;
+  designation!: string;
+  unitCode!: string;
+  costCategory?: string;
+  unitPrice!: string;
+}
+export class UpdateDqeLibraryItemDto {
+  companyId?: string;
+  designation?: string;
+  unitCode?: string;
+  costCategory?: string;
+  unitPrice?: string;
+  isActive?: boolean;
+}
 
 export function assertDraftFields(input: object, allowed: readonly string[]): void {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new BadRequestException("A JSON object is required");

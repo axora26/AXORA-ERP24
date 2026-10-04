@@ -1059,6 +1059,7 @@ a.btn { text-decoration: none; }
 }
 .line-form select { width: 100%; height: 38px; min-width: 0; border: 1px solid #d6dae2; border-radius: 8px; padding: 0 10px; color: var(--ax-text-text-heading); background: var(--ax-background-panel); font: 400 11px Inter, sans-serif; outline: none; }
 .line-form select:focus { border-color: var(--blue-600); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.line-library-field { grid-column: 1 / -1; }
 .dqe-financial-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 0 21px 16px; }
 .dqe-financial-summary > div { display: grid; gap: 4px; min-width: 0; padding: 11px 12px; border: 1px solid #e6eaf0; border-radius: 10px; background: #fbfcfe; }
 .dqe-financial-summary span { color: var(--ax-text-text-muted); font-size: 9px; font-weight: 600; }

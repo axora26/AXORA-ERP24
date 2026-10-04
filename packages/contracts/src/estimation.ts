@@ -75,6 +75,18 @@ export interface DqeVariantView {
   deltaTotal: string;
 }
 
+export interface DqeLibraryItemView {
+  id: string;
+  code: string;
+  designation: string;
+  unitCode: string;
+  costCategory: DqeCostCategory;
+  unitPrice: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** La route de liste renvoie le même contrat complet que la route de détail. */
 export interface DqeView {
   id: string;

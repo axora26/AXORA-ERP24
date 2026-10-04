@@ -238,4 +238,17 @@ describe("Study and DQE draft corrections (PostgreSQL)", () => {
     expect(variants.status).toBe(200);
     expect(variants.body[0]).toMatchObject({ code: "OPT-A", deltaSubtotal: "0.000000", deltaTotal: "-1.000000" });
   });
+
+  it("manages a scoped DQE library with exact reusable prices", async () => {
+    const created = await post("library", { code: "OUV-001", designation: "Béton C25/30", unitCode: "m3", costCategory: "MATERIAL", unitPrice: "125.500000" });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ code: "OUV-001", unitPrice: "125.500000", isActive: true });
+    const updated = await patch(`library/${created.body.id}`, { unitPrice: "130.250000", isActive: false });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({ unitPrice: "130.250000", isActive: false });
+    const listed = await get("library");
+    expect(listed.status).toBe(200);
+    expect(listed.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: created.body.id, code: "OUV-001", isActive: false })]));
+    expect((await post("library", { code: "OUV-001", designation: "Doublon", unitCode: "u", unitPrice: "1" })).status).toBe(409);
+  });
 });

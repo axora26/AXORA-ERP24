@@ -17,6 +17,8 @@ import type {
   UpdateDqeLineDto,
   UpdateDqePricingDto,
   CreateDqeVariantDto,
+  CreateDqeLibraryItemDto,
+  UpdateDqeLibraryItemDto,
 } from "./estimation.dto.js";
 
 @Controller("estimation")
@@ -157,6 +159,27 @@ export class EstimationController {
   async createDqeVariant(@Req() request: Request, @Param("id") id: string, @Body() body: CreateDqeVariantDto) {
     const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
     return this.estimation.createDqeVariant(scope, id, body, request.axoraUser!.id);
+  }
+
+  @Get("library")
+  @RequirePermission(ESTIMATION_PERMISSIONS.LIBRARY_READ)
+  async listDqeLibrary(@Req() request: Request, @Query("companyId") companyId?: string) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+    return this.estimation.listDqeLibrary(scope);
+  }
+
+  @Post("library")
+  @RequirePermission(ESTIMATION_PERMISSIONS.LIBRARY_MANAGE)
+  async createDqeLibraryItem(@Req() request: Request, @Body() body: CreateDqeLibraryItemDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.createDqeLibraryItem(scope, body, request.axoraUser!.id);
+  }
+
+  @Patch("library/:itemId")
+  @RequirePermission(ESTIMATION_PERMISSIONS.LIBRARY_MANAGE)
+  async updateDqeLibraryItem(@Req() request: Request, @Param("itemId") itemId: string, @Body() body: UpdateDqeLibraryItemDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.updateDqeLibraryItem(scope, itemId, body, request.axoraUser!.id);
   }
 
   @Delete("dqes/:id/lines/:lineId")

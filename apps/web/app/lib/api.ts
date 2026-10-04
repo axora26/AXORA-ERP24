@@ -197,6 +197,7 @@ export const estimationApi = {
   dqeVariants: (dqeId: string) => api.get<import("@axora24/contracts").DqeVariantView[]>(`/estimation/dqes/${dqeId}/variants`),
   createDqeVariant: (dqeId: string, input: { code: string; title: string }) =>
     api.post<import("@axora24/contracts").DqeVariantView>(`/estimation/dqes/${dqeId}/variants`, input),
+  dqeLibrary: () => api.get<import("@axora24/contracts").DqeLibraryItemView[]>("/estimation/library"),
   finalizeDqe: (dqeId: string, expectedVersion?: number) => api.post<DqeView>(`/estimation/dqes/${dqeId}/finalize`, { expectedVersion }),
 };
 

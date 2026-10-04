@@ -549,6 +549,26 @@ model DqeVariant {
   @@map("dqe_variants")
 }
 
+/// Catalogue d'ouvrages réutilisables par les études de l'entreprise.
+model DqeLibraryItem {
+  id             String          @id @default(cuid())
+  organizationId String
+  companyId      String
+  code           String
+  designation    String
+  unitCode       String
+  costCategory   DqeCostCategory @default(MATERIAL)
+  unitPrice      Decimal         @db.Decimal(24, 6)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, isActive, code])
+  @@map("dqe_library_items")
+}
+
 model DqeLine {
   id             String   @id @default(cuid())
   organizationId String

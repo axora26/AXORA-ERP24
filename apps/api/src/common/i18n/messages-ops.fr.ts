@@ -237,4 +237,8 @@ export const OPS_MESSAGES: Record<string, string> = {
   "{x} must be between 0 and 100": "{1} doit être compris entre 0 et 100",
   "Provide at least one pricing field to update": "Indiquez au moins un coefficient de chiffrage à modifier",
   "A DQE variant with this code already exists": "Une variante DQE avec ce code existe déjà",
+  "A library item with this code already exists": "Un ouvrage de bibliothèque avec ce code existe déjà",
+  "isActive must be a boolean": "isActive doit être un booléen",
+  "Provide at least one library field to update": "Indiquez au moins un champ de bibliothèque à modifier",
+  "DQE library item not found": "Ouvrage de bibliothèque DQE introuvable",
 };
