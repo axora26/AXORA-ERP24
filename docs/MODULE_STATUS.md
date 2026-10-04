@@ -74,5 +74,6 @@ Restent aussi les connecteurs a services/materiels reels, les signatures natives
 ## Incréments récents — 4 octobre 2026
 
 - **Finance / comptabilité** : l’API `/finance/accounting/statements` expose le compte de résultat et le bilan sur les écritures `POSTED`, avec contrôle des totaux et de la devise. L’émission d’une facture peut signer automatiquement la représentation canonique après attribution du numéro ; le PDF conserve l’empreinte et le QR de vérification.
+- **Exports finance** : une facture client émise peut maintenant être téléchargée depuis `/finance/invoices/:id/export.pdf`. Le PDF serveur reprend le gabarit A4 AXORA, le logo, les coordonnées et l’empreinte de la signature interne lorsqu’elle est valide. La comptabilité propose une lecture par période et l’export CSV détaillé du journal, sans convertir les montants en nombres côté serveur.
 - **Paie** : la migration `20261005030000_statutory_payroll` ajoute le paramétrage explicite du pays, des taux salariés et de l’abattement. Les retenues, le net à payer et leur détail sont figés dans chaque préparation et repris dans le bulletin PDF ; une politique incomplète reste `NOT_CONFIGURED`.
 - **Interface** : le paramétrage des retenues adopte une grille responsive et les états financiers utilisent les composants AXORA existants, avec onglets défilants et tableaux encapsulés sur mobile.

@@ -25,18 +25,20 @@ describe("Protected document exports (real AppModule)", () => {
   let excludedEmployeeId: string;
   let payrollId: string;
   let customerCreditId: string;
+  let customerInvoiceId: string;
   let supplierCreditId: string;
   let projectId: string;
   let qrPayload: string;
   const readers = new Map<string, Tenant>();
   const previousKey = process.env.SERVICE_CARD_ENCRYPTION_KEY;
   const today = new Date().toISOString().slice(0, 10);
-  const grants = ["estimation.dqe.read", "hr.card.manage", "hr.payroll.read", "finance.credit.read", "finance.payable.read", "projects.project.read"];
+  const grants = ["estimation.dqe.read", "hr.card.manage", "hr.payroll.read", "finance.credit.read", "finance.payable.read", "finance.invoice.read", "projects.project.read"];
   const routes = () => [
     { name: "DQE PDF", path: `/estimation/dqes/${dqeId}/export.pdf`, grant: "estimation.dqe.read" },
     { name: "Service card", path: `/hr/employees/${employeeId}/service-card/export.pdf`, grant: "hr.card.manage" },
     { name: "Payroll slip", path: `/hr/payroll/${payrollId}/employees/${employeeId}/export.pdf`, grant: "hr.payroll.read" },
     { name: "Customer credit", path: `/finance/customer-credit-notes/${customerCreditId}/export.pdf`, grant: "finance.credit.read" },
+    { name: "Customer invoice", path: `/finance/invoices/${customerInvoiceId}/export.pdf`, grant: "finance.invoice.read" },
     { name: "Supplier credit", path: `/finance/supplier-credit-notes/${supplierCreditId}/export.pdf`, grant: "supplier" },
     { name: "Project operations", path: `/projects/${projectId}/operations/export.pdf?from=2026-09-01&to=2026-09-30`, grant: "projects.project.read" },
   ];
@@ -81,7 +83,9 @@ describe("Protected document exports (real AppModule)", () => {
 
     const invoice = await api.post("/finance/invoices", { customerName: "Export customer", currency: "USD", lines: [{ description: "Source line", quantity: "2", unitPrice: "100.00" }] });
     expect(invoice.status).toBe(201);
+    customerInvoiceId = invoice.body.id;
     expect((await api.post(`/finance/invoices/${invoice.body.id}/issue`, { issueDate: today })).status).toBe(201);
+    expect((await api.post(`/finance/invoices/${invoice.body.id}/sign`, {})).status).toBe(201);
     const customer = await api.post("/finance/customer-credit-notes", { invoiceId: invoice.body.id, reason: "Export credit", lines: [{ sourceInvoiceLineId: invoice.body.lines[0].id, quantity: "1" }] });
     expect(customer.status).toBe(201);
     customerCreditId = customer.body.id;
@@ -208,11 +212,11 @@ describe("Protected document exports (real AppModule)", () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(response.body);
     const sheet = workbook.getWorksheet("DQE")!;
-    for (const [cell, expected] of [["D9", source.lines[0].quantity], ["E9", source.lines[0].unitPrice], ["F9", source.lines[0].lineTotal], ["F10", source.subtotal]]) {
+    for (const [cell, expected] of [["E9", source.lines[0].quantity], ["F9", source.lines[0].unitPrice], ["G9", source.lines[0].lineTotal], ["G10", source.subtotal]]) {
       expect(sheet.getCell(cell).value).toBe(expected);
       expect(typeof sheet.getCell(cell).value).toBe("string");
       expect(sheet.getCell(cell).numFmt).toBe("@");
     }
-    expect(sheet.getCell("D9").value).toBe("123456789012.123456");
+    expect(sheet.getCell("E9").value).toBe("123456789012.123456");
   });
 });

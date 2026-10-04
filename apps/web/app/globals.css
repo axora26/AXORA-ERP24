@@ -1010,6 +1010,13 @@ a.btn { text-decoration: none; }
 .accounting-tabs button:hover, .accounting-tabs button:focus-visible { color: var(--blue-700); background: var(--ax-background-blue-soft); }
 .accounting-tabs button.active { border-bottom-color: var(--blue-600); color: var(--blue-700); }
 .accounting-workspace .metrics-grid { margin-top: 0; }
+.accounting-period-filter { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin: 16px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--ax-background-subtle); }
+.accounting-period-copy { display: grid; flex: 1 1 220px; gap: 3px; min-width: 180px; }
+.accounting-period-copy strong { color: var(--ax-text-text-heading); font-size: 12px; }
+.accounting-period-copy small { color: var(--ax-text-text-muted); font-size: 10px; line-height: 1.4; }
+.accounting-period-filter .field { flex: 0 1 150px; margin: 0; }
+.accounting-period-filter .btn { min-height: 40px; }
+.accounting-period-filter + .field-error { margin: 8px 0 0; }
 .accounting-entry-lines { display: grid; gap: 10px; }
 .accounting-line-head, .accounting-line { display: grid; grid-template-columns: minmax(180px, 1.4fr) minmax(140px, 1fr) minmax(110px, .7fr) minmax(110px, .7fr) 44px; gap: 8px; align-items: end; }
 .accounting-line-head { padding: 0 44px 2px 0; color: var(--ax-text-text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
@@ -1032,6 +1039,8 @@ a.btn { text-decoration: none; }
   .accounting-tabs button { min-height: 48px; padding-inline: 12px; }
   .accounting-workspace .panel-head { align-items: flex-start; flex-direction: column; }
   .accounting-workspace .panel-actions { width: 100%; justify-content: flex-start; }
+  .accounting-period-filter { align-items: stretch; }
+  .accounting-period-copy, .accounting-period-filter .field, .accounting-period-filter .btn { flex-basis: 100%; width: 100%; }
 }
 
 /* Keyboard qualification: modal scopes and a visible content shortcut. */

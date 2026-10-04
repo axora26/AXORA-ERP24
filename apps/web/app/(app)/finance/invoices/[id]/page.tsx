@@ -4,11 +4,12 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { CustomerInvoiceView } from "@axora24/contracts";
-import { Banknote, Printer, Send, ShieldCheck, XCircle } from "lucide-react";
+import { Banknote, Download, Printer, Send, ShieldCheck, XCircle } from "lucide-react";
 import { CUSTOMER_STATUS_LABEL, financeApi } from "../../../../lib/modules/finance";
 import { formatDate, formatMoney, formatQuantity } from "../../../../lib/format";
 import { useMutation, useResource } from "../../../../lib/hooks";
 import { useSession } from "../../../../lib/session";
+import { api } from "../../../../lib/api";
 import { PaymentModal, PaymentsTable } from "../../../../components/finance-payment";
 import {
   Button,
@@ -52,6 +53,7 @@ export default function CustomerInvoicePage(): React.ReactElement {
   const canManage = session.can("finance.invoice.manage");
   const canSign = session.can("finance.invoice.sign") || session.can("finance.invoice.manage");
   const payable = invoice.status === "ISSUED" || invoice.status === "PARTIALLY_PAID";
+  const hasValidSignature = (signatures.data ?? []).some((signature) => signature.status === "VALID");
 
   return (
     <>
@@ -63,9 +65,14 @@ export default function CustomerInvoicePage(): React.ReactElement {
           <>
             <StatusChip status={invoice.overdue ? "overdue" : invoice.status} label={invoice.overdue ? "Échue" : CUSTOMER_STATUS_LABEL[invoice.status]} />
             {invoice.status !== "DRAFT" && invoice.status !== "CANCELLED" && (
-              <Link className="btn btn-secondary" href={`/print/invoices/${invoice.id}${session.activeCompanyId ? `?companyId=${encodeURIComponent(session.activeCompanyId)}` : ""}`} target="_blank" rel="noopener noreferrer">
-                <Printer size={14} aria-hidden="true" /> Imprimer / PDF
-              </Link>
+              <>
+                <Link className="btn btn-secondary" href={`/print/invoices/${invoice.id}${session.activeCompanyId ? `?companyId=${encodeURIComponent(session.activeCompanyId)}` : ""}`} target="_blank" rel="noopener noreferrer">
+                  <Printer size={14} aria-hidden="true" /> Imprimer
+                </Link>
+                <a className="btn btn-secondary" href={api.downloadUrl(`/finance/invoices/${invoice.id}/export.pdf`)} target="_blank" rel="noopener noreferrer">
+                  <Download size={14} aria-hidden="true" /> {hasValidSignature ? "Télécharger PDF signé" : "Télécharger PDF"}
+                </a>
+              </>
             )}
             {canManage && invoice.status === "DRAFT" && (
               <>

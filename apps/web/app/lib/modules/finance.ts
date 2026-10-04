@@ -22,9 +22,9 @@ export const financeApi = {
   createAccountingAccount: (input: Record<string, unknown>) => api.post<AccountingAccountView[]>("/finance/accounting/accounts", input),
   accountingJournals: () => api.get<AccountingJournalView[]>("/finance/accounting/journals"),
   createAccountingJournal: (input: Record<string, unknown>) => api.post<AccountingJournalView[]>("/finance/accounting/journals", input),
-  accountingEntries: (query?: { from?: string; to?: string; journalId?: string }) => api.get<AccountingEntryView[]>(`/finance/accounting/entries${query ? `?${new URLSearchParams(query).toString()}` : ""}`),
-  accountingTrialBalance: (query?: { from?: string; to?: string }) => api.get<AccountingTrialBalanceView>(`/finance/accounting/trial-balance${query ? `?${new URLSearchParams(query).toString()}` : ""}`),
-  accountingStatements: (query?: { from?: string; to?: string }) => api.get<import("@axora24/contracts").AccountingFinancialStatementsView>(`/finance/accounting/statements${query ? `?${new URLSearchParams(query).toString()}` : ""}`),
+  accountingEntries: (query?: { from?: string; to?: string; journalId?: string }) => api.get<AccountingEntryView[]>(`/finance/accounting/entries${accountingQuery(query)}`),
+  accountingTrialBalance: (query?: { from?: string; to?: string }) => api.get<AccountingTrialBalanceView>(`/finance/accounting/trial-balance${accountingQuery(query)}`),
+  accountingStatements: (query?: { from?: string; to?: string }) => api.get<import("@axora24/contracts").AccountingFinancialStatementsView>(`/finance/accounting/statements${accountingQuery(query)}`),
   createAccountingEntry: (input: Record<string, unknown>) => api.post<AccountingEntryView>("/finance/accounting/entries", input),
   summary: () => api.get<FinanceSummaryView>("/finance/summary"),
   collectionReminders: () => api.get<import("@axora24/contracts").CollectionReminderView[]>("/finance/collection-reminders"),
@@ -64,6 +64,14 @@ export const financeApi = {
     idempotencyKey: string;
   }) => api.post<T>("/finance/payments", input),
 };
+
+function accountingQuery(query?: Record<string, string | undefined>): string {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value);
+  const encoded = params.toString();
+  return encoded ? `?${encoded}` : "";
+}
 
 export const CUSTOMER_STATUS_LABEL: Record<string, string> = {
   DRAFT: "Brouillon",

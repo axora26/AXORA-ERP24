@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { BookOpen, Database, Plus, RefreshCw, Scale } from "lucide-react";
+import { BookOpen, Database, Download, Plus, RefreshCw, Scale } from "lucide-react";
 import type { AccountingEntryView, AccountingFinancialStatementsView, AccountingTrialBalanceView } from "@axora24/contracts";
 import { financeApi } from "../lib/modules/finance";
 import { formatDate, formatMoney } from "../lib/format";
@@ -32,11 +32,15 @@ const today = () => new Date().toISOString().slice(0, 10);
 export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; canPost: boolean }): React.ReactElement {
   const [tab, setTab] = useState<AccountingTab>("accounts");
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const mutation = useMutation();
   const configuration = useResource(() => financeApi.accountingConfiguration(), []);
-  const entries = useResource<AccountingEntryView[]>(() => financeApi.accountingEntries(), [configuration.data?.accounts.length]);
-  const balance = useResource<AccountingTrialBalanceView>(() => financeApi.accountingTrialBalance(), [configuration.data?.accounts.length, entries.data?.length]);
-  const statements = useResource<AccountingFinancialStatementsView>(() => financeApi.accountingStatements(), [configuration.data?.accounts.length, entries.data?.length]);
+  const periodKey = `${from}|${to}`;
+  const period = { from: from || undefined, to: to || undefined };
+  const entries = useResource<AccountingEntryView[]>(() => financeApi.accountingEntries(period), [configuration.data?.accounts.length, periodKey]);
+  const balance = useResource<AccountingTrialBalanceView>(() => financeApi.accountingTrialBalance(period), [configuration.data?.accounts.length, entries.data?.length, periodKey]);
+  const statements = useResource<AccountingFinancialStatementsView>(() => financeApi.accountingStatements(period), [configuration.data?.accounts.length, entries.data?.length, periodKey]);
   const accounts = configuration.data?.accounts ?? [];
   const journals = configuration.data?.journals ?? [];
 
@@ -60,6 +64,7 @@ export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; 
   const trial = balance.data;
   const accountOptions = useMemo(() => accounts.filter((account) => account.isActive).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` })), [accounts]);
   const journalOptions = useMemo(() => journals.filter((journal) => journal.isActive).map((journal) => ({ value: journal.id, label: `${journal.code} — ${journal.name}` })), [journals]);
+  const invalidPeriod = Boolean(from && to && from > to);
 
   return (
     <section className="stack accounting-workspace" aria-label="Comptabilité générale">
@@ -81,6 +86,14 @@ export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; 
           <Empty icon={<BookOpen size={24} />} title="Plan comptable non initialisé" body={canManage ? "Initialisez le plan standard AXORA puis adaptez les comptes selon votre conseil comptable." : "Un administrateur Finance doit initialiser le plan comptable."} />
         ) : (
           <>
+            <div className="accounting-period-filter" aria-label="Filtrer la période comptable">
+              <div className="accounting-period-copy"><strong>Période de lecture</strong><small>Les états et le journal sont recalculés côté serveur sur cette fenêtre.</small></div>
+              <DateField label="Du" value={from} onChange={setFrom} />
+              <DateField label="Au" value={to} onChange={setTo} />
+              {(from || to) && <Button variant="ghost" onClick={() => { setFrom(""); setTo(""); }}>Réinitialiser</Button>}
+              {tab === "entries" && entries.data && <Button variant="secondary" onClick={() => downloadJournalCsv(entries.data ?? [])}><Download size={14} aria-hidden="true" /> Exporter CSV</Button>}
+            </div>
+            {invalidPeriod && <p className="field-error" role="alert">La date de début doit précéder la date de fin.</p>}
             <Metrics label="Contrôle de la balance">
               <Metric icon={<BookOpen size={19} />} tone="blue" label="Comptes actifs" value={String(accounts.filter((account) => account.isActive).length)} detail={`${journals.length} journal(aux) configuré(s)`} />
               <Metric icon={<Scale size={19} />} tone="green" label="Total débit" value={formatMoney(trial?.totalDebit ?? "0.00", trial?.currency)} detail="Écritures validées" />
@@ -101,6 +114,34 @@ export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; 
       {dialog === "entry" && <ManualEntryModal saving={mutation.saving} error={mutation.error} currency={trial?.currency ?? "USD"} accounts={accountOptions} journals={journalOptions} onClose={() => setDialog(null)} onSubmit={(input) => saveDialog(() => financeApi.createAccountingEntry(input), "Écriture comptable enregistrée et équilibrée.")} />}
     </section>
   );
+}
+
+function downloadJournalCsv(entries: AccountingEntryView[]): void {
+  const escape = (value: string): string => `"${value.replaceAll('"', '""')}"`;
+  const rows = [["Date", "Numéro", "Journal", "Libellé", "Compte", "Libellé compte", "Débit", "Crédit", "Devise", "Origine"]];
+  for (const entry of entries) {
+    for (const line of entry.lines) {
+      rows.push([
+        entry.entryDate.slice(0, 10),
+        entry.number,
+        entry.journalCode,
+        entry.description,
+        line.accountCode,
+        line.accountName,
+        line.debit,
+        line.credit,
+        entry.currency,
+        entry.sourceType ?? "Saisie",
+      ]);
+    }
+  }
+  const csv = `\uFEFF${rows.map((row) => row.map(escape).join(";")).join("\r\n")}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `journal-comptable-${today()}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function AccountingAccountModal({ saving, error, onClose, onSubmit }: { saving: boolean; error: string; onClose: () => void; onSubmit: (input: Record<string, unknown>) => Promise<void> }): React.ReactElement {

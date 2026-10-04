@@ -96,7 +96,7 @@ export async function dqePdf(dqe: DqeView, companyName: string, demo = false): P
   doc.table([
     { label: "N°", width: 28 }, { label: "Désignation", width: 150 }, { label: "Catégorie", width: 60 }, { label: "Unité", width: 36 },
     { label: "Quantité", width: 80, align: "right" }, { label: "PU HT", width: 84, align: "right" },
-    { label: "Montant HT", width: 84, align: "right" },
+    { label: "Montant HT", width: 85, align: "right" },
   ], dqe.lines.map(line => [String(line.position), line.designation, categoryLabel(line.costCategory), line.unitCode, line.quantity, line.unitPrice, line.lineTotal]));
   doc.paragraph(`TOTAL DIRECT HT : ${dqe.subtotal} ${dqe.currency}`, 12, "#1E3A8A");
   doc.paragraph(`Frais généraux (${rate(dqe.overheadRate)} %) : ${amount(dqe.overheadAmount)} ${dqe.currency}`);
