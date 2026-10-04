@@ -70,6 +70,12 @@ export class AdminController {
     return this.admin.listCompanies(request.axoraUser!);
   }
 
+  @Get("projects")
+  @RequirePermission(CORE_PERMISSIONS.USER_MANAGE)
+  listProjects(@Req() request: Request) {
+    return this.admin.listProjects(request.axoraUser!);
+  }
+
   @Post("companies")
   @RequirePermission(CORE_PERMISSIONS.COMPANY_MANAGE)
   createCompany(@Req() request: Request, @Body() body: unknown) {

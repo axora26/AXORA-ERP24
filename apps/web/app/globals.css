@@ -1104,3 +1104,7 @@ a.btn { text-decoration: none; }
   .dqe-variant-form { grid-template-columns: 1fr; }
   .dqe-variants .table-wrap { margin-inline: -16px; }
 }
+/* Administration — portées RBAC projet, empilées sur petit écran. */
+.admin-scope-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto; gap: 10px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--ax-background-soft); }
+@media (max-width: 720px) { .admin-scope-row { grid-template-columns: 1fr 1fr; } .admin-scope-row .icon-button { grid-column: 2; justify-self: end; } }
+@media (max-width: 480px) { .admin-scope-row { grid-template-columns: 1fr; } .admin-scope-row .icon-button { grid-column: auto; justify-self: start; } }

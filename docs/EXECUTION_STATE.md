@@ -103,4 +103,12 @@ Typecheck API et contrats reconstruits, lint cible passe. Le typecheck web passe
 
 ## Prochaine etape
 
+## Incrément du 4 octobre 2026 — RBAC porté par projet
+
+- Les requêtes métier résolvent désormais `projectId` depuis la requête, le corps ou les routes `/projects/:id`, puis vérifient l'appartenance du projet à l'entreprise et à l'organisation de la session.
+- `PermissionGuard` transmet ce projet au moteur d'autorisation : une affectation entreprise ou projet ne peut plus autoriser silencieusement un autre chantier. Le refus reste deny-by-default et les messages sont couverts par le catalogue français.
+- L'administration expose les projets de l'organisation et permet d'affecter un rôle global, limité à une entreprise ou limité à un projet. Les projets et entreprises sont revalidés côté serveur, OWNER reste organisationnel et chaque mutation reste auditée.
+- L'écran Administration → Utilisateurs propose une édition responsive des portées de rôle, avec filtrage des projets par entreprise et empilement mobile.
+- Validation locale de cette évolution : typecheck et builds API/web réussis, tests API 106/106 et web 74/74 réussis, lint web sans erreur (8 avertissements d'images préexistants), test unitaire de résolution de périmètre projet ajouté.
+
 Poursuivre le backlog concret ci-dessous ; les preuves locales finales sont enregistrées sur `b1a6cb1`, sans obligation de rejouer les suites actuelles. Conserver la CI distante en `BLOCKED` tant que le compte GitHub reste verrouillé pour facturation. La couverture de base des increments ne signifie pas que tout le perimetre fondateur est termine : le reste fonctionnel comprend notamment la decomposition de prix DQE, les variantes/bibliotheques, le sourcing partiel Achats, les reservations et lots de stock, le rapprochement bancaire, les previsions de tresorerie et le parametrage legal de paie. `docs/MODULE_STATUS.md` distingue ces evolutions des dependances externes (CI, signatures natives, services et equipements reels).

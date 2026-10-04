@@ -37,14 +37,31 @@ export class CompanyScopeGuard implements CanActivate {
     if (!user) throw new UnauthorizedException("SessionGuard must run before CompanyScopeGuard");
 
     const fromQuery = typeof request.query.companyId === "string" ? request.query.companyId : undefined;
-    const body = request.body as { companyId?: unknown } | undefined;
+    const body = request.body as { companyId?: unknown; projectId?: unknown } | undefined;
     const fromBody = typeof body?.companyId === "string" ? body.companyId : undefined;
 
     // Legacy handlers may read the body while @Scope handlers use the query.
     // A request must never authorize one company and operate on another.
     if (fromQuery !== undefined && fromBody !== undefined && fromQuery !== fromBody) throw new BadRequestException("Conflicting companyId values");
 
-    request.axoraScope = await this.companyScope.resolve(user, fromQuery ?? fromBody);
+    const projectFromQuery = typeof request.query.projectId === "string" ? request.query.projectId : undefined;
+    const projectFromBody = typeof body?.projectId === "string" ? body.projectId : undefined;
+    const projectFromParam = typeof request.params?.projectId === "string" ? request.params.projectId : undefined;
+    // Les routes /projects/:id/... portent naturellement l'identifiant du
+    // chantier dans `id`. Les autres ressources ne déduisent jamais un projet
+    // depuis un identifiant générique afin d'éviter un mauvais périmètre.
+    const projectFromProjectRoute = /\/projects\/[^/]+/.test(request.path) && typeof request.params?.id === "string"
+      ? request.params.id
+      : undefined;
+    const projectIds = [projectFromQuery, projectFromBody, projectFromParam, projectFromProjectRoute].filter(
+      (value): value is string => value !== undefined && value !== "",
+    );
+    const requestedProjectId = projectIds[0];
+    if (projectIds.some((value) => value !== requestedProjectId)) {
+      throw new BadRequestException("Conflicting projectId values");
+    }
+
+    request.axoraScope = await this.companyScope.resolve(user, fromQuery ?? fromBody, requestedProjectId);
     return true;
   }
 }

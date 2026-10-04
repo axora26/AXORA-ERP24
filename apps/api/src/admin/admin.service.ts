@@ -71,6 +71,8 @@ export class AdminService {
     const fullName = requiredText(input.fullName, "fullName", 120);
     const password = credentialPassword(input.password, "password", 12);
     const roleIds = idList(input.roleIds, "roleIds");
+    const roleAssignments = parseRoleAssignments(input.roleAssignments, roleIds);
+    const assignedRoleIds = [...new Set(roleAssignments.map((assignment) => assignment.roleId))];
     const companyIds = idList(input.companyIds, "companyIds");
     if (companyIds.length === 0) throw new BadRequestException("companyIds must contain at least one company");
 
@@ -80,13 +82,14 @@ export class AdminService {
     });
     if (existing) throw new ConflictException(`A user with e-mail "${email}" already exists`);
 
-    await this.assertRolesInOrganization(actor.organizationId, roleIds);
+    await this.assertRolesInOrganization(actor.organizationId, assignedRoleIds);
     await this.assertCompaniesInOrganization(actor.organizationId, companyIds);
+    await this.assertRoleAssignmentsInOrganization(actor.organizationId, roleAssignments, companyIds);
     const passwordHash = await hashPassword(password);
 
     const userId = await this.prisma.$transaction(async (tx) => {
       await this.lockOrganization(tx, actor.organizationId);
-      if (roleIds.length) await this.assertRoleAssignmentAllowed(tx, actor, roleIds);
+      if (assignedRoleIds.length) await this.assertRoleAssignmentAllowed(tx, actor, assignedRoleIds);
       await this.assertActorAuthorized(tx, actor, CORE_PERMISSIONS.USER_MANAGE);
       const user = await tx.user.create({
         data: { organizationId: actor.organizationId, email, fullName, passwordHash },
@@ -96,12 +99,20 @@ export class AdminService {
           data: companyIds.map((companyId) => ({ userId: user.id, companyId })),
         });
       }
-      if (roleIds.length > 0) {
-        await tx.roleAssignment.createMany({ data: roleIds.map((roleId) => ({ userId: user.id, roleId })) });
+      if (roleAssignments.length > 0) {
+        await tx.roleAssignment.createMany({
+          data: roleAssignments.map((assignment) => ({
+            userId: user.id,
+            roleId: assignment.roleId,
+            companyId: assignment.companyId,
+            projectId: assignment.projectId,
+          })),
+        });
       }
       await writeAudit(tx, actor, actor.id, "core.user.created", "User", user.id, {
         email,
-        roleIds,
+        roleIds: assignedRoleIds,
+        roleAssignments,
         companyIds,
       });
       return user.id;
@@ -120,6 +131,10 @@ export class AdminService {
     const fullName = input.fullName === undefined ? undefined : requiredText(input.fullName, "fullName", 120);
     const isActive = optionalBoolean(input.isActive, "isActive");
     const roleIds = input.roleIds === undefined ? undefined : idList(input.roleIds, "roleIds");
+    const roleAssignments = input.roleAssignments === undefined && roleIds === undefined
+      ? undefined
+      : parseRoleAssignments(input.roleAssignments, roleIds ?? []);
+    const assignedRoleIds = roleAssignments === undefined ? undefined : [...new Set(roleAssignments.map((assignment) => assignment.roleId))];
     const companyIds = input.companyIds === undefined ? undefined : idList(input.companyIds, "companyIds");
 
     if (isActive === false && target.id === actor.id) {
@@ -128,12 +143,13 @@ export class AdminService {
     if (companyIds !== undefined && companyIds.length === 0) {
       throw new BadRequestException("companyIds must contain at least one company");
     }
-    if (roleIds !== undefined) await this.assertRolesInOrganization(actor.organizationId, roleIds);
+    if (assignedRoleIds !== undefined) await this.assertRolesInOrganization(actor.organizationId, assignedRoleIds);
     if (companyIds !== undefined) await this.assertCompaniesInOrganization(actor.organizationId, companyIds);
+    if (roleAssignments !== undefined) await this.assertRoleAssignmentsInOrganization(actor.organizationId, roleAssignments, companyIds);
 
     await this.prisma.$transaction(async (tx) => {
       await this.lockOrganization(tx, actor.organizationId);
-      if (roleIds !== undefined) await this.assertRoleAssignmentAllowed(tx, actor, roleIds);
+      if (assignedRoleIds !== undefined) await this.assertRoleAssignmentAllowed(tx, actor, assignedRoleIds);
       await this.assertActorAuthorized(tx, actor, CORE_PERMISSIONS.USER_MANAGE);
       if (fullName !== undefined || isActive !== null) {
         await tx.user.update({
@@ -151,10 +167,17 @@ export class AdminService {
           data: { revokedAt: new Date() },
         });
       }
-      if (roleIds !== undefined) {
+      if (roleAssignments !== undefined) {
         await tx.roleAssignment.deleteMany({ where: { userId: target.id } });
-        if (roleIds.length > 0) {
-          await tx.roleAssignment.createMany({ data: roleIds.map((roleId) => ({ userId: target.id, roleId })) });
+        if (roleAssignments.length > 0) {
+          await tx.roleAssignment.createMany({
+            data: roleAssignments.map((assignment) => ({
+              userId: target.id,
+              roleId: assignment.roleId,
+              companyId: assignment.companyId,
+              projectId: assignment.projectId,
+            })),
+          });
         }
       }
       if (companyIds !== undefined) {
@@ -167,7 +190,8 @@ export class AdminService {
       await writeAudit(tx, actor, actor.id, "core.user.updated", "User", target.id, {
         fullName,
         isActive,
-        roleIds,
+        roleIds: assignedRoleIds,
+        roleAssignments,
         companyIds,
       });
     });
@@ -315,6 +339,26 @@ export class AdminService {
     }));
   }
 
+  async listProjects(actor: AuthenticatedUser) {
+    const projects = await this.prisma.project.findMany({
+      where: { organizationId: actor.organizationId },
+      orderBy: [{ companyId: "asc" }, { code: "asc" }],
+    });
+    const companies = await this.prisma.company.findMany({
+      where: { organizationId: actor.organizationId, id: { in: [...new Set(projects.map((project) => project.companyId))] } },
+      select: { id: true, name: true },
+    });
+    const companyNames = new Map(companies.map((company) => [company.id, company.name]));
+    return projects.map((project) => ({
+      id: project.id,
+      code: project.code,
+      name: project.name,
+      companyId: project.companyId,
+      companyName: companyNames.get(project.companyId) ?? "Entreprise",
+      status: project.status,
+    }));
+  }
+
   async createCompany(actor: AuthenticatedUser, body: unknown) {
     const input = assertBody(body);
     const name = requiredText(input.name, "name", 120);
@@ -416,6 +460,41 @@ export class AdminService {
     if (count !== companyIds.length) throw new BadRequestException("One or more companies do not exist");
   }
 
+  private async assertRoleAssignmentsInOrganization(organizationId: string, assignments: RoleAssignmentInput[], allowedCompanyIds?: string[]) {
+    if (assignments.length === 0) return;
+    const companyIds = [...new Set(assignments.flatMap((assignment) => assignment.companyId ? [assignment.companyId] : []))];
+    const projectIds = [...new Set(assignments.flatMap((assignment) => assignment.projectId ? [assignment.projectId] : []))];
+    if (allowedCompanyIds && assignments.some((assignment) => assignment.companyId && !allowedCompanyIds.includes(assignment.companyId))) {
+      throw new BadRequestException("A role assignment company must be accessible by the user");
+    }
+    if (companyIds.length > 0) {
+      const count = await this.prisma.company.count({ where: { id: { in: companyIds }, organizationId } });
+      if (count !== companyIds.length) throw new BadRequestException("One or more role assignment companies do not exist");
+    }
+    if (projectIds.length > 0) {
+      const projects = await this.prisma.project.findMany({
+        where: { id: { in: projectIds }, organizationId },
+        select: { id: true, companyId: true },
+      });
+      if (projects.length !== projectIds.length) throw new BadRequestException("One or more role assignment projects do not exist");
+      const byId = new Map(projects.map((project) => [project.id, project.companyId]));
+      for (const assignment of assignments) {
+        if (assignment.projectId && (!assignment.companyId || byId.get(assignment.projectId) !== assignment.companyId)) {
+          throw new BadRequestException("A project role assignment must target its own company");
+        }
+      }
+    }
+    const roleIds = [...new Set(assignments.map((assignment) => assignment.roleId))];
+    const roles = await this.prisma.role.findMany({ where: { id: { in: roleIds }, organizationId }, select: { id: true, name: true, isSystem: true } });
+    const rolesById = new Map(roles.map((role) => [role.id, role]));
+    for (const assignment of assignments) {
+      const role = rolesById.get(assignment.roleId);
+      if (role?.isSystem && role.name === OWNER_ROLE && (assignment.companyId || assignment.projectId)) {
+        throw new BadRequestException("OWNER must remain an organization-wide role");
+      }
+    }
+  }
+
   private async assertOwnerRemains(tx: Prisma.TransactionClient, organizationId: string) {
     const activeOwners = await tx.roleAssignment.count({
       where: {
@@ -471,6 +550,47 @@ function idList(value: unknown, field: string): string[] {
   return [...new Set(value.map((item: string) => item.trim()))];
 }
 
+interface RoleAssignmentInput {
+  roleId: string;
+  companyId: string | null;
+  projectId: string | null;
+}
+
+function parseRoleAssignments(value: unknown, fallbackRoleIds: string[]): RoleAssignmentInput[] {
+  if (value === undefined || value === null) {
+    return fallbackRoleIds.map((roleId) => ({ roleId, companyId: null, projectId: null }));
+  }
+  if (!Array.isArray(value)) throw new BadRequestException("roleAssignments must be an array");
+  const result: RoleAssignmentInput[] = [];
+  const seen = new Set<string>();
+  for (const [index, raw] of value.entries()) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new BadRequestException(`roleAssignments[${index}] must be an object`);
+    }
+    const record = raw as Record<string, unknown>;
+    if (typeof record.roleId !== "string" || record.roleId.trim() === "") {
+      throw new BadRequestException(`roleAssignments[${index}].roleId is required`);
+    }
+    const companyId = record.companyId === undefined || record.companyId === null || record.companyId === ""
+      ? null
+      : typeof record.companyId === "string" ? record.companyId.trim() : null;
+    const projectId = record.projectId === undefined || record.projectId === null || record.projectId === ""
+      ? null
+      : typeof record.projectId === "string" ? record.projectId.trim() : null;
+    if ((record.companyId !== undefined && record.companyId !== null && typeof record.companyId !== "string") ||
+      (record.projectId !== undefined && record.projectId !== null && typeof record.projectId !== "string")) {
+      throw new BadRequestException(`roleAssignments[${index}] scope identifiers must be strings`);
+    }
+    if (projectId && !companyId) throw new BadRequestException("A project role assignment requires companyId");
+    const roleId = record.roleId.trim();
+    const key = `${roleId}:${companyId ?? ""}:${projectId ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ roleId, companyId, projectId });
+  }
+  return result;
+}
+
 function permissionKeys(value: unknown): string[] {
   const keys = idList(value, "permissions");
   const unknown = keys.filter((key) => !isKnownPermission(key));
@@ -502,5 +622,12 @@ function toUserView(user: UserWithRelations) {
     createdAt: user.createdAt.toISOString(),
     roles: user.roleAssignments.map((assignment) => assignment.role),
     companies: user.companyMemberships.map((membership) => membership.company),
+    roleAssignments: user.roleAssignments.map((assignment) => ({
+      id: assignment.id,
+      roleId: assignment.role.id,
+      roleName: assignment.role.name,
+      companyId: assignment.companyId,
+      projectId: assignment.projectId,
+    })),
   };
 }

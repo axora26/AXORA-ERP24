@@ -20,6 +20,7 @@ import { DataUnavailable,
   Modal,
   PageHeader,
   Panel,
+  SelectField,
   StatusChip,
   TextField,
   Toggle,
@@ -27,12 +28,12 @@ import { DataUnavailable,
 
 export default function UsersPage(): React.ReactElement {
   const session = useSession();
-  const data = useResource(() => Promise.all([adminApi.users(), adminApi.roles(), adminApi.companies()]));
+  const data = useResource(() => Promise.all([adminApi.users(), adminApi.roles(), adminApi.companies(), adminApi.projects()]));
   const mutation = useMutation();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<AdminUserView | null>(null);
 
-  const [users, roles, companies] = data.data ?? [[], [], []];
+  const [users, roles, companies, projects] = data.data ?? [[], [], [], []];
   const roleOptions = roles.map((role) => ({
     value: role.id,
     label: role.name,
@@ -133,6 +134,7 @@ export default function UsersPage(): React.ReactElement {
         <CreateUserModal
           roleOptions={roleOptions}
           companyOptions={companyOptions}
+          projects={projects}
           onClose={() => setCreating(false)}
           onSubmit={async (input) => {
             const created = await mutation.run(() => adminApi.createUser(input), `Compte ${input.email} créé.`);
@@ -152,6 +154,7 @@ export default function UsersPage(): React.ReactElement {
           isSelf={editing.id === session.user.id}
           roleOptions={roleOptions}
           companyOptions={companyOptions}
+          projects={projects}
           onClose={() => setEditing(null)}
           saving={mutation.saving}
           error={mutation.error}
@@ -169,10 +172,39 @@ export default function UsersPage(): React.ReactElement {
 }
 
 type Option = { value: string; label: string; hint?: string };
+type ProjectOption = { id: string; code: string; name: string; companyId: string; companyName: string; status: string };
+type AssignmentDraft = { roleId: string; companyId: string; projectId: string };
+
+function RoleAssignmentsEditor({ roleOptions, companyOptions, projects, globalRoleIds, onGlobalRolesChange, assignments, onAssignmentsChange }: {
+  roleOptions: Option[];
+  companyOptions: Option[];
+  projects: ProjectOption[];
+  globalRoleIds: string[];
+  onGlobalRolesChange: (value: string[]) => void;
+  assignments: AssignmentDraft[];
+  onAssignmentsChange: (value: AssignmentDraft[]) => void;
+}): React.ReactElement {
+  const add = () => onAssignmentsChange([...assignments, { roleId: roleOptions[0]?.value ?? "", companyId: companyOptions[0]?.value ?? "", projectId: "" }]);
+  return <div className="stack">
+    <CheckboxGroup label="Rôles globaux" options={roleOptions} selected={globalRoleIds} onChange={onGlobalRolesChange} />
+    <div className="field"><span className="field-note">Rôles portés par un chantier</span><small className="field-note">Ces droits restent limités à l’entreprise et au projet sélectionnés.</small></div>
+    {assignments.map((assignment, index) => {
+      const projectOptions = projects.filter((project) => project.companyId === assignment.companyId).map((project) => ({ value: project.id, label: `${project.code} — ${project.name}` }));
+      return <div className="admin-scope-row" key={`${index}-${assignment.roleId}-${assignment.companyId}-${assignment.projectId}`}>
+        <SelectField label={`Rôle projet ${index + 1}`} value={assignment.roleId} onChange={(value) => onAssignmentsChange(assignments.map((item, current) => current === index ? { ...item, roleId: value } : item))} options={roleOptions} required />
+        <SelectField label="Entreprise" value={assignment.companyId} onChange={(value) => onAssignmentsChange(assignments.map((item, current) => current === index ? { ...item, companyId: value, projectId: "" } : item))} options={companyOptions} required />
+        <SelectField label="Projet" value={assignment.projectId} onChange={(value) => onAssignmentsChange(assignments.map((item, current) => current === index ? { ...item, projectId: value } : item))} options={projectOptions} emptyLabel="Tous les projets de l’entreprise" />
+        <button className="icon-button" type="button" onClick={() => onAssignmentsChange(assignments.filter((_, current) => current !== index))} aria-label={`Supprimer le rôle projet ${index + 1}`}>×</button>
+      </div>;
+    })}
+    <Button type="button" variant="secondary" onClick={add} disabled={roleOptions.length === 0 || companyOptions.length === 0}>Ajouter une portée</Button>
+  </div>;
+}
 
 function CreateUserModal({
   roleOptions,
   companyOptions,
+  projects,
   onClose,
   onSubmit,
   saving,
@@ -180,8 +212,9 @@ function CreateUserModal({
 }: {
   roleOptions: Option[];
   companyOptions: Option[];
+  projects: ProjectOption[];
   onClose: () => void;
-  onSubmit: (input: { email: string; fullName: string; password: string; roleIds: string[]; companyIds: string[] }) => Promise<void>;
+  onSubmit: (input: { email: string; fullName: string; password: string; roleIds: string[]; companyIds: string[]; roleAssignments: Array<{ roleId: string; companyId?: string | null; projectId?: string | null }> }) => Promise<void>;
   saving: boolean;
   error: string;
 }): React.ReactElement {
@@ -190,10 +223,11 @@ function CreateUserModal({
   const [password, setPassword] = useState("");
   const [roleIds, setRoleIds] = useState<string[]>([]);
   const [companyIds, setCompanyIds] = useState<string[]>(companyOptions.length === 1 ? [companyOptions[0]!.value] : []);
+  const [assignments, setAssignments] = useState<AssignmentDraft[]>([]);
   return (
     <Modal title="Nouvel utilisateur" onClose={onClose} wide>
       <Feedback error={error} />
-      <Form onSubmit={() => onSubmit({ email, fullName, password, roleIds, companyIds })} submitLabel="Créer le compte" saving={saving}>
+      <Form onSubmit={() => onSubmit({ email, fullName, password, roleIds, companyIds, roleAssignments: [...roleIds.map((roleId) => ({ roleId })), ...assignments.map((assignment) => ({ roleId: assignment.roleId, companyId: assignment.companyId || null, projectId: assignment.projectId || null }))] })} submitLabel="Créer le compte" saving={saving}>
         <TextField label="Nom complet" value={fullName} onChange={setFullName} required />
         <TextField label="E-mail" type="email" value={email} onChange={setEmail} required />
         <TextField
@@ -206,7 +240,7 @@ function CreateUserModal({
           autoComplete="new-password"
           hint="12 caractères minimum. Transmettez-le par un canal sûr ; l'utilisateur pourra le changer dans « Mon compte »."
         />
-        <CheckboxGroup label="Rôles" options={roleOptions} selected={roleIds} onChange={setRoleIds} />
+        <RoleAssignmentsEditor roleOptions={roleOptions} companyOptions={companyOptions} projects={projects} globalRoleIds={roleIds} onGlobalRolesChange={setRoleIds} assignments={assignments} onAssignmentsChange={setAssignments} />
         <CheckboxGroup label="Entreprises accessibles" options={companyOptions} selected={companyIds} onChange={setCompanyIds} />
       </Form>
     </Modal>
@@ -218,6 +252,7 @@ function EditUserModal({
   isSelf,
   roleOptions,
   companyOptions,
+  projects,
   onClose,
   onSubmit,
   saving,
@@ -227,19 +262,21 @@ function EditUserModal({
   isSelf: boolean;
   roleOptions: Option[];
   companyOptions: Option[];
+  projects: ProjectOption[];
   onClose: () => void;
-  onSubmit: (input: { fullName: string; isActive: boolean; roleIds: string[]; companyIds: string[] }) => Promise<void>;
+  onSubmit: (input: { fullName: string; isActive: boolean; roleIds: string[]; companyIds: string[]; roleAssignments: Array<{ roleId: string; companyId?: string | null; projectId?: string | null }> }) => Promise<void>;
   saving: boolean;
   error: string;
 }): React.ReactElement {
   const [fullName, setFullName] = useState(user.fullName);
   const [isActive, setIsActive] = useState(user.isActive);
-  const [roleIds, setRoleIds] = useState(user.roles.map((role) => role.id));
+  const [roleIds, setRoleIds] = useState(user.roleAssignments.filter((assignment) => assignment.companyId === null && assignment.projectId === null).map((assignment) => assignment.roleId));
   const [companyIds, setCompanyIds] = useState(user.companies.map((company) => company.id));
+  const [assignments, setAssignments] = useState<AssignmentDraft[]>(user.roleAssignments.filter((assignment) => assignment.companyId !== null || assignment.projectId !== null).map((assignment) => ({ roleId: assignment.roleId, companyId: assignment.companyId ?? "", projectId: assignment.projectId ?? "" })));
   return (
     <Modal title={`Modifier ${user.email}`} onClose={onClose} wide>
       <Feedback error={error} />
-      <Form onSubmit={() => onSubmit({ fullName, isActive, roleIds, companyIds })} submitLabel="Enregistrer" saving={saving}>
+      <Form onSubmit={() => onSubmit({ fullName, isActive, roleIds, companyIds, roleAssignments: [...roleIds.map((roleId) => ({ roleId })), ...assignments.map((assignment) => ({ roleId: assignment.roleId, companyId: assignment.companyId || null, projectId: assignment.projectId || null }))] })} submitLabel="Enregistrer" saving={saving}>
         <TextField label="Nom complet" value={fullName} onChange={setFullName} required />
         <div className="field">
           <span className="field-note">État du compte</span>
@@ -251,7 +288,7 @@ function EditUserModal({
           />
           {isSelf && <small className="field-note">Vous ne pouvez pas désactiver votre propre compte.</small>}
         </div>
-        <CheckboxGroup label="Rôles" options={roleOptions} selected={roleIds} onChange={setRoleIds} />
+        <RoleAssignmentsEditor roleOptions={roleOptions} companyOptions={companyOptions} projects={projects} globalRoleIds={roleIds} onGlobalRolesChange={setRoleIds} assignments={assignments} onAssignmentsChange={setAssignments} />
         <CheckboxGroup label="Entreprises accessibles" options={companyOptions} selected={companyIds} onChange={setCompanyIds} />
       </Form>
     </Modal>

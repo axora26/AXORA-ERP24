@@ -63,7 +63,15 @@ export class PermissionGuard implements CanActivate {
       })),
     );
 
-    const scope = { organizationId: user.organizationId, ...(request.axoraScope ? { companyId: request.axoraScope.companyId } : {}) };
+    const scope = {
+      organizationId: user.organizationId,
+      ...(request.axoraScope
+        ? {
+            companyId: request.axoraScope.companyId,
+            ...(request.axoraScope.projectId ? { projectId: request.axoraScope.projectId } : {}),
+          }
+        : {}),
+    };
     request.axoraPermissions = new Set(grants.filter((grant) => isAuthorized({ key: grant.permissionKey, ...scope }, [grant])).map((grant) => grant.permissionKey));
 
     const authorized = requiredPermissions.some((key) =>

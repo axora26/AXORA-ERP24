@@ -5,6 +5,8 @@ import type { AuthenticatedUser } from "../auth/session.guard.js";
 export interface CompanyScope {
   organizationId: string;
   companyId: string;
+  /** Projet resolu depuis la requete et verifie dans la meme entreprise. */
+  projectId?: string;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface CompanyScope {
 export class CompanyScopeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async resolve(user: AuthenticatedUser, requestedCompanyId?: string): Promise<CompanyScope> {
+  async resolve(user: AuthenticatedUser, requestedCompanyId?: string, requestedProjectId?: string): Promise<CompanyScope> {
     const memberships = await this.prisma.companyMembership.findMany({
       where: {
         userId: user.id,
@@ -46,7 +48,7 @@ export class CompanyScopeService {
         // l'existence d'une entreprise appartenant a un autre tenant.
         throw new ForbiddenException("Company not accessible");
       }
-      return { organizationId: user.organizationId, companyId: requestedCompanyId };
+      return this.withProject(user.organizationId, requestedCompanyId, requestedProjectId);
     }
 
     if (memberships.length > 1) {
@@ -55,6 +57,23 @@ export class CompanyScopeService {
       );
     }
 
-    return { organizationId: user.organizationId, companyId: memberships[0]!.companyId };
+    return this.withProject(user.organizationId, memberships[0]!.companyId, requestedProjectId);
+  }
+
+  private async withProject(organizationId: string, companyId: string, requestedProjectId?: string): Promise<CompanyScope> {
+    if (requestedProjectId === undefined || requestedProjectId === "") {
+      return { organizationId, companyId };
+    }
+
+    const project = await this.prisma.project.findFirst({
+      where: { id: requestedProjectId, organizationId, companyId },
+      select: { id: true },
+    });
+    if (!project) {
+      // Meme message generique que pour une entreprise inaccessible : ne pas
+      // divulguer l'existence d'un chantier d'un autre perimetre.
+      throw new ForbiddenException("Project not accessible");
+    }
+    return { organizationId, companyId, projectId: project.id };
   }
 }
