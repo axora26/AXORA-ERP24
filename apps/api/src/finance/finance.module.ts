@@ -5,11 +5,14 @@ import { FinanceService } from "./finance.service.js";
 import { CreditNotesController } from "./credit-notes.controller.js";
 import { CreditNotesService } from "./credit-notes.service.js";
 import { CreditExportController } from "./credit-export.controller.js";
+import { InvoiceSignatureService } from "./invoice-signature.service.js";
+import { TreasuryForecastService } from "./treasury-forecast.service.js";
+import { BankReconciliationService } from "./bank-reconciliation.service.js";
 
 /** INC-08 — Finance (clients, fournisseurs, paiements, tresorerie). */
 @Module({
   imports: [AuthModule],
   controllers: [FinanceController, CreditNotesController, CreditExportController],
-  providers: [FinanceService, CreditNotesService],
+  providers: [FinanceService, CreditNotesService, InvoiceSignatureService, TreasuryForecastService, BankReconciliationService],
 })
 export class FinanceModule {}

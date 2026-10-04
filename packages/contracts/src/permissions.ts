@@ -93,6 +93,7 @@ export const INVENTORY_PERMISSIONS = {
 export const FINANCE_PERMISSIONS = {
   INVOICE_READ: "finance.invoice.read",
   INVOICE_MANAGE: "finance.invoice.manage",
+  INVOICE_SIGN: "finance.invoice.sign",
   PAYABLE_READ: "finance.payable.read",
   PAYABLE_MANAGE: "finance.payable.manage",
   PAYABLE_APPROVE: "finance.payable.approve",

@@ -1,4 +1,4 @@
-import type { ProjectDetailView, ProjectSummaryView, ProjectOperationsQuery, ProjectOperationsView, ProjectForecastRevisionView } from "@axora24/contracts";
+import type { ProjectDetailView, ProjectSummaryView, ProjectOperationsQuery, ProjectOperationsView, ProjectForecastRevisionView, ProjectResourcePlanView } from "@axora24/contracts";
 import { api } from "../api";
 
 export const projectsApi = {
@@ -57,6 +57,11 @@ export const projectsApi = {
     api.post<ProjectForecastRevisionView>(`/projects/${id}/forecasts/${revisionId}/approve`, { note }),
   rejectForecast: (id: string, revisionId: string, note: string) =>
     api.post<ProjectForecastRevisionView>(`/projects/${id}/forecasts/${revisionId}/reject`, { note }),
+  resources: (id: string) => api.get<ProjectResourcePlanView[]>(`/projects/${id}/resources`),
+  createResource: (id: string, input: { kind: string; resourceId: string; wbsItemId?: string; plannedQuantity: string; plannedRate?: string; startAt: string; endAt?: string; notes?: string }) =>
+    api.post<ProjectResourcePlanView>(`/projects/${id}/resources`, input),
+  releaseResource: (id: string, planId: string) =>
+    api.post<ProjectResourcePlanView>(`/projects/${id}/resources/${planId}/release`),
 };
 
 export const PROJECT_STATUS_LABEL: Record<string, string> = {

@@ -54,8 +54,24 @@ export interface PaymentView {
   createdAt: string;
 }
 
+export interface InvoiceSignatureView {
+  id: string;
+  invoiceId: string;
+  invoiceCode: string;
+  documentHash: string;
+  signature: string;
+  algorithm: "HMAC-SHA256";
+  signerUserId: string;
+  signedAt: string;
+  status: "VALID" | "REVOKED";
+  revokedAt: string | null;
+  revokedByUserId: string | null;
+  revokeReason: string | null;
+}
+
 export interface CustomerInvoiceView {
   credit?: import("./credit-notes.js").InvoiceCreditFigures;
+  signatures?: InvoiceSignatureView[];
   id: string;
   code: string | null;
   customerName: string;
@@ -123,4 +139,33 @@ export interface FinanceSummaryView {
   payablesOverdue: string | null;
   cashPosition: string;
   toApprove: number;
+}
+
+export interface TreasuryForecastPointView {
+  date: string;
+  expectedIn: string;
+  expectedOut: string;
+  projectedBalance: string;
+}
+
+export interface TreasuryForecastView {
+  currency: string;
+  horizonDays: number;
+  openingBalance: string;
+  points: TreasuryForecastPointView[];
+  assumptions: string[];
+}
+
+export interface BankStatementEntryView {
+  id: string;
+  bankAccountId: string;
+  externalId: string;
+  bookedAt: string;
+  valueDate: string | null;
+  description: string;
+  amount: string;
+  currency: string;
+  status: "UNMATCHED" | "MATCHED" | "IGNORED";
+  matchedPaymentId: string | null;
+  matchedAt: string | null;
 }

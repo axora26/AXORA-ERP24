@@ -67,6 +67,19 @@ enum ProjectForecastStatus {
   REJECTED
 }
 
+enum ProjectResourceKind {
+  EMPLOYEE
+  VEHICLE
+  ASSET
+  MATERIAL
+}
+
+enum ProjectResourcePlanStatus {
+  PLANNED
+  RESERVED
+  RELEASED
+}
+
 model Project {
   id                String        @id @default(cuid())
   organizationId    String
@@ -100,6 +113,7 @@ model Project {
   risks        ProjectRisk[]
   stockReservations StockReservation[]
   forecastRevisions ProjectForecastRevision[]
+  resourcePlans ProjectResourcePlan[]
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
@@ -127,6 +141,7 @@ model ProjectWbsItem {
   changeOrders ProjectChangeOrder[]
   stockReservations StockReservation[]
   forecastLines ProjectForecastLine[]
+  resourcePlans ProjectResourcePlan[]
 
   @@unique([projectId, code])
   @@index([organizationId, companyId, projectId])
@@ -295,4 +310,38 @@ model ProjectForecastLine {
   @@index([organizationId, companyId, revisionId])
   @@index([wbsItemId])
   @@map("project_forecast_lines")
+}
+
+/// Planification de capacité future : une ressource physique ou humaine ne peut
+/// pas être réservée deux fois sur une période qui se chevauche.
+model ProjectResourcePlan {
+  id               String                    @id @default(cuid())
+  organizationId   String
+  companyId        String
+  projectId        String
+  wbsItemId        String?
+  kind             ProjectResourceKind
+  resourceId       String
+  resourceCode     String
+  resourceName     String
+  unitCode         String
+  plannedQuantity  Decimal                   @db.Decimal(18, 3)
+  plannedRate      Decimal?                  @db.Decimal(18, 2)
+  startAt          DateTime
+  endAt            DateTime?
+  status           ProjectResourcePlanStatus  @default(PLANNED)
+  notes            String?
+  createdByUserId  String
+  releasedByUserId String?
+  releasedAt       DateTime?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  project Project        @relation(fields: [projectId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  wbsItem ProjectWbsItem? @relation(fields: [wbsItemId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId, projectId, status, startAt])
+  @@index([organizationId, companyId, kind, resourceId, status, startAt])
+  @@index([wbsItemId])
+  @@map("project_resource_plans")
 }

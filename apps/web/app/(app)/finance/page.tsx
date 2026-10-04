@@ -7,9 +7,11 @@ import { CUSTOMER_STATUS_LABEL, MATCH_LABEL, METHOD_LABEL, SUPPLIER_STATUS_LABEL
 import { procurementApi } from "../../lib/modules/procurement";
 import { salesApi } from "../../lib/api";
 import { formatDate, formatMoney } from "../../lib/format";
+import type { TreasuryForecastView } from "@axora24/contracts";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
 import { FinanceCreditNotes } from "../../components/finance-credit-notes";
+import { BankReconciliation } from "../../components/bank-reconciliation";
 import { DataUnavailable,
   Button,
   DataTable,
@@ -54,6 +56,7 @@ export default function FinancePage(): React.ReactElement {
     [canInvoices, canPayables],
   );
   const [summary, invoices, payables, payments, accounts, taxRates] = data.data ?? [null, [], [], [], [], []];
+  const forecast = useResource<TreasuryForecastView | null>(() => canInvoices ? financeApi.treasuryForecast(30) : Promise.resolve(null), [canInvoices]);
 
   async function done(action: () => Promise<unknown>, success: string, open?: (result: { id: string }) => string): Promise<void> {
     const result = await mutation.run(action, success);
@@ -246,6 +249,19 @@ export default function FinancePage(): React.ReactElement {
             )}
 
             {tab === "treasury" && canInvoices && (
+              <>
+              <Panel title="Prévision de trésorerie à 30 jours" subtitle="Projection des échéances clients et fournisseurs validées, à compléter avec vos hypothèses de gestion.">
+                {forecast.data ? <DataTable rows={forecast.data.points.filter((point) => point.expectedIn !== "0.00" || point.expectedOut !== "0.00").slice(0, 12).map((point) => ({ ...point, id: point.date }))} empty={<Empty title="Aucune échéance dans l'horizon" />} columns={[
+                  { key: "date", header: "Date", render: (point) => formatDate(point.date) },
+                  { key: "in", header: "Entrées prévues", align: "right", render: (point) => <span className="text-success num">{formatMoney(point.expectedIn, forecast.data?.currency)}</span> },
+                  { key: "out", header: "Sorties prévues", align: "right", render: (point) => <span className="text-danger num">{formatMoney(point.expectedOut, forecast.data?.currency)}</span> },
+                  { key: "balance", header: "Solde projeté", align: "right", render: (point) => <strong className="num">{formatMoney(point.projectedBalance, forecast.data?.currency)}</strong> },
+                ]} /> : <Loading label="Calcul de la prévision…" />}
+                {forecast.data?.assumptions.map((assumption) => <p className="inline-note" key={assumption}>{assumption}</p>)}
+              </Panel>
+              <Panel title="Rapprochement bancaire" subtitle="Importez les lignes du relevé puis rapprochez chaque opération avec un paiement AXORA de même compte et montant.">
+                <BankReconciliation accounts={accounts} payments={payments} canManage={session.can("finance.bank.manage")} />
+              </Panel>
               <div className="module-grid cols-2">
                 <Panel
                   title="Comptes bancaires et caisses"
@@ -300,6 +316,7 @@ export default function FinancePage(): React.ReactElement {
                   />
                 </Panel>
               </div>
+              </>
             )}
           </div>
         </>

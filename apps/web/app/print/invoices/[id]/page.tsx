@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import type { CustomerInvoiceView } from "@axora24/contracts";
+import type { CustomerInvoiceView, InvoiceSignatureView } from "@axora24/contracts";
 import { api, ApiError } from "../../../lib/api";
+import QRCode from "qrcode";
 import { formatDate, formatMoney, formatQuantity } from "../../../lib/format";
 import { useResource } from "../../../lib/hooks";
 import { PrintDocument } from "../../../components/print-document";
@@ -27,8 +28,17 @@ export default function PrintInvoicePage(): React.ReactElement {
     const company = requestedId ? context.companies.find(item => item.id === requestedId) : context.companies.length === 1 ? context.companies[0] : undefined;
     if (!company) throw new ApiError(400, "Ouvrez l’impression depuis la facture de l’entreprise sélectionnée.");
     const invoice = await api.get<CustomerInvoiceView>(`/finance/invoices/${id}?companyId=${encodeURIComponent(company.id)}`);
-    return { invoice, context, company };
+    const signatures = await api.get<InvoiceSignatureView[]>(`/finance/invoices/${id}/signatures?companyId=${encodeURIComponent(company.id)}`);
+    return { invoice, signatures, context, company };
   }, [id]);
+  const [signatureQr, setSignatureQr] = useState("");
+  const validSignature = data.data?.signatures.find((signature) => signature.status === "VALID");
+  useEffect(() => {
+    let active = true;
+    if (!validSignature || !data.data?.invoice.id) { setSignatureQr(""); return () => { active = false; }; }
+    void QRCode.toDataURL(`AXORA-SIG:v1:${data.data.invoice.id}:${validSignature.id}:${validSignature.documentHash}`, { margin: 1, width: 140, errorCorrectionLevel: "M" }).then((value) => { if (active) setSignatureQr(value); }).catch(() => { if (active) setSignatureQr(""); });
+    return () => { active = false; };
+  }, [data.data?.invoice.id, validSignature?.documentHash, validSignature?.id]);
 
   useEffect(() => {
     if (data.data && new URLSearchParams(window.location.search).get("print") === "1") window.print();
@@ -130,6 +140,7 @@ export default function PrintInvoicePage(): React.ReactElement {
           </>
         </dl>
         {invoice.notes && <p className="print-notes">{invoice.notes}</p>}
+        {validSignature && <section className="print-signature"><div><strong>Signature électronique interne AXORA</strong><span>Empreinte SHA-256 : {validSignature.documentHash}</span><span>Signée le {formatDate(validSignature.signedAt)} · vérification disponible dans la fiche facture.</span></div>{signatureQr && <img src={signatureQr} alt="QR de vérification de la signature de la facture" />}</section>}
         <p className="print-notes">Les mentions légales et fiscales applicables relèvent de la configuration de l’entreprise émettrice.</p>
       </PrintDocument>
     </main>

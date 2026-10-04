@@ -597,6 +597,14 @@ a.user-menu:hover strong { color: var(--theme-link); }
 .invoice-totals dt { color: var(--ax-text-text-muted); text-align: right; }
 .invoice-totals dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--ax-text-text-heading); }
 .invoice-totals .grand dt, .invoice-totals .grand dd { font-weight: 700; color: #0b1f3a; font-size: 13.5px; }
+.signature-hash { display: block; max-width: 28ch; overflow-wrap: anywhere; color: var(--ax-text-text-secondary); font-size: 10px; line-height: 1.4; }
+.reconciliation-import { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(280px, 1.5fr) auto; gap: 12px; align-items: end; padding: 16px 21px 18px; border-bottom: 1px solid var(--line); }
+.reconciliation-import .field { margin: 0; }
+.reconciliation-import .actions { padding-bottom: 1px; }
+.print-signature { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #b9cdf6; border-radius: 8px; padding: 10px 12px; color: #1e3a8a; background: #f5f8ff; font-size: 9px; }
+.print-signature > div { display: grid; gap: 4px; min-width: 0; }
+.print-signature img { width: 58px; height: 58px; flex: 0 0 auto; }
+.print-signature span { overflow-wrap: anywhere; }
 a.btn { text-decoration: none; }
 
 .print-status { padding: 40px; font: 14px Inter, sans-serif; color: var(--ax-text-text-secondary); }
@@ -1013,3 +1021,8 @@ a.btn { text-decoration: none; }
 .currency-summary-list dl > div { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; }
 .currency-summary-list dt { color: var(--ax-text-text-muted); }
 .currency-summary-list dd { margin: 0; color: var(--ax-text-text-heading); font-weight: 600; }
+
+@media (max-width: 680px) {
+  .reconciliation-import { grid-template-columns: minmax(0, 1fr); padding-inline: 16px; }
+  .reconciliation-import .actions, .reconciliation-import .actions .btn { width: 100%; }
+}

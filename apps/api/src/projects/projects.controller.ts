@@ -8,12 +8,13 @@ import type { AuthenticatedUser } from "../auth/session.guard.js";
 import { ProjectsService } from "./projects.service.js";
 import { ProjectOperationsService } from "./project-operations.service.js";
 import { ProjectForecastService } from "./project-forecast.service.js";
+import { ProjectResourceService } from "./project-resource.service.js";
 
 /** INC-05 — Projets & Construction. */
 @Controller("projects")
 @ScopedController()
 export class ProjectsController {
-  constructor(private readonly projects: ProjectsService, private readonly operations: ProjectOperationsService, private readonly forecasts: ProjectForecastService) {}
+  constructor(private readonly projects: ProjectsService, private readonly operations: ProjectOperationsService, private readonly forecasts: ProjectForecastService, private readonly resources: ProjectResourceService) {}
 
   @Get(":id/operations")
   @RequirePermission(PROJECT_PERMISSIONS.PROJECT_READ)
@@ -184,5 +185,23 @@ export class ProjectsController {
   @RequirePermission(PROJECT_PERMISSIONS.FORECAST_APPROVE)
   forecastReject(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Param("revisionId") revisionId: string, @Body() body: unknown) {
     return this.forecasts.decide(scope, id, revisionId, "REJECTED", body, user.id);
+  }
+
+  @Get(":id/resources")
+  @RequirePermission(PROJECT_PERMISSIONS.RESOURCE_READ)
+  resourcesList(@Scope() scope: CompanyScope, @Req() request: Request, @Param("id") id: string) {
+    return this.resources.list(scope, id, request.axoraPermissions ?? new Set());
+  }
+
+  @Post(":id/resources")
+  @RequirePermission(PROJECT_PERMISSIONS.RESOURCE_MANAGE)
+  resourceCreate(@Scope() scope: CompanyScope, @Req() request: Request, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.resources.create(scope, id, body, user.id, request.axoraPermissions ?? new Set());
+  }
+
+  @Post(":id/resources/:planId/release")
+  @RequirePermission(PROJECT_PERMISSIONS.RESOURCE_MANAGE)
+  resourceRelease(@Scope() scope: CompanyScope, @Req() request: Request, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Param("planId") planId: string) {
+    return this.resources.release(scope, id, planId, user.id, request.axoraPermissions ?? new Set());
   }
 }

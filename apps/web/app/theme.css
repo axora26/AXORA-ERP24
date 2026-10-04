@@ -127,7 +127,7 @@
 .registration-login a { color: var(--theme-link); font-weight: 600; }
 .crm-resource-panel { margin-top: 20px; padding: 20px; }
 .crm-resource-panel .panel-head { padding: 0 0 18px; }
-.crm-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding-bottom: 18px; }
+.crm-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding-bottom: 18px; }
 .crm-filters .field { flex: 1 1 220px; }
 .crm-filters .field input, .crm-filters .field select { min-height: 44px; }
 .crm-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }

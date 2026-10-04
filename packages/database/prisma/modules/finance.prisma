@@ -385,3 +385,61 @@ model CreditRefund {
   @@index([organizationId, companyId, refundedAt])
   @@map("credit_refunds")
 }
+
+// Signature interne append-only des factures clients. La signature qualifiée/légale
+// reste soumise à un certificat et un prestataire eIDAS configurés séparément.
+model InvoiceSignature {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  invoiceId       String
+  invoiceCode     String
+  documentHash    String   @db.Char(64)
+  signature       String   @db.Text
+  algorithm       String   @default("HMAC-SHA256")
+  signerUserId    String
+  signedAt        DateTime @default(now())
+  status          InvoiceSignatureStatus @default(VALID)
+  revokedAt       DateTime?
+  revokedByUserId String?
+  revokeReason    String?
+  createdAt       DateTime @default(now())
+
+  @@unique([companyId, invoiceId, documentHash])
+  @@index([organizationId, companyId, invoiceId, status])
+  @@map("invoice_signatures")
+}
+
+enum InvoiceSignatureStatus {
+  VALID
+  REVOKED
+}
+
+enum BankStatementMatchStatus {
+  UNMATCHED
+  MATCHED
+  IGNORED
+}
+
+model BankStatementEntry {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  bankAccountId   String
+  externalId      String
+  bookedAt        DateTime
+  valueDate       DateTime?
+  description     String
+  amount          Decimal  @db.Decimal(18, 2)
+  currency        String   @db.Char(3)
+  status          BankStatementMatchStatus @default(UNMATCHED)
+  matchedPaymentId String?
+  matchedAt       DateTime?
+  matchedByUserId String?
+  createdAt       DateTime @default(now())
+  importedAt      DateTime @default(now())
+
+  @@unique([companyId, bankAccountId, externalId])
+  @@index([organizationId, companyId, bankAccountId, status, bookedAt])
+  @@map("bank_statement_entries")
+}

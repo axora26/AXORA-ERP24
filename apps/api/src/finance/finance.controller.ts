@@ -6,12 +6,15 @@ import { CurrentUser, Scope, ScopedController } from "../common/scope.guard.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import type { AuthenticatedUser } from "../auth/session.guard.js";
 import { FinanceService } from "./finance.service.js";
+import { InvoiceSignatureService } from "./invoice-signature.service.js";
+import { TreasuryForecastService } from "./treasury-forecast.service.js";
+import { BankReconciliationService } from "./bank-reconciliation.service.js";
 
 /** INC-08 — Finance. Les paiements sont append-only (aucune route de modification). */
 @Controller("finance")
 @ScopedController()
 export class FinanceController {
-  constructor(private readonly finance: FinanceService) {}
+  constructor(private readonly finance: FinanceService, private readonly signatures: InvoiceSignatureService, private readonly treasury: TreasuryForecastService, private readonly reconciliation: BankReconciliationService) {}
 
   @Get("summary")
   @RequirePermission(F.INVOICE_READ)
@@ -71,6 +74,55 @@ export class FinanceController {
   @RequirePermission(F.INVOICE_MANAGE)
   cancelInvoice(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
     return this.finance.cancelCustomerInvoice(scope, id, body, user.id);
+  }
+
+  @Get("invoices/:id/signatures")
+  @RequirePermission(F.INVOICE_READ)
+  signaturesForInvoice(@Scope() scope: CompanyScope, @Param("id") id: string) {
+    return this.signatures.list(scope, id);
+  }
+
+  @Post("invoices/:id/sign")
+  @RequireAnyPermission(F.INVOICE_SIGN, F.INVOICE_MANAGE)
+  signInvoice(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.signatures.sign(scope, id, body, user.id);
+  }
+
+  @Post("invoices/:id/signatures/:signatureId/revoke")
+  @RequireAnyPermission(F.INVOICE_SIGN, F.INVOICE_MANAGE)
+  revokeInvoiceSignature(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Param("signatureId") signatureId: string, @Body() body: unknown) {
+    return this.signatures.revoke(scope, id, signatureId, body, user.id);
+  }
+
+  @Get("invoices/:id/signatures/:signatureId/verify")
+  @RequirePermission(F.INVOICE_READ)
+  verifyInvoiceSignature(@Scope() scope: CompanyScope, @Param("id") id: string, @Param("signatureId") signatureId: string) {
+    return this.signatures.verify(scope, id, signatureId);
+  }
+
+  @Get("treasury-forecast")
+  @RequirePermission(F.INVOICE_READ)
+  treasuryForecast(@Scope() scope: CompanyScope, @Query("days") days?: string) {
+    return this.treasury.forecast(scope, days);
+  }
+
+  @Get("bank-statements")
+  @RequirePermission(F.INVOICE_READ)
+  bankStatements(@Scope() scope: CompanyScope, @Query("bankAccountId") bankAccountId?: string) {
+    return this.reconciliation.list(scope, bankAccountId);
+  }
+
+  @Post("bank-statements/import")
+  @RequirePermission(F.BANK_MANAGE)
+  importBankStatement(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    return this.reconciliation.importEntries(scope, body, user.id);
+  }
+
+  @Post("bank-statements/:id/match")
+  @RequirePermission(F.BANK_MANAGE)
+  matchBankStatement(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    const paymentId = body && typeof body === "object" && !Array.isArray(body) && "paymentId" in body && typeof body.paymentId === "string" ? body.paymentId : "";
+    return this.reconciliation.match(scope, id, paymentId, user.id);
   }
 
   @Get("payables")

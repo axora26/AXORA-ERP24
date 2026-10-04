@@ -33,6 +33,29 @@ export type ProjectForecastRevisionView = {
   decisionNote: string | null;
   lines: Array<ProjectForecastLineInput & { id: string }>;
 };
+
+export type ProjectResourceKind = "EMPLOYEE" | "VEHICLE" | "ASSET" | "MATERIAL";
+export type ProjectResourcePlanStatus = "PLANNED" | "RESERVED" | "RELEASED";
+
+export type ProjectResourcePlanView = {
+  id: string;
+  projectId: string;
+  wbsItemId: string | null;
+  kind: ProjectResourceKind;
+  resourceId: string;
+  resourceCode: string;
+  resourceName: string;
+  unitCode: string;
+  plannedQuantity: string;
+  plannedRate: string | null;
+  startAt: string;
+  endAt: string | null;
+  status: ProjectResourcePlanStatus;
+  notes: string | null;
+  createdByUserId: string;
+  releasedByUserId: string | null;
+  releasedAt: string | null;
+};
 export type ProjectTaskStatus = "TODO" | "IN_PROGRESS" | "BLOCKED" | "DONE";
 export type ProjectChangeOrderStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type ProjectRiskStatus = "OPEN" | "MITIGATED" | "CLOSED";
