@@ -232,6 +232,10 @@ const LABELS: Record<string, string> = {
   "integrations.inbound.activated": "Webhook entrant activé",
   "integrations.inbound.deactivated": "Webhook entrant désactivé",
   "integrations.inbound.lead.created": "Prospect reçu par webhook entrant",
+  "finance.accounting.bootstrapped": "Plan comptable initialisé",
+  "finance.accounting.account.created": "Compte comptable créé",
+  "finance.accounting.journal.created": "Journal comptable créé",
+  "finance.accounting.entry.posted": "Écriture comptable postée",
 };
 
 export function describeAudit(action: string): string {
