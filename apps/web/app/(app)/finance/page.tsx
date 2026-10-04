@@ -12,6 +12,7 @@ import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
 import { FinanceCreditNotes } from "../../components/finance-credit-notes";
 import { BankReconciliation } from "../../components/bank-reconciliation";
+import { FinanceAccounting } from "../../components/finance-accounting";
 import { DataUnavailable,
   Button,
   DataTable,
@@ -32,7 +33,7 @@ import { DataUnavailable,
   TextField,
 } from "../../components/ui";
 
-type TabId = "receivables" | "payables" | "payments" | "treasury" | "credits";
+type TabId = "receivables" | "payables" | "payments" | "treasury" | "credits" | "accounting";
 type Dialog = "invoice" | "payable" | "bank" | "tax";
 
 export default function FinancePage(): React.ReactElement {
@@ -41,7 +42,8 @@ export default function FinancePage(): React.ReactElement {
   const canInvoices = session.can("finance.invoice.read");
   const canPayables = session.can("finance.payable.read");
   const canCredits = session.can("finance.credit.read");
-  const [tab, setTab] = useState<TabId>(canInvoices ? "receivables" : canPayables ? "payables" : "credits");
+  const canAccounting = session.can("finance.accounting.read");
+  const [tab, setTab] = useState<TabId>(canInvoices ? "receivables" : canPayables ? "payables" : canCredits ? "credits" : "accounting");
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const mutation = useMutation();
   const data = useResource(() =>
@@ -132,11 +134,13 @@ export default function FinancePage(): React.ReactElement {
               ...(canPayables ? [{ id: "payables" as const, label: "Factures fournisseurs", count: payables.length }] : []),
               ...(canCredits ? [{ id: "credits" as const, label: "Avoirs & remboursements" }] : []),
               ...(canInvoices ? [{ id: "payments" as const, label: "Paiements", count: payments.length }, { id: "treasury" as const, label: "Trésorerie & paramètres" }] : []),
+              ...(canAccounting ? [{ id: "accounting" as const, label: "Comptabilité générale" }] : []),
             ]}
           />
 
           <div className="stack">
             {tab === "credits" && canCredits && <FinanceCreditNotes onChanged={data.reload} />}
+            {tab === "accounting" && canAccounting && <FinanceAccounting canManage={session.can("finance.accounting.manage")} canPost={session.can("finance.accounting.post")} />}
             {tab === "receivables" && canInvoices && (
               <Panel title="Factures clients" subtitle="Le numéro légal est attribué à l'émission, dans l'ordre chronologique">
                 <DataTable

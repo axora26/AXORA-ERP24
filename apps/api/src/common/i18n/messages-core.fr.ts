@@ -181,4 +181,15 @@ export const CORE_MESSAGES: Record<string, string> = {
   "measurements[{x}] needs an acceptance range (min and/or max)": "measurements[{1}] exige une plage d'acceptation (min et/ou max)",
   "measurements[{x}].measured is required": "measurements[{1}].measured est obligatoire",
   "measurements[{x}]: min > max": "measurements[{1}] : min > max",
+  // --- Comptabilité générale ---------------------------------------------
+  "code contains invalid characters": "Le code contient des caractères invalides",
+  "Parent account not found": "Compte parent introuvable",
+  "Account {x} already exists": "Le compte {1} existe déjà",
+  "Journal {x} already exists": "Le journal {1} existe déjà",
+  "Payment not found": "Paiement introuvable",
+  "lines must contain between 2 and 100 lines": "Les écritures doivent contenir entre 2 et 100 lignes",
+  "lines[{x}] must contain either a debit or a credit": "La ligne {1} doit contenir un débit ou un crédit",
+  "Accounting entry must be balanced": "L’écriture comptable doit être équilibrée",
+  "Accounting journal not found or inactive": "Journal comptable introuvable ou inactif",
+  "Every accounting account must exist and be active": "Chaque compte comptable doit exister et être actif",
 };

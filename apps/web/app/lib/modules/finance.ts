@@ -1,4 +1,8 @@
 import type {
+  AccountingAccountView,
+  AccountingEntryView,
+  AccountingJournalView,
+  AccountingTrialBalanceView,
   BankAccountView,
   CustomerInvoiceView,
   InvoiceSignatureView,
@@ -12,6 +16,15 @@ import type {
 import { api } from "../api";
 
 export const financeApi = {
+  accountingConfiguration: () => api.get<{ accounts: AccountingAccountView[]; journals: AccountingJournalView[] }>("/finance/accounting/configuration"),
+  accountingBootstrap: () => api.post<{ accounts: AccountingAccountView[]; journals: AccountingJournalView[] }>("/finance/accounting/bootstrap", {}),
+  accountingAccounts: () => api.get<AccountingAccountView[]>("/finance/accounting/accounts"),
+  createAccountingAccount: (input: Record<string, unknown>) => api.post<AccountingAccountView[]>("/finance/accounting/accounts", input),
+  accountingJournals: () => api.get<AccountingJournalView[]>("/finance/accounting/journals"),
+  createAccountingJournal: (input: Record<string, unknown>) => api.post<AccountingJournalView[]>("/finance/accounting/journals", input),
+  accountingEntries: (query?: { from?: string; to?: string; journalId?: string }) => api.get<AccountingEntryView[]>(`/finance/accounting/entries${query ? `?${new URLSearchParams(query).toString()}` : ""}`),
+  accountingTrialBalance: (query?: { from?: string; to?: string }) => api.get<AccountingTrialBalanceView>(`/finance/accounting/trial-balance${query ? `?${new URLSearchParams(query).toString()}` : ""}`),
+  createAccountingEntry: (input: Record<string, unknown>) => api.post<AccountingEntryView>("/finance/accounting/entries", input),
   summary: () => api.get<FinanceSummaryView>("/finance/summary"),
   taxRates: () => api.get<TaxRateView[]>("/finance/tax-rates"),
   createTaxRate: (input: { name: string; rate: string }) => api.post<TaxRateView[]>("/finance/tax-rates", input),

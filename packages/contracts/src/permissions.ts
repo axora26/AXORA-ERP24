@@ -104,6 +104,9 @@ export const FINANCE_PERMISSIONS = {
   CREDIT_MANAGE: "finance.credit.manage",
   CREDIT_ISSUE: "finance.credit.issue",
   REFUND_MANAGE: "finance.refund.manage",
+  ACCOUNTING_READ: "finance.accounting.read",
+  ACCOUNTING_MANAGE: "finance.accounting.manage",
+  ACCOUNTING_POST: "finance.accounting.post",
 } as const;
 
 /** INC-09 — RH. Donnees salariales et paie derriere une permission distincte. */

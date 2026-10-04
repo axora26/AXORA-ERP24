@@ -21,6 +21,7 @@ export * from "./project-operations.js";
 export * from "./procurement.js";
 export * from "./inventory.js";
 export * from "./finance.js";
+export * from "./accounting.js";
 export * from "./credit-notes.js";
 export * from "./hr.js";
 export * from "./hr-operations.js";

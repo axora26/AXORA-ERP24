@@ -75,6 +75,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   payment: "les paiements",
   bank: "les banques et caisses",
   settings: "les paramètres",
+  accounting: "la comptabilité générale",
   employee: "les employés",
   attendance: "les pointages",
   timesheet: "les feuilles de temps",

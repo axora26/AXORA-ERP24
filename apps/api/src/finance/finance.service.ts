@@ -21,6 +21,7 @@ import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
 import { AutomationService } from "../workflow/automation.service.js";
 import { WorkflowGate } from "../workflow/workflow-gate.service.js";
+import { AccountingService } from "./accounting.service.js";
 import { dec, money, qty, sumDecimals } from "../common/decimal.js";
 import {
   assertBody,
@@ -66,6 +67,7 @@ export class FinanceService {
     private readonly numbering: NumberingService,
     private readonly automation: AutomationService,
     private readonly gate: WorkflowGate,
+    private readonly accounting: AccountingService,
   ) {}
 
   // ---------------------------------------------------------------------
@@ -299,6 +301,7 @@ export class FinanceService {
         contractId: invoice.contractId,
       });
     });
+    await this.accounting.postCustomerInvoice(scope, invoiceId, actorUserId);
     return this.getCustomerInvoice(scope, invoiceId);
   }
 
@@ -490,6 +493,7 @@ export class FinanceService {
         { code: invoice.code, matchStatus: invoice.matchStatus, note },
       );
     });
+    if (decision === "APPROVED") await this.accounting.postSupplierInvoice(scope, invoiceId, actorUserId);
     return this.getSupplierInvoice(scope, invoiceId);
   }
 
@@ -515,6 +519,7 @@ export class FinanceService {
       return kind === "CUSTOMER" ? this.getCustomerInvoice(scope, invoiceId) : this.getSupplierInvoice(scope, invoiceId);
     }
 
+    let paymentId: string | null = null;
     try {
       await this.prisma.$transaction(async (tx) => {
         const account = await tx.bankAccount.findFirst({ where: { id: bankAccountId, ...scope } });
@@ -564,6 +569,7 @@ export class FinanceService {
             createdByUserId: actorUserId,
           },
         });
+        paymentId = payment.id;
         if (kind === "CUSTOMER") {
           await tx.customerInvoice.update({ where: { id: invoice.id }, data: { paidAmount, status } });
         } else {
@@ -581,6 +587,7 @@ export class FinanceService {
       // Course sur la meme cle d'idempotence : la contrainte unique arbitre.
       if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) throw error;
     }
+    if (paymentId) await this.accounting.postPayment(scope, paymentId, actorUserId);
     return kind === "CUSTOMER" ? this.getCustomerInvoice(scope, invoiceId) : this.getSupplierInvoice(scope, invoiceId);
   }
 
