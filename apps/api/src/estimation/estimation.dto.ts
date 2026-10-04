@@ -69,6 +69,11 @@ export class UpdateDqePricingDto {
   marginRate?: string;
   taxRate?: string;
 }
+export class CreateDqeVariantDto {
+  companyId?: string;
+  code!: string;
+  title!: string;
+}
 
 export function assertDraftFields(input: object, allowed: readonly string[]): void {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new BadRequestException("A JSON object is required");

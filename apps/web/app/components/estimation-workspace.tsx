@@ -6,6 +6,7 @@ import type {
   CrmOpportunityView,
   DqeSummaryView,
   DqeView,
+  DqeVariantView,
   EstimationStudySummaryView,
   EstimationStudyView,
 } from "@axora24/contracts";
@@ -62,6 +63,7 @@ const EMPTY_LINE_FORM = {
 };
 
 const EMPTY_PRICING_FORM = { overheadRate: "0", marginRate: "0", taxRate: "0" };
+const EMPTY_VARIANT_FORM = { code: "", title: "" };
 
 /**
  * Espace Etudes & DQE (INC-03).
@@ -82,6 +84,8 @@ export function EstimationWorkspace(): React.ReactElement {
   const [dqeForm, setDqeForm] = useState(EMPTY_DQE_FORM);
   const [lineForm, setLineForm] = useState(EMPTY_LINE_FORM);
   const [pricingForm, setPricingForm] = useState(EMPTY_PRICING_FORM);
+  const [variants, setVariants] = useState<DqeVariantView[]>([]);
+  const [variantForm, setVariantForm] = useState(EMPTY_VARIANT_FORM);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -197,6 +201,8 @@ export function EstimationWorkspace(): React.ReactElement {
         ...dqeForm,
       });
       setSelectedDqe(created);
+      setVariants([]);
+      setVariantForm(EMPTY_VARIANT_FORM);
       setDqeForm(EMPTY_DQE_FORM);
       setNotice("DQE créé avec sa source d'étude figée.");
       await load();
@@ -213,6 +219,7 @@ export function EstimationWorkspace(): React.ReactElement {
       const dqe = await estimationApi.dqe(dqeId);
       setSelectedDqe(dqe);
       setPricingForm({ overheadRate: dqe.overheadRate ?? "0", marginRate: dqe.marginRate ?? "0", taxRate: dqe.taxRate ?? "0" });
+      setVariants(await estimationApi.dqeVariants(dqeId));
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Ouverture du DQE impossible.");
     }
@@ -256,10 +263,29 @@ export function EstimationWorkspace(): React.ReactElement {
       const updated = await estimationApi.updateDqePricing(selectedDqe.id, { expectedVersion: selectedDqe.version, ...pricingForm });
       setSelectedDqe(updated);
       setPricingForm({ overheadRate: updated.overheadRate ?? "0", marginRate: updated.marginRate ?? "0", taxRate: updated.taxRate ?? "0" });
+      setVariants(await estimationApi.dqeVariants(updated.id));
       setNotice("Coefficients du DQE enregistrés.");
       await load();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Enregistrement des coefficients impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createDqeVariant(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!selectedDqe || !variantForm.code.trim() || !variantForm.title.trim()) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await estimationApi.createDqeVariant(selectedDqe.id, { code: variantForm.code.trim(), title: variantForm.title.trim() });
+      setVariantForm(EMPTY_VARIANT_FORM);
+      setVariants(await estimationApi.dqeVariants(selectedDqe.id));
+      setNotice("Variante enregistrée pour comparaison.");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Création de la variante impossible.");
     } finally {
       setSaving(false);
     }
@@ -738,6 +764,21 @@ export function EstimationWorkspace(): React.ReactElement {
               <button className="secondary-button" type="submit" disabled={saving}>Enregistrer les taux</button>
             </form>
           )}
+
+          <section className="dqe-variants" aria-labelledby="dqe-variants-title">
+            <div className="dqe-variants-head">
+              <div><h3 id="dqe-variants-title">Variantes comparées</h3><p>Capturez un instantané immuable avant de modifier le scénario de chiffrage.</p></div>
+              {selectedDqe.status !== "ARCHIVED" && can("estimation.dqe.manage") && (
+                <form className="dqe-variant-form" onSubmit={createDqeVariant}>
+                  <label htmlFor="variant-code">Code<input id="variant-code" value={variantForm.code} onChange={(event) => setVariantForm({ ...variantForm, code: event.currentTarget.value })} placeholder="OPT-A" required /></label>
+                  <label htmlFor="variant-title">Intitulé<input id="variant-title" value={variantForm.title} onChange={(event) => setVariantForm({ ...variantForm, title: event.currentTarget.value })} placeholder="Solution optimisée" required /></label>
+                  <button className="secondary-button" type="submit" disabled={saving}>Capturer</button>
+                </form>
+              )}
+            </div>
+            {variants.length > 0 && <div className="table-wrap"><table><thead><tr><th>Variante</th><th>Révision</th><th>Total capturé</th><th>Écart actuel</th><th>Créée le</th></tr></thead><tbody>{variants.map((variant) => <tr key={variant.id}><td><strong>{variant.title}</strong><small>{variant.code}</small></td><td>R{variant.revision}</td><td className="numeric-cell">{variant.total} {variant.currency}</td><td className="numeric-cell">{variant.deltaTotal} {variant.currency}</td><td>{new Date(variant.createdAt).toLocaleDateString("fr-FR")}</td></tr>)}</tbody></table></div>}
+            {variants.length === 0 && <p className="dqe-variants-empty">Aucune variante capturée pour ce DQE.</p>}
+          </section>
 
           {selectedDqe.lines.length === 0 ? (
             <EmptyState title="Aucune ligne" body="Ajoutez la première ligne du bordereau." />

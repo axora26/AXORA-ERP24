@@ -225,4 +225,17 @@ describe("Study and DQE draft corrections (PostgreSQL)", () => {
     expect((await post(`dqes/${current.id}/finalize`, { expectedVersion: 4 })).status).toBe(201);
     expect((await patch(`dqes/${current.id}/pricing`, { expectedVersion: 5, marginRate: "1" })).status).toBe(400);
   });
+
+  it("captures immutable DQE variants and compares their current delta", async () => {
+    const current = await dqe();
+    const captured = await post(`dqes/${current.id}/variants`, { code: "OPT-A", title: "Option de référence" });
+    expect(captured.status).toBe(201);
+    expect(captured.body).toMatchObject({ dqeId: current.id, code: "OPT-A", subtotal: "10.000000", total: "10.000000", deltaSubtotal: "0.000000", deltaTotal: "0.000000" });
+    expect((await post(`dqes/${current.id}/variants`, { code: "OPT-A", title: "Doublon" })).status).toBe(409);
+    const priced = await patch(`dqes/${current.id}/pricing`, { expectedVersion: 2, marginRate: "10.000000" });
+    expect(priced.status).toBe(200);
+    const variants = await get(`dqes/${current.id}/variants`);
+    expect(variants.status).toBe(200);
+    expect(variants.body[0]).toMatchObject({ code: "OPT-A", deltaSubtotal: "0.000000", deltaTotal: "-1.000000" });
+  });
 });

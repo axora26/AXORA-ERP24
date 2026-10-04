@@ -16,6 +16,7 @@ import type {
   UpdateStudyRequirementDto,
   UpdateDqeLineDto,
   UpdateDqePricingDto,
+  CreateDqeVariantDto,
 } from "./estimation.dto.js";
 
 @Controller("estimation")
@@ -142,6 +143,20 @@ export class EstimationController {
   async updateDqePricing(@Req() request: Request, @Param("id") id: string, @Body() body: UpdateDqePricingDto) {
     const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
     return this.estimation.updateDqePricing(scope, id, body, request.axoraUser!.id);
+  }
+
+  @Get("dqes/:id/variants")
+  @RequirePermission(ESTIMATION_PERMISSIONS.DQE_READ)
+  async listDqeVariants(@Req() request: Request, @Param("id") id: string, @Query("companyId") companyId?: string) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+    return this.estimation.listDqeVariants(scope, id);
+  }
+
+  @Post("dqes/:id/variants")
+  @RequirePermission(ESTIMATION_PERMISSIONS.DQE_MANAGE)
+  async createDqeVariant(@Req() request: Request, @Param("id") id: string, @Body() body: CreateDqeVariantDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.createDqeVariant(scope, id, body, request.axoraUser!.id);
   }
 
   @Delete("dqes/:id/lines/:lineId")

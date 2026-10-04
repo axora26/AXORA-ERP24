@@ -57,6 +57,24 @@ export interface DqeSourceView {
   createdAt: string;
 }
 
+export interface DqeVariantView {
+  id: string;
+  dqeId: string;
+  code: string;
+  title: string;
+  currency: string;
+  revision: number;
+  overheadRate: string;
+  marginRate: string;
+  taxRate: string;
+  subtotal: string;
+  total: string;
+  createdAt: string;
+  /** Écart calculé par rapport au DQE courant, jamais persisté. */
+  deltaSubtotal: string;
+  deltaTotal: string;
+}
+
 /** La route de liste renvoie le même contrat complet que la route de détail. */
 export interface DqeView {
   id: string;
@@ -83,6 +101,7 @@ export interface DqeView {
   taxAmount?: string;
   total?: string;
   categoryTotals?: Record<DqeCostCategory, string>;
+  variants?: DqeVariantView[];
   lines: DqeLineView[];
   source: DqeSourceView | null;
 }

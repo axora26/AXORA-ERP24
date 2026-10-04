@@ -236,4 +236,5 @@ export const OPS_MESSAGES: Record<string, string> = {
   "costCategory must be one of: {x}": "La famille de coût doit être l'une des valeurs suivantes : {1}",
   "{x} must be between 0 and 100": "{1} doit être compris entre 0 et 100",
   "Provide at least one pricing field to update": "Indiquez au moins un coefficient de chiffrage à modifier",
+  "A DQE variant with this code already exists": "Une variante DQE avec ce code existe déjà",
 };

@@ -15,6 +15,7 @@ import {
   draftVersion,
   type CreateDqeDto,
   type CreateDqeLineDto,
+  type CreateDqeVariantDto,
   type CreateStudyDto,
   type CreateStudyRequirementDto,
   type DraftVersionDto,
@@ -330,6 +331,52 @@ export class EstimationService {
     });
   }
 
+  async createDqeVariant(scope: CompanyScope, dqeId: string, input: CreateDqeVariantDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "code", "title"]);
+    const code = requiredText(input.code, "code", 80).toUpperCase();
+    const title = requiredText(input.title, "title", 180);
+    return this.prisma.$transaction(async (tx) => {
+      const document = await tx.dqeDocument.findFirst({ where: { id: dqeId, ...scope }, include: dqeInclude });
+      if (!document) throw new NotFoundException("DQE not found");
+      const duplicate = await tx.dqeVariant.findFirst({ where: { dqeId, ...scope, code }, select: { id: true } });
+      if (duplicate) throw new ConflictException("A DQE variant with this code already exists");
+      const current = toDqeView(document);
+      const created = await tx.dqeVariant.create({
+        data: {
+          ...scope,
+          dqeId,
+          code,
+          title,
+          currency: current.currency,
+          revision: current.revision,
+          overheadRate: new Prisma.Decimal(current.overheadRate),
+          marginRate: new Prisma.Decimal(current.marginRate),
+          taxRate: new Prisma.Decimal(current.taxRate),
+          subtotal: new Prisma.Decimal(current.subtotal),
+          total: new Prisma.Decimal(current.total),
+          snapshot: {
+            lines: current.lines.map((line) => ({ position: line.position, reference: line.reference, designation: line.designation, unitCode: line.unitCode, costCategory: line.costCategory ?? "MATERIAL", quantity: line.quantity, unitPrice: line.unitPrice, lineTotal: line.lineTotal })),
+            overheadRate: current.overheadRate,
+            marginRate: current.marginRate,
+            taxRate: current.taxRate,
+            subtotal: current.subtotal,
+            total: current.total,
+          } as Prisma.InputJsonValue,
+        },
+      });
+      await this.draftAudit(tx, scope, actorUserId, "dqe.variant.created", "DqeVariant", created.id, dqeId, document.version, [], { code, revision: document.revision, subtotal: current.subtotal, total: current.total });
+      return toDqeVariantView(created, current.subtotal, current.total);
+    });
+  }
+
+  async listDqeVariants(scope: CompanyScope, dqeId: string) {
+    const document = await this.prisma.dqeDocument.findFirst({ where: { id: dqeId, ...scope }, include: dqeInclude });
+    if (!document) throw new NotFoundException("DQE not found");
+    const current = toDqeView(document);
+    const variants = await this.prisma.dqeVariant.findMany({ where: { dqeId, ...scope }, orderBy: [{ createdAt: "desc" }, { code: "asc" }] });
+    return variants.map((variant) => toDqeVariantView(variant, current.subtotal, current.total));
+  }
+
   async deleteDqeLine(scope: CompanyScope, dqeId: string, lineId: string, input: DraftVersionDto, actorUserId: string) {
     assertDraftFields(input, ["companyId", "expectedVersion"]);
     const version = draftVersion(input.expectedVersion)!;
@@ -453,6 +500,26 @@ type DqeWithDetails = Prisma.DqeDocumentGetPayload<{
 }>;
 
 type DqeLineRecord = Prisma.DqeLineGetPayload<Record<string, never>>;
+type DqeVariantRecord = Prisma.DqeVariantGetPayload<Record<string, never>>;
+
+function toDqeVariantView(variant: DqeVariantRecord, currentSubtotal: string, currentTotal: string) {
+  return {
+    id: variant.id,
+    dqeId: variant.dqeId,
+    code: variant.code,
+    title: variant.title,
+    currency: variant.currency.trim(),
+    revision: variant.revision,
+    overheadRate: variant.overheadRate.toFixed(6),
+    marginRate: variant.marginRate.toFixed(6),
+    taxRate: variant.taxRate.toFixed(6),
+    subtotal: variant.subtotal.toFixed(6),
+    total: variant.total.toFixed(6),
+    createdAt: variant.createdAt.toISOString(),
+    deltaSubtotal: new Prisma.Decimal(variant.subtotal).minus(currentSubtotal).toFixed(6),
+    deltaTotal: new Prisma.Decimal(variant.total).minus(currentTotal).toFixed(6),
+  };
+}
 
 function toStudyView(study: StudyWithRequirements) {
   return {

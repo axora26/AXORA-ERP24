@@ -513,14 +513,40 @@ model DqeDocument {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  lines  DqeLine[]
-  source DqeStudySource?
+  lines    DqeLine[]
+  variants DqeVariant[]
+  source   DqeStudySource?
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
   @@index([organizationId, companyId, status, createdAt])
   @@index([opportunityId])
   @@map("dqe_documents")
+}
+
+/// Instantane immuable d'un DQE pour comparer des options de chiffrage.
+model DqeVariant {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  dqeId          String
+  code           String
+  title          String
+  currency       String   @db.Char(3)
+  revision       Int
+  overheadRate   Decimal  @db.Decimal(9, 6)
+  marginRate     Decimal  @db.Decimal(9, 6)
+  taxRate        Decimal  @db.Decimal(9, 6)
+  subtotal       Decimal  @db.Decimal(24, 6)
+  total          Decimal  @db.Decimal(24, 6)
+  snapshot       Json
+  createdAt      DateTime @default(now())
+
+  dqe DqeDocument @relation(fields: [dqeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([dqeId, code])
+  @@index([organizationId, companyId, dqeId, createdAt])
+  @@map("dqe_variants")
 }
 
 model DqeLine {
