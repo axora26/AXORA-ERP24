@@ -1,5 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import type { InvoiceSignatureView } from "@axora24/contracts";
 import { Prisma } from "@axora24/database";
 import type { CompanyScope } from "../common/company-scope.service.js";
@@ -42,7 +42,10 @@ export class InvoiceSignatureService {
     }
 
     const canonicalHash = this.hashInvoice(invoice);
-    const documentHash = input.documentHash ?? canonicalHash;
+    if (input.documentHash && input.documentHash !== canonicalHash) {
+      throw new ConflictException("L'empreinte fournie ne correspond pas à la facture émise");
+    }
+    const documentHash = canonicalHash;
     const signature = createHmac("sha256", this.signingSecret()).update(documentHash, "utf8").digest("hex");
     const existing = await this.prisma.invoiceSignature.findFirst({
       where: { companyId: scope.companyId, invoiceId, documentHash, status: "VALID" },

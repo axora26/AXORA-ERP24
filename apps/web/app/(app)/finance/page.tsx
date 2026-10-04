@@ -2,12 +2,12 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, FileText, Landmark, Plus, Receipt, Scale, Wallet } from "lucide-react";
+import { Banknote, BellRing, CheckCircle2, FileText, Landmark, Plus, Receipt, Scale, Wallet } from "lucide-react";
 import { CUSTOMER_STATUS_LABEL, MATCH_LABEL, METHOD_LABEL, SUPPLIER_STATUS_LABEL, financeApi } from "../../lib/modules/finance";
 import { procurementApi } from "../../lib/modules/procurement";
 import { salesApi } from "../../lib/api";
 import { formatDate, formatMoney } from "../../lib/format";
-import type { TreasuryForecastView } from "@axora24/contracts";
+import type { CollectionReminderView, TreasuryForecastView } from "@axora24/contracts";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
 import { FinanceCreditNotes } from "../../components/finance-credit-notes";
@@ -33,7 +33,7 @@ import { DataUnavailable,
   TextField,
 } from "../../components/ui";
 
-type TabId = "receivables" | "payables" | "payments" | "treasury" | "credits" | "accounting";
+type TabId = "receivables" | "payables" | "payments" | "treasury" | "credits" | "accounting" | "collections";
 type Dialog = "invoice" | "payable" | "bank" | "tax";
 
 export default function FinancePage(): React.ReactElement {
@@ -54,10 +54,11 @@ export default function FinancePage(): React.ReactElement {
       canInvoices ? financeApi.payments() : Promise.resolve([]),
       canInvoices ? financeApi.bankAccounts() : Promise.resolve([]),
       canInvoices ? financeApi.taxRates() : Promise.resolve([]),
+      canInvoices ? financeApi.collectionReminders() : Promise.resolve([]),
     ]),
     [canInvoices, canPayables],
   );
-  const [summary, invoices, payables, payments, accounts, taxRates] = data.data ?? [null, [], [], [], [], []];
+  const [summary, invoices, payables, payments, accounts, taxRates, reminders] = data.data ?? [null, [], [], [], [], [], []];
   const forecast = useResource<TreasuryForecastView | null>(() => canInvoices ? financeApi.treasuryForecast(30) : Promise.resolve(null), [canInvoices]);
 
   async function done(action: () => Promise<unknown>, success: string, open?: (result: { id: string }) => string): Promise<void> {
@@ -133,7 +134,7 @@ export default function FinancePage(): React.ReactElement {
               ...(canInvoices ? [{ id: "receivables" as const, label: "Factures clients", count: invoices.length }] : []),
               ...(canPayables ? [{ id: "payables" as const, label: "Factures fournisseurs", count: payables.length }] : []),
               ...(canCredits ? [{ id: "credits" as const, label: "Avoirs & remboursements" }] : []),
-              ...(canInvoices ? [{ id: "payments" as const, label: "Paiements", count: payments.length }, { id: "treasury" as const, label: "Trésorerie & paramètres" }] : []),
+              ...(canInvoices ? [{ id: "payments" as const, label: "Paiements", count: payments.length }, { id: "collections" as const, label: "Relances clients", count: reminders.filter((reminder) => reminder.status === "DRAFT").length }, { id: "treasury" as const, label: "Trésorerie & paramètres" }] : []),
               ...(canAccounting ? [{ id: "accounting" as const, label: "Comptabilité générale" }] : []),
             ]}
           />
@@ -252,6 +253,10 @@ export default function FinancePage(): React.ReactElement {
               </Panel>
             )}
 
+            {tab === "collections" && canInvoices && (
+              <CollectionReminders reminders={reminders} canManage={session.can("finance.invoice.manage")} onChanged={data.reload} />
+            )}
+
             {tab === "treasury" && canInvoices && (
               <>
               <Panel title="Prévision de trésorerie à 30 jours" subtitle="Projection des échéances clients et fournisseurs validées, à compléter avec vos hypothèses de gestion.">
@@ -337,6 +342,38 @@ export default function FinancePage(): React.ReactElement {
         />
       )}
     </>
+  );
+}
+
+function CollectionReminders({ reminders, canManage, onChanged }: { reminders: CollectionReminderView[]; canManage: boolean; onChanged: () => Promise<void> }): React.ReactElement {
+  const mutation = useMutation();
+  const draftCount = reminders.filter((reminder) => reminder.status === "DRAFT").length;
+  return (
+    <Panel
+      title="Relances clients"
+      subtitle="Paliers 1, 2 et 3 générés sur les créances échues. Le canal e-mail reste désactivé tant qu'aucun SMTP n'est configuré."
+      actions={
+        <div className="panel-actions">
+          <Button onClick={() => void mutation.run(() => financeApi.generateCollectionReminders(), "Relances recalculées.").then(() => onChanged())} disabled={mutation.saving}>
+            <BellRing size={14} aria-hidden="true" /> Générer les relances
+          </Button>
+        </div>
+      }
+    >
+      <Feedback error={mutation.error} notice={mutation.notice} />
+      {reminders.length === 0 ? <Empty icon={<BellRing size={22} />} title="Aucune relance à traiter" body="Les factures échues avec un reste dû apparaîtront ici après génération." /> : (
+        <DataTable rows={reminders} empty={null} columns={[
+          { key: "invoice", header: "Facture", render: (reminder) => <><strong>{reminder.invoiceCode ?? "Facture"}</strong><small>{reminder.customerName}</small></> },
+          { key: "due", header: "Échéance", render: (reminder) => formatDate(reminder.dueDate) },
+          { key: "delay", header: "Retard", render: (reminder) => <StatusChip status={reminder.daysOverdue >= 60 ? "critical" : reminder.daysOverdue >= 30 ? "warning" : "overdue"} label={`${reminder.daysOverdue} j`} /> },
+          { key: "level", header: "Palier", render: (reminder) => `Niveau ${reminder.level}` },
+          { key: "balance", header: "Reste dû", align: "right", render: (reminder) => <span className="num">{formatMoney(reminder.balanceDue, reminder.currency)}</span> },
+          { key: "status", header: "État", render: (reminder) => reminder.status === "SENT" ? <StatusChip status="done" label="Traitée" /> : <StatusChip status="pending" label="À traiter" /> },
+          { key: "action", header: "Action", align: "right", render: (reminder) => reminder.status === "DRAFT" && canManage ? <Button variant="ghost" disabled={mutation.saving} onClick={() => void mutation.run(() => financeApi.markCollectionReminderSent(reminder.id), "Relance marquée comme traitée.").then(() => onChanged())}><CheckCircle2 size={14} aria-hidden="true" /> Traiter</Button> : "—" },
+        ]} />
+      )}
+      <p className="inline-note">{draftCount} relance(s) interne(s) en attente. Chaque génération est idempotente et conservée dans l'audit.</p>
+    </Panel>
   );
 }
 

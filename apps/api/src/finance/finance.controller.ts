@@ -167,6 +167,24 @@ export class FinanceController {
     return this.signatures.verify(scope, id, signatureId);
   }
 
+  @Get("collection-reminders")
+  @RequirePermission(F.INVOICE_READ)
+  collectionReminders(@Scope() scope: CompanyScope) {
+    return this.finance.listCollectionReminders(scope);
+  }
+
+  @Post("collection-reminders/generate")
+  @RequirePermission(F.INVOICE_MANAGE)
+  generateCollectionReminders(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser) {
+    return this.finance.generateCollectionReminders(scope, user.id);
+  }
+
+  @Post("collection-reminders/:id/mark-sent")
+  @RequirePermission(F.INVOICE_MANAGE)
+  markCollectionReminderSent(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.finance.markCollectionReminderSent(scope, id, user.id);
+  }
+
   @Get("treasury-forecast")
   @RequirePermission(F.INVOICE_READ)
   treasuryForecast(@Scope() scope: CompanyScope, @Query("days") days?: string) {

@@ -264,10 +264,57 @@ describe("Finance (e2e)", () => {
     expect(cockpit.collected.amount).toBe("17400.00");
   });
 
+  it("relances clients : paliers idempotents, traitement et exclusion des factures soldees", async () => {
+    const reminderInvoice = await harness.prisma.customerInvoice.create({
+      data: {
+        organizationId: owner.organizationId,
+        companyId: owner.companyId,
+        customerName: "Client relance",
+        currency: "USD",
+        issueDate: new Date("2026-08-01T00:00:00.000Z"),
+        dueDate: new Date("2026-08-01T00:00:00.000Z"),
+        status: "ISSUED",
+        subtotal: "1000.00",
+        total: "1000.00",
+        createdByUserId: owner.userId,
+        issuedByUserId: owner.userId,
+      },
+    });
+    const paidInvoice = await harness.prisma.customerInvoice.create({
+      data: {
+        organizationId: owner.organizationId,
+        companyId: owner.companyId,
+        customerName: "Client solde",
+        currency: "USD",
+        issueDate: new Date("2026-08-01T00:00:00.000Z"),
+        dueDate: new Date("2026-08-01T00:00:00.000Z"),
+        status: "PAID",
+        subtotal: "500.00",
+        total: "500.00",
+        paidAmount: "500.00",
+        createdByUserId: owner.userId,
+        issuedByUserId: owner.userId,
+      },
+    });
+
+    const generated = await api().post("/finance/collection-reminders/generate", {});
+    expect(generated.status).toBe(201);
+    const invoiceReminders = generated.body.filter((row: { invoiceId: string }) => row.invoiceId === reminderInvoice.id);
+    expect(invoiceReminders.map((row: { level: number }) => row.level)).toEqual([1, 2, 3]);
+    expect(generated.body.some((row: { invoiceId: string }) => row.invoiceId === paidInvoice.id)).toBe(false);
+
+    const replay = await api().post("/finance/collection-reminders/generate", {});
+    expect(replay.body.filter((row: { invoiceId: string }) => row.invoiceId === reminderInvoice.id)).toHaveLength(3);
+    const treated = await api().post(`/finance/collection-reminders/${invoiceReminders[0].id}/mark-sent`, {});
+    expect(treated.body.status).toBe("SENT");
+    expect((await api().post(`/finance/collection-reminders/${invoiceReminders[0].id}/mark-sent`, {})).status).toBe(400);
+    expect((await as(harness, other).get("/finance/collection-reminders")).body).toEqual([]);
+  });
+
   it("synthese de tresorerie et RBAC / isolation", async () => {
     const summary = await api().get("/finance/summary");
     expect(summary.body.currency).toBe("USD");
-    expect(summary.body.receivables).toBe("35000.00");
+    expect(summary.body.receivables).toBe("36000.00");
     expect(summary.body.payables).toBe("580.00");
     expect(summary.body.cashPosition).toBe("26820.00");
 

@@ -141,6 +141,26 @@ export interface FinanceSummaryView {
   toApprove: number;
 }
 
+export type CollectionReminderStatus = "DRAFT" | "SENT" | "CANCELLED";
+
+export interface CollectionReminderView {
+  id: string;
+  invoiceId: string;
+  invoiceCode: string | null;
+  customerName: string;
+  currency: string;
+  dueDate: string;
+  scheduledFor: string;
+  daysOverdue: number;
+  level: number;
+  balanceDue: string;
+  status: CollectionReminderStatus;
+  sentAt: string | null;
+  sentByUserId: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
 export interface TreasuryForecastPointView {
   date: string;
   expectedIn: string;

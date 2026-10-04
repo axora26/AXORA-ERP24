@@ -120,6 +120,7 @@ model CustomerInvoice {
   lines    CustomerInvoiceLine[]
   payments Payment[]
   creditNotes CustomerCreditNote[]
+  collectionReminders CustomerInvoiceReminder[]
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
@@ -127,6 +128,35 @@ model CustomerInvoice {
   @@index([contractId])
   @@index([projectId])
   @@map("customer_invoices")
+}
+
+enum CollectionReminderStatus {
+  DRAFT
+  SENT
+  CANCELLED
+}
+
+/// Relances de créances générées par paliers. L'envoi externe reste séparé :
+/// cette trace interne est idempotente et auditable même sans SMTP configuré.
+model CustomerInvoiceReminder {
+  id              String                   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  invoiceId       String
+  level           Int
+  scheduledFor    DateTime
+  status          CollectionReminderStatus @default(DRAFT)
+  sentAt          DateTime?
+  sentByUserId    String?
+  note            String?
+  createdAt       DateTime                 @default(now())
+
+  invoice CustomerInvoice @relation(fields: [invoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([companyId, invoiceId, level])
+  @@index([organizationId, companyId, status, scheduledFor])
+  @@index([invoiceId])
+  @@map("customer_invoice_reminders")
 }
 
 model CustomerInvoiceLine {

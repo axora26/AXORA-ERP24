@@ -8,6 +8,7 @@ import {
 import { Prisma } from "@axora24/database";
 import type {
   BankAccountView,
+  CollectionReminderView,
   CustomerInvoiceView,
   FinanceSummaryView,
   PaymentView,
@@ -159,6 +160,73 @@ export class FinanceService {
     const refs = await this.references(scope, [invoice.contractId], [invoice.projectId]);
     const credits = await invoiceCreditTotals(this.prisma, scope, "CUSTOMER", [invoice.id]);
     return toCustomerView(invoice, refs, credits.get(invoice.id));
+  }
+
+  async listCollectionReminders(scope: CompanyScope): Promise<CollectionReminderView[]> {
+    const reminders = await this.prisma.customerInvoiceReminder.findMany({
+      where: { ...scope, status: { in: ["DRAFT", "SENT"] } },
+      include: { invoice: { select: { id: true, code: true, customerName: true, currency: true, dueDate: true, total: true, paidAmount: true, status: true } } },
+      orderBy: [{ status: "asc" }, { scheduledFor: "asc" }, { level: "desc" }],
+      take: 500,
+    });
+    const invoiceIds = reminders.map((reminder) => reminder.invoiceId);
+    const credits = await invoiceCreditTotals(this.prisma, scope, "CUSTOMER", invoiceIds);
+    return reminders
+      .map((reminder) => this.toCollectionReminderView(reminder, credits.get(reminder.invoiceId)))
+      // Une facture soldée ne doit plus apparaître dans la file de recouvrement.
+      // La trace historique reste conservée en base et dans l'audit.
+      .filter((reminder) => dec(reminder.balanceDue).greaterThan(0));
+  }
+
+  /** Génère les trois paliers de relance sans doublon. Aucun taux ni canal externe n'est présumé. */
+  async generateCollectionReminders(scope: CompanyScope, actorUserId: string): Promise<CollectionReminderView[]> {
+    const today = startOfToday();
+    const invoices = await this.prisma.customerInvoice.findMany({
+      where: { ...scope, status: { in: ["ISSUED", "PARTIALLY_PAID"] }, dueDate: { not: null, lt: today } },
+      select: { id: true, dueDate: true },
+    });
+    if (invoices.length === 0) return this.listCollectionReminders(scope);
+    const credits = await invoiceCreditTotals(this.prisma, scope, "CUSTOMER", invoices.map((invoice) => invoice.id));
+    await this.prisma.$transaction(async (tx) => {
+      for (const invoice of invoices) {
+        const credit = credits.get(invoice.id);
+        const source = await tx.customerInvoice.findUniqueOrThrow({ where: { id: invoice.id }, select: { total: true, paidAmount: true } });
+        const balance = netInvoiceFigures(source, credit).balanceDue;
+        if (dec(balance).lessThanOrEqualTo(0)) {
+          await tx.customerInvoiceReminder.updateMany({
+            where: { ...scope, invoiceId: invoice.id, status: "DRAFT" },
+            data: { status: "CANCELLED" },
+          });
+          continue;
+        }
+        const overdueDays = Math.max(1, Math.floor((today.getTime() - invoice.dueDate!.getTime()) / 86_400_000));
+        const levels = overdueDays >= 60 ? [1, 2, 3] : overdueDays >= 30 ? [1, 2] : [1];
+        for (const level of levels) {
+          const scheduledFor = new Date(invoice.dueDate!.getTime() + [1, 30, 60][level - 1]! * 86_400_000);
+          await tx.customerInvoiceReminder.upsert({
+            where: { companyId_invoiceId_level: { companyId: scope.companyId, invoiceId: invoice.id, level } },
+            create: { ...scope, invoiceId: invoice.id, level, scheduledFor, note: `Relance niveau ${level} — aucun canal externe configuré`, createdAt: new Date() },
+            update: {},
+          });
+        }
+      }
+      await writeAudit(tx, scope, actorUserId, "finance.collection_reminders.generated", "CustomerInvoiceReminder", scope.companyId, { invoices: invoices.length });
+    });
+    return this.listCollectionReminders(scope);
+  }
+
+  async markCollectionReminderSent(scope: CompanyScope, reminderId: string, actorUserId: string): Promise<CollectionReminderView> {
+    const reminder = await this.prisma.customerInvoiceReminder.findFirst({ where: { id: reminderId, ...scope }, select: { id: true, invoiceId: true, status: true } });
+    if (!reminder) throw new NotFoundException("Collection reminder not found");
+    if (reminder.status !== "DRAFT") throw new BadRequestException("Only a draft reminder can be marked as sent");
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('axora.collection_reminder_mutation', '1', true)`;
+      await tx.customerInvoiceReminder.update({ where: { id: reminder.id }, data: { status: "SENT", sentAt: new Date(), sentByUserId: actorUserId } });
+      await writeAudit(tx, scope, actorUserId, "finance.collection_reminder.sent", "CustomerInvoiceReminder", reminder.id, { invoiceId: reminder.invoiceId });
+    });
+    const view = (await this.listCollectionReminders(scope)).find((row) => row.id === reminder.id);
+    if (!view) throw new NotFoundException("Collection reminder not found");
+    return view;
   }
 
   /** Brouillon de facture : aucun numero legal n'est attribue avant l'emission. */
@@ -715,6 +783,33 @@ export class FinanceService {
     `;
     if (rows.length === 0) throw new NotFoundException("Supplier invoice not found");
     return tx.supplierInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
+  }
+
+  private toCollectionReminderView(
+    reminder: Prisma.CustomerInvoiceReminderGetPayload<{ include: { invoice: { select: { id: true; code: true; customerName: true; currency: true; dueDate: true; total: true; paidAmount: true; status: true } } } }>,
+    credits: CreditTotals = zeroCredits(),
+  ): CollectionReminderView {
+    const today = startOfToday();
+    const dueDate = reminder.invoice.dueDate!;
+    const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / 86_400_000));
+    const balanceDue = netInvoiceFigures(reminder.invoice, credits).balanceDue;
+    return {
+      id: reminder.id,
+      invoiceId: reminder.invoiceId,
+      invoiceCode: reminder.invoice.code,
+      customerName: reminder.invoice.customerName,
+      currency: reminder.invoice.currency.trim(),
+      dueDate: dueDate.toISOString(),
+      scheduledFor: reminder.scheduledFor.toISOString(),
+      daysOverdue,
+      level: reminder.level,
+      balanceDue: money(balanceDue),
+      status: reminder.status,
+      sentAt: reminder.sentAt?.toISOString() ?? null,
+      sentByUserId: reminder.sentByUserId,
+      note: reminder.note,
+      createdAt: reminder.createdAt.toISOString(),
+    };
   }
 
   private async references(scope: CompanyScope, contractIds: Array<string | null>, projectIds: Array<string | null>) {
