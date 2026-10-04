@@ -33,7 +33,9 @@ export default function CustomerInvoicePage(): React.ReactElement {
   const signatures = useResource(() => financeApi.invoiceSignatures(id), [id]);
   const mutation = useMutation();
   const [override, setOverride] = useState<CustomerInvoiceView | null>(null);
-  const [dialog, setDialog] = useState<"issue" | "cancel" | "pay" | null>(null);
+  const [dialog, setDialog] = useState<"issue" | "cancel" | "pay" | "revoke" | null>(null);
+  const [signatureToRevoke, setSignatureToRevoke] = useState<string | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
   const invoice = override ?? resource.data?.[0];
   const accounts = resource.data?.[1] ?? [];
 
@@ -108,7 +110,7 @@ export default function CustomerInvoicePage(): React.ReactElement {
             { key: "status", header: "État", render: (signature) => <StatusChip status={signature.status === "VALID" ? "done" : "critical"} label={signature.status === "VALID" ? "Valide" : "Révoquée"} /> },
             { key: "hash", header: "Empreinte SHA-256", render: (signature) => <code className="signature-hash">{signature.documentHash}</code> },
             { key: "date", header: "Signée le", render: (signature) => formatDate(signature.signedAt) },
-            { key: "action", header: "Vérification", render: (signature) => <Button variant="ghost" onClick={() => void mutation.run(() => financeApi.verifyInvoiceSignature(invoice.id, signature.id), "Signature vérifiée.")}>Vérifier</Button> },
+            { key: "action", header: "Actions", render: (signature) => <div className="table-actions"><Button variant="ghost" onClick={() => void mutation.run(() => financeApi.verifyInvoiceSignature(invoice.id, signature.id), "Signature vérifiée.")}>Vérifier</Button>{canSign && signature.status === "VALID" && <Button variant="ghost" onClick={() => { setSignatureToRevoke(signature.id); setDialog("revoke"); }}>Révoquer</Button>}</div> },
           ]} />
         )}
       </Panel>
@@ -167,6 +169,17 @@ export default function CustomerInvoicePage(): React.ReactElement {
           onClose={() => setDialog(null)}
           onSubmit={(input) => apply(() => financeApi.pay<CustomerInvoiceView>({ invoiceType: "CUSTOMER", invoiceId: invoice.id, ...input }), "Encaissement enregistré.")}
         />
+      )}
+      {dialog === "revoke" && signatureToRevoke && (
+        <Modal title="Révoquer la signature" onClose={() => { setDialog(null); setSignatureToRevoke(null); }}>
+          <Feedback error={mutation.error} />
+          <Form columns={1} submitLabel="Révoquer la signature" saving={mutation.saving} onSubmit={async () => {
+            const result = await mutation.run(() => financeApi.revokeInvoiceSignature(invoice.id, signatureToRevoke, revokeReason), "Signature révoquée.");
+            if (result !== undefined) { await signatures.reload(); setDialog(null); setSignatureToRevoke(null); }
+          }}>
+            <TextAreaField label="Motif de révocation" value={revokeReason} onChange={setRevokeReason} required hint="La révocation est définitive et sera inscrite dans le journal d'audit." />
+          </Form>
+        </Modal>
       )}
     </>
   );

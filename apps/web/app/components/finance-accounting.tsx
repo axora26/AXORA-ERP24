@@ -1,17 +1,37 @@
 "use client";
 
-import React, { useState } from "react";
-import { BookOpen, Database, RefreshCw, Scale } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { BookOpen, Database, Plus, RefreshCw, Scale } from "lucide-react";
 import type { AccountingEntryView, AccountingTrialBalanceView } from "@axora24/contracts";
 import { financeApi } from "../lib/modules/finance";
 import { formatDate, formatMoney } from "../lib/format";
 import { useMutation, useResource } from "../lib/hooks";
-import { Button, DataTable, Empty, Feedback, Metric, Metrics, Panel, StatusChip } from "./ui";
+import {
+  Button,
+  DataTable,
+  DateField,
+  DecimalField,
+  Empty,
+  Feedback,
+  Form,
+  Metric,
+  Metrics,
+  Modal,
+  Panel,
+  SelectField,
+  StatusChip,
+  TextField,
+} from "./ui";
 
 type AccountingTab = "accounts" | "entries" | "balance";
+type Dialog = "account" | "journal" | "entry" | null;
+type EntryLine = { accountId: string; label: string; debit: string; credit: string };
+
+const today = () => new Date().toISOString().slice(0, 10);
 
 export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; canPost: boolean }): React.ReactElement {
   const [tab, setTab] = useState<AccountingTab>("accounts");
+  const [dialog, setDialog] = useState<Dialog>(null);
   const mutation = useMutation();
   const configuration = useResource(() => financeApi.accountingConfiguration(), []);
   const entries = useResource<AccountingEntryView[]>(() => financeApi.accountingEntries(), [configuration.data?.accounts.length]);
@@ -19,16 +39,27 @@ export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; 
   const accounts = configuration.data?.accounts ?? [];
   const journals = configuration.data?.journals ?? [];
 
+  const refresh = async (): Promise<void> => {
+    await Promise.all([configuration.reload(), entries.reload(), balance.reload()]);
+  };
+
   async function bootstrap(): Promise<void> {
     const result = await mutation.run(() => financeApi.accountingBootstrap(), "Plan comptable et journaux initialisés.");
+    if (result !== undefined) await refresh();
+  }
+
+  async function saveDialog(action: () => Promise<unknown>, success: string): Promise<void> {
+    const result = await mutation.run(action, success);
     if (result !== undefined) {
-      await configuration.reload();
-      await entries.reload();
-      await balance.reload();
+      setDialog(null);
+      await refresh();
     }
   }
 
   const trial = balance.data;
+  const accountOptions = useMemo(() => accounts.filter((account) => account.isActive).map((account) => ({ value: account.id, label: `${account.code} — ${account.name}` })), [accounts]);
+  const journalOptions = useMemo(() => journals.filter((journal) => journal.isActive).map((journal) => ({ value: journal.id, label: `${journal.code} — ${journal.name}` })), [journals]);
+
   return (
     <section className="stack accounting-workspace" aria-label="Comptabilité générale">
       <Feedback error={configuration.error || entries.error || balance.error || mutation.error} notice={mutation.notice} />
@@ -37,9 +68,10 @@ export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; 
         subtitle="Plan de comptes, journaux et écritures équilibrées. Chaque écriture source est figée et auditée."
         actions={
           <div className="panel-actions">
-            <Button onClick={() => void Promise.all([configuration.reload(), entries.reload(), balance.reload()])}>
-              <RefreshCw size={14} aria-hidden="true" /> Actualiser
-            </Button>
+            <Button onClick={() => void refresh()}><RefreshCw size={14} aria-hidden="true" /> Actualiser</Button>
+            {canManage && accounts.length > 0 && <Button onClick={() => setDialog("account")}><Plus size={14} aria-hidden="true" /> Compte</Button>}
+            {canManage && journals.length > 0 && <Button onClick={() => setDialog("journal")}><Plus size={14} aria-hidden="true" /> Journal</Button>}
+            {canPost && accounts.length > 0 && journals.length > 0 && <Button variant="primary" onClick={() => setDialog("entry")}><Plus size={14} aria-hidden="true" /> Écriture</Button>}
             {canManage && accounts.length === 0 && <Button variant="primary" onClick={() => void bootstrap()} disabled={mutation.saving}><Database size={14} aria-hidden="true" /> Initialiser</Button>}
           </div>
         }
@@ -62,6 +94,49 @@ export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; 
           </>
         )}
       </Panel>
+      {dialog === "account" && <AccountingAccountModal saving={mutation.saving} error={mutation.error} onClose={() => setDialog(null)} onSubmit={(input) => saveDialog(() => financeApi.createAccountingAccount(input), "Compte comptable créé.")} />}
+      {dialog === "journal" && <AccountingJournalModal saving={mutation.saving} error={mutation.error} onClose={() => setDialog(null)} onSubmit={(input) => saveDialog(() => financeApi.createAccountingJournal(input), "Journal comptable créé.")} />}
+      {dialog === "entry" && <ManualEntryModal saving={mutation.saving} error={mutation.error} currency={trial?.currency ?? "USD"} accounts={accountOptions} journals={journalOptions} onClose={() => setDialog(null)} onSubmit={(input) => saveDialog(() => financeApi.createAccountingEntry(input), "Écriture comptable enregistrée et équilibrée.")} />}
     </section>
   );
+}
+
+function AccountingAccountModal({ saving, error, onClose, onSubmit }: { saving: boolean; error: string; onClose: () => void; onSubmit: (input: Record<string, unknown>) => Promise<void> }): React.ReactElement {
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [type, setType] = useState("EXPENSE");
+  return <Modal title="Nouveau compte comptable" onClose={onClose}><Feedback error={error} /><Form submitLabel="Créer le compte" saving={saving} onSubmit={() => onSubmit({ code, name, type })}><TextField label="Code" value={code} onChange={setCode} required placeholder="Ex. 623000" /><TextField label="Libellé" value={name} onChange={setName} required /><SelectField label="Classe" value={type} onChange={setType} required options={[{ value: "ASSET", label: "Actif" }, { value: "LIABILITY", label: "Passif" }, { value: "EQUITY", label: "Capitaux propres" }, { value: "REVENUE", label: "Produit" }, { value: "EXPENSE", label: "Charge" }]} /></Form></Modal>;
+}
+
+function AccountingJournalModal({ saving, error, onClose, onSubmit }: { saving: boolean; error: string; onClose: () => void; onSubmit: (input: Record<string, unknown>) => Promise<void> }): React.ReactElement {
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [type, setType] = useState("GENERAL");
+  return <Modal title="Nouveau journal" onClose={onClose}><Feedback error={error} /><Form submitLabel="Créer le journal" saving={saving} onSubmit={() => onSubmit({ code, name, type })}><TextField label="Code" value={code} onChange={setCode} required placeholder="Ex. OD2" /><TextField label="Libellé" value={name} onChange={setName} required /><SelectField label="Type" value={type} onChange={setType} required options={[{ value: "SALES", label: "Ventes" }, { value: "PURCHASES", label: "Achats" }, { value: "BANK", label: "Banque" }, { value: "CASH", label: "Caisse" }, { value: "GENERAL", label: "Opérations diverses" }]} /></Form></Modal>;
+}
+
+function ManualEntryModal({ saving, error, currency, accounts, journals, onClose, onSubmit }: { saving: boolean; error: string; currency: string; accounts: Array<{ value: string; label: string }>; journals: Array<{ value: string; label: string }>; onClose: () => void; onSubmit: (input: Record<string, unknown>) => Promise<void> }): React.ReactElement {
+  const [journalId, setJournalId] = useState(journals[0]?.value ?? "");
+  const [entryDate, setEntryDate] = useState(today());
+  const [description, setDescription] = useState("");
+  const [lines, setLines] = useState<EntryLine[]>([
+    { accountId: accounts[0]?.value ?? "", label: "", debit: "", credit: "" },
+    { accountId: accounts[1]?.value ?? accounts[0]?.value ?? "", label: "", debit: "", credit: "" },
+  ]);
+  const updateLine = (index: number, key: keyof EntryLine, value: string) => setLines((current) => current.map((line, lineIndex) => lineIndex === index ? { ...line, [key]: value, ...(key === "debit" && value ? { credit: "" } : {}), ...(key === "credit" && value ? { debit: "" } : {}) } : line));
+  const addLine = () => setLines((current) => [...current, { accountId: accounts[0]?.value ?? "", label: "", debit: "", credit: "" }]);
+  const removeLine = (index: number) => setLines((current) => current.length > 2 ? current.filter((_, lineIndex) => lineIndex !== index) : current);
+  const debit = lines.reduce((sum, line) => sum + Number(line.debit.replace(",", ".") || 0), 0);
+  const credit = lines.reduce((sum, line) => sum + Number(line.credit.replace(",", ".") || 0), 0);
+  const balanced = Math.abs(debit - credit) < 0.005 && debit > 0;
+  return <Modal title="Saisir une écriture" wide onClose={onClose}><Feedback error={error} /><Form submitLabel={balanced ? "Comptabiliser" : "Équilibrez l'écriture"} saving={saving} submitDisabled={!balanced} onSubmit={() => onSubmit({ journalId, entryDate, description, currency, lines: lines.map((line) => ({ ...line, debit: line.debit.replace(",", ".") || "0", credit: line.credit.replace(",", ".") || "0" })) })}>
+    <SelectField label="Journal" value={journalId} onChange={setJournalId} required options={journals} />
+    <DateField label="Date" value={entryDate} onChange={setEntryDate} required />
+    <TextField label="Libellé de l'écriture" value={description} onChange={setDescription} required wide placeholder="Ex. Régularisation fournisseur" />
+    <div className="accounting-entry-lines field wide">
+      <div className="accounting-line-head"><span>Compte</span><span>Libellé</span><span>Débit ({currency})</span><span>Crédit ({currency})</span><span className="sr-only">Action</span></div>
+      {lines.map((line, index) => <div className="accounting-line" key={index}><SelectField label={`Compte ligne ${index + 1}`} value={line.accountId} onChange={(value) => updateLine(index, "accountId", value)} required options={accounts} /><TextField label={`Libellé ligne ${index + 1}`} value={line.label} onChange={(value) => updateLine(index, "label", value)} required placeholder="Libellé" /><DecimalField label={`Débit ligne ${index + 1}`} value={line.debit} onChange={(value) => updateLine(index, "debit", value)} placeholder="0.00" /><DecimalField label={`Crédit ligne ${index + 1}`} value={line.credit} onChange={(value) => updateLine(index, "credit", value)} placeholder="0.00" /><button className="icon-button" type="button" onClick={() => removeLine(index)} disabled={lines.length <= 2} aria-label={`Supprimer la ligne ${index + 1}`}>×</button></div>)}
+      <div className="accounting-entry-total"><Button type="button" onClick={addLine}><Plus size={14} aria-hidden="true" /> Ajouter une ligne</Button><strong>Débit {debit.toFixed(2)} · Crédit {credit.toFixed(2)} {balanced ? "· équilibrée" : "· à équilibrer"}</strong></div>
+    </div>
+  </Form></Modal>;
 }

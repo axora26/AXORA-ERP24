@@ -275,6 +275,7 @@ export function Form({
   children,
   submitLabel,
   saving,
+  submitDisabled,
   columns = 2,
   secondary,
 }: {
@@ -282,19 +283,20 @@ export function Form({
   children: ReactNode;
   submitLabel: string;
   saving?: boolean;
+  submitDisabled?: boolean;
   columns?: 1 | 2 | 3 | 4;
   secondary?: ReactNode;
 }): React.ReactElement {
   function handle(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    if (saving) return;
+    if (saving || submitDisabled) return;
     void onSubmit();
   }
   return (
     <form className={`module-form cols-${columns}`} onSubmit={handle}>
       {children}
       <div className="module-form-actions">
-        <button className="primary-inline-button" type="submit" disabled={saving}>
+        <button className="primary-inline-button" type="submit" disabled={saving || submitDisabled}>
           {saving ? <Loader2 size={15} className="spin" aria-hidden="true" /> : null}
           {submitLabel}
         </button>
