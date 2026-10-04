@@ -88,3 +88,9 @@ Restent aussi les connecteurs a services/materiels reels, les signatures natives
 - **Exports finance** : une facture client émise peut maintenant être téléchargée depuis `/finance/invoices/:id/export.pdf`. Le PDF serveur reprend le gabarit A4 AXORA, le logo, les coordonnées et l’empreinte de la signature interne lorsqu’elle est valide. La comptabilité propose une lecture par période et l’export CSV détaillé du journal, sans convertir les montants en nombres côté serveur.
 - **Paie** : la migration `20261005030000_statutory_payroll` ajoute le paramétrage explicite du pays, des taux salariés et de l’abattement. Les retenues, le net à payer et leur détail sont figés dans chaque préparation et repris dans le bulletin PDF ; une politique incomplète reste `NOT_CONFIGURED`.
 - **Interface** : le paramétrage des retenues adopte une grille responsive et les états financiers utilisent les composants AXORA existants, avec onglets défilants et tableaux encapsulés sur mobile.
+
+### Incrément du 4 octobre 2026 — réservations de stock
+
+- L’écran `/inventory` expose maintenant un onglet Réservations : création idempotente, contrôle de quantité libre, libération avec motif et suivi des états actif/consommé/libéré.
+- La suite API couvre la concurrence, l’idempotence, la consommation par sortie chantier, la libération et l’audit (**1/1**). La suite navigateur couvre la navigation et l’ouverture du formulaire (**2/2**).
+- Le responsive de l’écran inventaire a été vérifié à **390 px et 768 px** ; le rechargement met à jour les balances et le grand livre.

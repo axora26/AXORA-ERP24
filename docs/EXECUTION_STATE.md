@@ -119,3 +119,7 @@ Typecheck API et contrats reconstruits, lint cible passe. Le typecheck web passe
 - Validation locale de cette évolution : typecheck et builds API/web réussis, tests API 106/106 et web 74/74 réussis, lint web sans erreur (8 avertissements d'images préexistants), test unitaire de résolution de périmètre projet ajouté.
 
 Poursuivre le backlog concret ci-dessous ; les preuves locales finales sont enregistrées sur `b1a6cb1`, sans obligation de rejouer les suites actuelles. Conserver la CI distante en `BLOCKED` tant que le compte GitHub reste verrouillé pour facturation. La couverture de base des increments ne signifie pas que tout le perimetre fondateur est termine : le reste fonctionnel comprend notamment la decomposition de prix DQE, les variantes/bibliotheques, le sourcing partiel Achats, les reservations et lots de stock, le rapprochement bancaire, les previsions de tresorerie et le parametrage legal de paie. `docs/MODULE_STATUS.md` distingue ces evolutions des dependances externes (CI, signatures natives, services et equipements reels).
+
+## Mise à jour du 4 octobre 2026 — réservations de stock
+
+L’interface inventaire inclut les réservations de stock avec quantité libre, idempotence, libération motivée et états lisibles. Validation ciblée : API E2E 1/1, navigateur 2/2 et responsive 390/768 px. Le code reste à qualifier par les builds et la suite globale avant toute promotion de statut.
