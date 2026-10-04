@@ -56,9 +56,12 @@ const EMPTY_LINE_FORM = {
   reference: "",
   designation: "",
   unitCode: "",
+  costCategory: "MATERIAL",
   quantity: "",
   unitPrice: "",
 };
+
+const EMPTY_PRICING_FORM = { overheadRate: "0", marginRate: "0", taxRate: "0" };
 
 /**
  * Espace Etudes & DQE (INC-03).
@@ -78,6 +81,7 @@ export function EstimationWorkspace(): React.ReactElement {
   const [selectedDqe, setSelectedDqe] = useState<DqeView | null>(null);
   const [dqeForm, setDqeForm] = useState(EMPTY_DQE_FORM);
   const [lineForm, setLineForm] = useState(EMPTY_LINE_FORM);
+  const [pricingForm, setPricingForm] = useState(EMPTY_PRICING_FORM);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -206,7 +210,9 @@ export function EstimationWorkspace(): React.ReactElement {
   async function openDqe(dqeId: string): Promise<void> {
     setError("");
     try {
-      setSelectedDqe(await estimationApi.dqe(dqeId));
+      const dqe = await estimationApi.dqe(dqeId);
+      setSelectedDqe(dqe);
+      setPricingForm({ overheadRate: dqe.overheadRate ?? "0", marginRate: dqe.marginRate ?? "0", taxRate: dqe.taxRate ?? "0" });
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Ouverture du DQE impossible.");
     }
@@ -225,6 +231,7 @@ export function EstimationWorkspace(): React.ReactElement {
         ...(lineForm.reference.trim() ? { reference: lineForm.reference.trim() } : {}),
         designation: lineForm.designation,
         unitCode: lineForm.unitCode,
+        ...(lineForm.costCategory !== "MATERIAL" ? { costCategory: lineForm.costCategory } : {}),
         quantity: lineForm.quantity,
         unitPrice: lineForm.unitPrice,
       });
@@ -234,6 +241,25 @@ export function EstimationWorkspace(): React.ReactElement {
       await load();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Ajout de la ligne impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateDqePricing(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!selectedDqe || selectedDqe.status !== "DRAFT") return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const updated = await estimationApi.updateDqePricing(selectedDqe.id, { expectedVersion: selectedDqe.version, ...pricingForm });
+      setSelectedDqe(updated);
+      setPricingForm({ overheadRate: updated.overheadRate ?? "0", marginRate: updated.marginRate ?? "0", taxRate: updated.taxRate ?? "0" });
+      setNotice("Coefficients du DQE enregistrés.");
+      await load();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Enregistrement des coefficients impossible.");
     } finally {
       setSaving(false);
     }
@@ -695,6 +721,24 @@ export function EstimationWorkspace(): React.ReactElement {
             </div>
           </div>
 
+          <div className="dqe-financial-summary" aria-label="Synthèse financière du DQE">
+            <div><span>Total direct</span><strong>{selectedDqe.subtotal} {selectedDqe.currency}</strong></div>
+            <div><span>Frais généraux</span><strong>{selectedDqe.overheadAmount} {selectedDqe.currency}</strong></div>
+            <div><span>Marge</span><strong>{selectedDqe.marginAmount} {selectedDqe.currency}</strong></div>
+            <div><span>Taxes</span><strong>{selectedDqe.taxAmount} {selectedDqe.currency}</strong></div>
+            <div className="dqe-financial-total"><span>Total TTC</span><strong>{selectedDqe.total} {selectedDqe.currency}</strong></div>
+          </div>
+
+          {selectedDqe.status === "DRAFT" && can("estimation.pricing.manage") && (
+            <form className="dqe-pricing-form" onSubmit={updateDqePricing}>
+              <div className="dqe-pricing-copy"><strong>Coefficients de chiffrage</strong><small>Les taux sont enregistrés avec la version du brouillon.</small></div>
+              <label htmlFor="dqe-overhead">Frais généraux (%)<input id="dqe-overhead" inputMode="decimal" value={pricingForm.overheadRate} onChange={(event) => setPricingForm({ ...pricingForm, overheadRate: event.currentTarget.value })} /></label>
+              <label htmlFor="dqe-margin">Marge (%)<input id="dqe-margin" inputMode="decimal" value={pricingForm.marginRate} onChange={(event) => setPricingForm({ ...pricingForm, marginRate: event.currentTarget.value })} /></label>
+              <label htmlFor="dqe-tax">Taxe (%)<input id="dqe-tax" inputMode="decimal" value={pricingForm.taxRate} onChange={(event) => setPricingForm({ ...pricingForm, taxRate: event.currentTarget.value })} /></label>
+              <button className="secondary-button" type="submit" disabled={saving}>Enregistrer les taux</button>
+            </form>
+          )}
+
           {selectedDqe.lines.length === 0 ? (
             <EmptyState title="Aucune ligne" body="Ajoutez la première ligne du bordereau." />
           ) : (
@@ -705,6 +749,7 @@ export function EstimationWorkspace(): React.ReactElement {
                     <th scope="col">Pos.</th>
                     <th scope="col">Référence</th>
                     <th scope="col">Désignation</th>
+                    <th scope="col">Famille</th>
                     <th scope="col">Unité</th>
                     <th scope="col">Quantité</th>
                     <th scope="col">Prix unitaire</th>
@@ -718,6 +763,7 @@ export function EstimationWorkspace(): React.ReactElement {
                       <td>{line.position}</td>
                       <td><strong>{line.reference ?? "—"}</strong></td>
                       <td>{line.designation}</td>
+                      <td>{line.costCategory === "MATERIAL" ? "Matériaux" : line.costCategory === "LABOR" ? "Main-d’œuvre" : line.costCategory === "EQUIPMENT" ? "Matériel" : line.costCategory === "SUBCONTRACTING" ? "Sous-traitance" : "Autres"}</td>
                       <td>{line.unitCode}</td>
                       <td className="numeric-cell">{line.quantity}</td>
                       <td className="numeric-cell">{line.unitPrice}</td>
@@ -772,6 +818,20 @@ export function EstimationWorkspace(): React.ReactElement {
                   placeholder="m3"
                   required
                 />
+              </div>
+              <div>
+                <label htmlFor="line-category">Famille de coût</label>
+                <select
+                  id="line-category"
+                  value={lineForm.costCategory}
+                  onChange={(event) => setLineForm({ ...lineForm, costCategory: event.currentTarget.value })}
+                >
+                  <option value="MATERIAL">Matériaux</option>
+                  <option value="LABOR">Main-d’œuvre</option>
+                  <option value="EQUIPMENT">Matériel</option>
+                  <option value="SUBCONTRACTING">Sous-traitance</option>
+                  <option value="OTHER">Autres</option>
+                </select>
               </div>
               <div>
                 <label htmlFor="line-quantity">Quantité</label>

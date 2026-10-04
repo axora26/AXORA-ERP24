@@ -4,10 +4,12 @@ import { PrismaService } from "../core/prisma.service.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import {
   currencyCode,
+  costCategory,
   decimal6,
   optionalText,
   positiveInteger,
   requiredText,
+  rate6,
   requirementCategory,
   assertDraftFields,
   draftVersion,
@@ -18,6 +20,7 @@ import {
   type DraftVersionDto,
   type UpdateStudyRequirementDto,
   type UpdateDqeLineDto,
+  type UpdateDqePricingDto,
 } from "./estimation.dto.js";
 
 /**
@@ -268,7 +271,7 @@ export class EstimationService {
   }
 
   async addDqeLine(scope: CompanyScope, dqeId: string, input: CreateDqeLineDto, actorUserId: string) {
-    assertDraftFields(input, ["companyId", "expectedVersion", "position", "reference", "designation", "unitCode", "quantity", "unitPrice"]);
+    assertDraftFields(input, ["companyId", "expectedVersion", "position", "reference", "designation", "unitCode", "costCategory", "quantity", "unitPrice"]);
     const version = draftVersion(input.expectedVersion, false);
     return this.prisma.$transaction(async (tx) => {
       const document = await this.lockDqe(tx, scope, dqeId);
@@ -277,7 +280,7 @@ export class EstimationService {
       await this.linePosition(tx, scope, dqeId, position);
       const line = await tx.dqeLine.create({ data: { ...scope, dqeId, position,
         reference: optionalText(input.reference, "reference", 120), designation: requiredText(input.designation, "designation", 500),
-        unitCode: requiredText(input.unitCode, "unitCode", 32), quantity: new Prisma.Decimal(decimal6(input.quantity, "quantity", false)),
+        unitCode: requiredText(input.unitCode, "unitCode", 32), costCategory: costCategory(input.costCategory), quantity: new Prisma.Decimal(decimal6(input.quantity, "quantity", false)),
         unitPrice: new Prisma.Decimal(decimal6(input.unitPrice, "unitPrice", true)) } });
       await this.bumpDqe(tx, scope, dqeId, document.version);
       await this.draftAudit(tx, scope, actorUserId, "dqe.line.created", "DqeLine", line.id, dqeId, document.version + 1);
@@ -286,13 +289,14 @@ export class EstimationService {
   }
 
   async updateDqeLine(scope: CompanyScope, dqeId: string, lineId: string, input: UpdateDqeLineDto, actorUserId: string) {
-    assertDraftFields(input, ["companyId", "expectedVersion", "position", "reference", "designation", "unitCode", "quantity", "unitPrice"]);
+    assertDraftFields(input, ["companyId", "expectedVersion", "position", "reference", "designation", "unitCode", "costCategory", "quantity", "unitPrice"]);
     const version = draftVersion(input.expectedVersion)!;
     const data: Prisma.DqeLineUpdateInput = {};
     if (input.position !== undefined) data.position = positiveInteger(input.position, "position");
     if (input.reference !== undefined) data.reference = optionalText(input.reference, "reference", 120);
     if (input.designation !== undefined) data.designation = requiredText(input.designation, "designation", 500);
     if (input.unitCode !== undefined) data.unitCode = requiredText(input.unitCode, "unitCode", 32);
+    if (input.costCategory !== undefined) data.costCategory = costCategory(input.costCategory);
     if (input.quantity !== undefined) data.quantity = new Prisma.Decimal(decimal6(input.quantity, "quantity", false));
     if (input.unitPrice !== undefined) data.unitPrice = new Prisma.Decimal(decimal6(input.unitPrice, "unitPrice", true));
     if (!Object.keys(data).length) throw new BadRequestException("Provide at least one DQE line field to update");
@@ -309,6 +313,23 @@ export class EstimationService {
     });
   }
 
+  async updateDqePricing(scope: CompanyScope, dqeId: string, input: UpdateDqePricingDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "expectedVersion", "overheadRate", "marginRate", "taxRate"]);
+    const version = draftVersion(input.expectedVersion)!;
+    const data: Prisma.DqeDocumentUpdateInput = {};
+    if (input.overheadRate !== undefined) data.overheadRate = new Prisma.Decimal(rate6(input.overheadRate, "overheadRate"));
+    if (input.marginRate !== undefined) data.marginRate = new Prisma.Decimal(rate6(input.marginRate, "marginRate"));
+    if (input.taxRate !== undefined) data.taxRate = new Prisma.Decimal(rate6(input.taxRate, "taxRate"));
+    if (!Object.keys(data).length) throw new BadRequestException("Provide at least one pricing field to update");
+    return this.prisma.$transaction(async (tx) => {
+      const document = await this.lockDqe(tx, scope, dqeId);
+      checkDraft(document.status, document.version, version, "DQE");
+      await tx.dqeDocument.update({ where: { id: dqeId }, data: { ...data, version: { increment: 1 } } });
+      await this.draftAudit(tx, scope, actorUserId, "dqe.pricing.updated", "DqeDocument", dqeId, dqeId, document.version + 1, Object.keys(data));
+      return toDqeView(await tx.dqeDocument.findUniqueOrThrow({ where: { id: dqeId }, include: dqeInclude }));
+    });
+  }
+
   async deleteDqeLine(scope: CompanyScope, dqeId: string, lineId: string, input: DraftVersionDto, actorUserId: string) {
     assertDraftFields(input, ["companyId", "expectedVersion"]);
     const version = draftVersion(input.expectedVersion)!;
@@ -321,6 +342,7 @@ export class EstimationService {
       await this.bumpDqe(tx, scope, dqeId, document.version);
       await this.draftAudit(tx, scope, actorUserId, "dqe.line.deleted", "DqeLine", lineId, dqeId, document.version + 1, [],
         { position: current.position, reference: current.reference, designation: current.designation, unitCode: current.unitCode,
+          costCategory: current.costCategory,
           quantity: current.quantity.toFixed(6), unitPrice: current.unitPrice.toFixed(6) });
       return toDqeView(await tx.dqeDocument.findUniqueOrThrow({ where: { id: dqeId }, include: dqeInclude }));
     });
@@ -465,6 +487,7 @@ function toDqeLineView(line: DqeLineRecord) {
     reference: line.reference,
     designation: line.designation,
     unitCode: line.unitCode,
+    costCategory: line.costCategory,
     quantity: quantity.toFixed(6),
     unitPrice: unitPrice.toFixed(6),
     lineTotal: quantity.mul(unitPrice).toFixed(6),
@@ -473,11 +496,25 @@ function toDqeLineView(line: DqeLineRecord) {
 
 function toDqeView(document: DqeWithDetails) {
   let subtotal = new Prisma.Decimal(0);
+  const categoryTotals: Record<string, Prisma.Decimal> = {
+    MATERIAL: new Prisma.Decimal(0), LABOR: new Prisma.Decimal(0), EQUIPMENT: new Prisma.Decimal(0), SUBCONTRACTING: new Prisma.Decimal(0), OTHER: new Prisma.Decimal(0),
+  };
   const lines = document.lines.map((line) => {
     const view = toDqeLineView(line);
-    subtotal = subtotal.plus(new Prisma.Decimal(view.lineTotal));
+    const lineTotal = new Prisma.Decimal(view.lineTotal);
+    subtotal = subtotal.plus(lineTotal);
+    categoryTotals[view.costCategory] = (categoryTotals[view.costCategory] ?? new Prisma.Decimal(0)).plus(lineTotal);
     return view;
   });
+  const overheadRate = new Prisma.Decimal(document.overheadRate);
+  const marginRate = new Prisma.Decimal(document.marginRate);
+  const taxRate = new Prisma.Decimal(document.taxRate);
+  const overheadAmount = subtotal.mul(overheadRate).div(100);
+  const costBase = subtotal.plus(overheadAmount);
+  const marginAmount = costBase.mul(marginRate).div(100);
+  const taxableTotal = costBase.plus(marginAmount);
+  const taxAmount = taxableTotal.mul(taxRate).div(100);
+  const totalFor = (key: string) => categoryTotals[key] ?? new Prisma.Decimal(0);
 
   return {
     id: document.id,
@@ -487,12 +524,28 @@ function toDqeView(document: DqeWithDetails) {
     title: document.title,
     currency: document.currency.trim(),
     status: document.status,
+    overheadRate: overheadRate.toFixed(6),
+    marginRate: marginRate.toFixed(6),
+    taxRate: taxRate.toFixed(6),
     revision: document.revision,
     version: document.version,
     updatedAt: document.updatedAt.toISOString(),
     finalizedAt: document.finalizedAt?.toISOString() ?? null,
     createdAt: document.createdAt.toISOString(),
     subtotal: subtotal.toFixed(6),
+    overheadAmount: overheadAmount.toFixed(6),
+    costBase: costBase.toFixed(6),
+    marginAmount: marginAmount.toFixed(6),
+    taxableTotal: taxableTotal.toFixed(6),
+    taxAmount: taxAmount.toFixed(6),
+    total: taxableTotal.plus(taxAmount).toFixed(6),
+    categoryTotals: {
+      MATERIAL: totalFor("MATERIAL").toFixed(6),
+      LABOR: totalFor("LABOR").toFixed(6),
+      EQUIPMENT: totalFor("EQUIPMENT").toFixed(6),
+      SUBCONTRACTING: totalFor("SUBCONTRACTING").toFixed(6),
+      OTHER: totalFor("OTHER").toFixed(6),
+    },
     lines,
     source: document.source
       ? {

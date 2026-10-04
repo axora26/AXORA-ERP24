@@ -441,6 +441,16 @@ enum DqeStatus {
   ARCHIVED
 }
 
+/// Famille de coût utilisée pour analyser un chiffrage sans perdre le détail
+/// des lignes sources.
+enum DqeCostCategory {
+  MATERIAL
+  LABOR
+  EQUIPMENT
+  SUBCONTRACTING
+  OTHER
+}
+
 model EstimationStudy {
   id              String                @id @default(cuid())
   organizationId  String
@@ -493,6 +503,10 @@ model DqeDocument {
   title          String
   currency       String    @default("USD") @db.Char(3)
   status         DqeStatus @default(DRAFT)
+  /// Coefficients de chiffrage exprimés en pourcentage, bornés à 0..100.
+  overheadRate   Decimal   @default(0) @db.Decimal(9, 6)
+  marginRate     Decimal   @default(0) @db.Decimal(9, 6)
+  taxRate        Decimal   @default(0) @db.Decimal(9, 6)
   revision       Int       @default(1)
   version        Int       @default(1)
   finalizedAt    DateTime?
@@ -518,6 +532,7 @@ model DqeLine {
   reference      String?
   designation    String
   unitCode       String
+  costCategory   DqeCostCategory @default(MATERIAL)
   quantity       Decimal  @db.Decimal(24, 6)
   unitPrice      Decimal  @db.Decimal(24, 6)
   createdAt      DateTime @default(now())

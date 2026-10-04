@@ -14,6 +14,7 @@ export function EstimationDraftEditor({ selection, deleting, onClose, onSaved }:
   const [reference, setReference] = useState(("sourceReference" in initial ? initial.sourceReference : initial.reference) ?? "");
   const [designation, setDesignation] = useState("designation" in initial ? initial.designation : "");
   const [unitCode, setUnitCode] = useState("unitCode" in initial ? initial.unitCode : "");
+  const [costCategory, setCostCategory] = useState<string>("costCategory" in initial ? String(initial.costCategory) : "MATERIAL");
   const [quantity, setQuantity] = useState("quantity" in initial ? initial.quantity : "");
   const [unitPrice, setUnitPrice] = useState("unitPrice" in initial ? initial.unitPrice : "");
   const [saving, setSaving] = useState(false);
@@ -27,7 +28,7 @@ export function EstimationDraftEditor({ selection, deleting, onClose, onSaved }:
     setSaving(true); setError("");
     const path = requirement ? `/estimation/studies/${selection.parent.id}/requirements/${selection.row.id}` : `/estimation/dqes/${selection.parent.id}/lines/${selection.row.id}`;
     try {
-      const result = deleting ? await api.delete<EstimationStudyView | DqeView>(path, { expectedVersion: selection.parent.version }) : await api.patch<EstimationStudyView | DqeView>(path, { expectedVersion: selection.parent.version, position: numericPosition, ...(requirement ? { category, statement: statement.trim(), sourceReference: reference.trim() || null } : { reference: reference.trim() || null, designation: designation.trim(), unitCode: unitCode.trim(), quantity: quantity.trim().replace(",", "."), unitPrice: unitPrice.trim().replace(",", ".") }) });
+      const result = deleting ? await api.delete<EstimationStudyView | DqeView>(path, { expectedVersion: selection.parent.version }) : await api.patch<EstimationStudyView | DqeView>(path, { expectedVersion: selection.parent.version, position: numericPosition, ...(requirement ? { category, statement: statement.trim(), sourceReference: reference.trim() || null } : { reference: reference.trim() || null, designation: designation.trim(), unitCode: unitCode.trim(), costCategory, quantity: quantity.trim().replace(",", "."), unitPrice: unitPrice.trim().replace(",", ".") }) });
       await onSaved(result);
     } catch (caught) {
       const stale = caught instanceof ApiError && caught.status === 409 && /changed|concurr|version|modifi/i.test(caught.message);
@@ -39,6 +40,7 @@ export function EstimationDraftEditor({ selection, deleting, onClose, onSaved }:
     {deleting ? <><p>Confirmez la suppression de cet élément du brouillon. {requirement ? "Les autres exigences seront conservées." : "Le montant du DQE sera recalculé."}</p><p><strong>{requirement ? statement : designation}</strong></p><div className="module-form-actions"><button type="button" className="secondary-button" disabled={saving} onClick={onClose}>Annuler</button><button type="button" className="primary-inline-button" disabled={saving || conflict} onClick={() => void submit()}>{saving ? "Suppression…" : "Supprimer"}</button></div></> : <Form columns={2} onSubmit={() => void submit()} saving={saving || conflict} submitLabel="Enregistrer la correction">
       <TextField label="Position" type="number" value={position} onChange={setPosition} required />
       {requirement ? <><SelectField label="Catégorie" value={category} onChange={value => setCategory(value as StudyRequirementCategory)} required options={[{ value: "FACT", label: "Fait" }, { value: "ASSUMPTION", label: "Hypothèse" }, { value: "CONSTRAINT", label: "Contrainte" }, { value: "RISK", label: "Risque" }, { value: "NOTE", label: "Note" }]} /><TextAreaField label="Énoncé de l’exigence" value={statement} onChange={setStatement} required wide /></> : <><TextField label="Unité" value={unitCode} onChange={setUnitCode} required /><TextField label="Désignation" value={designation} onChange={setDesignation} required wide /><TextField label="Quantité" inputMode="decimal" value={quantity} onChange={setQuantity} required hint="Maximum six décimales" /><TextField label="Prix unitaire" inputMode="decimal" value={unitPrice} onChange={setUnitPrice} required hint="Maximum six décimales" /></>}
+      {!requirement && <SelectField label="Famille de coût" value={costCategory} onChange={setCostCategory} required options={[{ value: "MATERIAL", label: "Matériaux" }, { value: "LABOR", label: "Main-d’œuvre" }, { value: "EQUIPMENT", label: "Matériel" }, { value: "SUBCONTRACTING", label: "Sous-traitance" }, { value: "OTHER", label: "Autres" }]} />}
       <TextField label={requirement ? "Source" : "Référence"} value={reference} onChange={setReference} wide />
     </Form>}
   </Modal>;

@@ -211,4 +211,18 @@ describe("Study and DQE draft corrections (PostgreSQL)", () => {
     expect((await post(`dqes/${current.id}/finalize`, { expectedVersion: 1 })).status).toBe(409);
     expect((await get(`dqes/${current.id}`)).body.version).toBe(2);
   });
+
+  it("calculates advanced cost breakdowns with exact decimal rates", async () => {
+    const current = await dqe(); const line = current.lines[0];
+    const categorized = await patch(`dqes/${current.id}/lines/${line.id}`, { expectedVersion: 2, costCategory: "LABOR" });
+    expect(categorized.status).toBe(200);
+    const priced = await patch(`dqes/${current.id}/pricing`, { expectedVersion: 3, overheadRate: "10.000000", marginRate: "5.000000", taxRate: "16.000000" });
+    expect(priced.status).toBe(200);
+    expect(priced.body).toMatchObject({ version: 4, subtotal: "10.000000", overheadAmount: "1.000000", costBase: "11.000000", marginAmount: "0.550000", taxableTotal: "11.550000", taxAmount: "1.848000", total: "13.398000", overheadRate: "10.000000", marginRate: "5.000000", taxRate: "16.000000" });
+    expect(priced.body.categoryTotals).toMatchObject({ LABOR: "10.000000", MATERIAL: "0.000000" });
+    expect(priced.body.lines[0].costCategory).toBe("LABOR");
+    expect((await patch(`dqes/${current.id}/pricing`, { expectedVersion: 4, taxRate: "100.000001" })).status).toBe(400);
+    expect((await post(`dqes/${current.id}/finalize`, { expectedVersion: 4 })).status).toBe(201);
+    expect((await patch(`dqes/${current.id}/pricing`, { expectedVersion: 5, marginRate: "1" })).status).toBe(400);
+  });
 });

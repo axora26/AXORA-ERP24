@@ -15,6 +15,7 @@ import type {
   DraftVersionDto,
   UpdateStudyRequirementDto,
   UpdateDqeLineDto,
+  UpdateDqePricingDto,
 } from "./estimation.dto.js";
 
 @Controller("estimation")
@@ -134,6 +135,13 @@ export class EstimationController {
     @Body() body: UpdateDqeLineDto) {
     const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
     return this.estimation.updateDqeLine(scope, id, lineId, body, request.axoraUser!.id);
+  }
+
+  @Patch("dqes/:id/pricing")
+  @RequirePermission(ESTIMATION_PERMISSIONS.PRICING_MANAGE)
+  async updateDqePricing(@Req() request: Request, @Param("id") id: string, @Body() body: UpdateDqePricingDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.updateDqePricing(scope, id, body, request.axoraUser!.id);
   }
 
   @Delete("dqes/:id/lines/:lineId")

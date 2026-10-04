@@ -1,5 +1,6 @@
 export type EstimationStudyStatus = "DRAFT" | "READY_FOR_DQE" | "ARCHIVED";
 export type DqeStatus = "DRAFT" | "FINALIZED" | "ARCHIVED";
+export type DqeCostCategory = "MATERIAL" | "LABOR" | "EQUIPMENT" | "SUBCONTRACTING" | "OTHER";
 export type StudyRequirementCategory =
   | "FACT"
   | "ASSUMPTION"
@@ -40,6 +41,7 @@ export interface DqeLineView {
   reference: string | null;
   designation: string;
   unitCode: string;
+  costCategory?: DqeCostCategory;
   /** Decimal exact sérialisé à six décimales. */
   quantity: string;
   /** Decimal exact sérialisé à six décimales. */
@@ -64,6 +66,9 @@ export interface DqeView {
   title: string;
   currency: string;
   status: DqeStatus;
+  overheadRate?: string;
+  marginRate?: string;
+  taxRate?: string;
   revision: number;
   version: number;
   updatedAt: string;
@@ -71,6 +76,13 @@ export interface DqeView {
   createdAt: string;
   /** Somme exacte des lignes, calculée côté serveur. */
   subtotal: string;
+  overheadAmount?: string;
+  costBase?: string;
+  marginAmount?: string;
+  taxableTotal?: string;
+  taxAmount?: string;
+  total?: string;
+  categoryTotals?: Record<DqeCostCategory, string>;
   lines: DqeLineView[];
   source: DqeSourceView | null;
 }
@@ -93,6 +105,13 @@ export interface DqeLineUpdateInput extends EstimationDraftVersionInput {
   reference?: string | null;
   designation?: string;
   unitCode?: string;
+  costCategory?: DqeCostCategory;
   quantity?: string;
   unitPrice?: string;
+}
+
+export interface DqePricingUpdateInput extends EstimationDraftVersionInput {
+  overheadRate?: string;
+  marginRate?: string;
+  taxRate?: string;
 }

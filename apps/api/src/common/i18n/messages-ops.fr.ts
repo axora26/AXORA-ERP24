@@ -233,4 +233,7 @@ export const OPS_MESSAGES: Record<string, string> = {
   "occurredAt precedes the vehicle's entry into the fleet": "La date des faits précède l'entrée du véhicule dans le parc",
   "readAt cannot be in the future": "La date du relevé ne peut pas être dans le futur",
   "validUntil must be after validFrom": "La fin de validité doit suivre le début",
+  "costCategory must be one of: {x}": "La famille de coût doit être l'une des valeurs suivantes : {1}",
+  "{x} must be between 0 and 100": "{1} doit être compris entre 0 et 100",
+  "Provide at least one pricing field to update": "Indiquez au moins un coefficient de chiffrage à modifier",
 };

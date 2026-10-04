@@ -1,4 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
+import { Prisma } from "@axora24/database";
 
 export class CreateStudyDto {
   companyId?: string;
@@ -33,6 +34,7 @@ export class CreateDqeLineDto {
   reference?: string;
   designation!: string;
   unitCode!: string;
+  costCategory?: string;
   quantity!: string;
   unitPrice!: string;
 }
@@ -56,8 +58,16 @@ export class UpdateDqeLineDto {
   reference?: string | null;
   designation?: string;
   unitCode?: string;
+  costCategory?: string;
   quantity?: string;
   unitPrice?: string;
+}
+export class UpdateDqePricingDto {
+  companyId?: string;
+  expectedVersion!: number;
+  overheadRate?: string;
+  marginRate?: string;
+  taxRate?: string;
 }
 
 export function assertDraftFields(input: object, allowed: readonly string[]): void {
@@ -140,4 +150,22 @@ export function currencyCode(value: unknown): string {
     throw new BadRequestException("currency must be a 3-letter ISO-4217 code");
   }
   return candidate;
+}
+
+export const DQE_COST_CATEGORIES = ["MATERIAL", "LABOR", "EQUIPMENT", "SUBCONTRACTING", "OTHER"] as const;
+
+export function costCategory(value: unknown): (typeof DQE_COST_CATEGORIES)[number] {
+  const candidate = String(value ?? "MATERIAL").trim().toUpperCase();
+  if (!DQE_COST_CATEGORIES.includes(candidate as (typeof DQE_COST_CATEGORIES)[number])) {
+    throw new BadRequestException(`costCategory must be one of: ${DQE_COST_CATEGORIES.join(", ")}`);
+  }
+  return candidate as (typeof DQE_COST_CATEGORIES)[number];
+}
+
+/** Taux de chiffrage strict, exprimé en pourcentage et borné à 100. */
+export function rate6(value: unknown, field: string): string {
+  const normalized = value === undefined || value === null || value === "" ? "0" : value;
+  const parsed = decimal6(normalized, field, true);
+  if (new Prisma.Decimal(parsed).gt(100)) throw new BadRequestException(`${field} must be between 0 and 100`);
+  return parsed;
 }

@@ -186,11 +186,14 @@ export const estimationApi = {
       reference?: string;
       designation: string;
       unitCode: string;
+      costCategory?: string;
       quantity: string;
       unitPrice: string;
       expectedVersion?: number;
     },
   ) => api.post<DqeLineView>(`/estimation/dqes/${dqeId}/lines`, input),
+  updateDqePricing: (dqeId: string, input: { expectedVersion: number; overheadRate?: string; marginRate?: string; taxRate?: string }) =>
+    api.patch<DqeView>(`/estimation/dqes/${dqeId}/pricing`, input),
   finalizeDqe: (dqeId: string, expectedVersion?: number) => api.post<DqeView>(`/estimation/dqes/${dqeId}/finalize`, { expectedVersion }),
 };
 
