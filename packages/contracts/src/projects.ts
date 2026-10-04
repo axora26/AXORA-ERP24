@@ -3,6 +3,36 @@
 export type ProjectStatus = "PLANNED" | "IN_PROGRESS" | "ON_HOLD" | "COMPLETED" | "CANCELLED";
 export type ProjectWbsKind = "LOT" | "PHASE" | "WORK_PACKAGE";
 export type ProjectCostCategory = "MATERIAL" | "LABOR" | "EQUIPMENT" | "SUBCONTRACT" | "OVERHEAD" | "OTHER";
+
+export type ProjectForecastStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export type ProjectForecastLineInput = {
+  category: ProjectCostCategory;
+  description: string;
+  remainingAmount: string;
+  wbsItemId?: string;
+};
+
+export type ProjectForecastRevisionView = {
+  id: string;
+  projectId: string;
+  revisionNumber: number;
+  status: ProjectForecastStatus;
+  justification: string;
+  asOf: string;
+  currency: string;
+  contractAmount: string;
+  revisedBudget: string;
+  consumedAmount: string;
+  remainingAmount: string;
+  eacAmount: string;
+  marginAmount: string;
+  requestedByUserId: string;
+  decidedByUserId: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  lines: Array<ProjectForecastLineInput & { id: string }>;
+};
 export type ProjectTaskStatus = "TODO" | "IN_PROGRESS" | "BLOCKED" | "DONE";
 export type ProjectChangeOrderStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type ProjectRiskStatus = "OPEN" | "MITIGATED" | "CLOSED";

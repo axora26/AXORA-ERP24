@@ -60,6 +60,8 @@ const RESOURCE_LABELS: Record<string, string> = {
   budget: "les budgets",
   changeorder: "les avenants",
   task: "les tâches",
+  resource: "les ressources planifiées",
+  forecast: "les prévisions de coût",
   supplier: "les fournisseurs",
   request: "les demandes d'achat",
   order: "les commandes",
@@ -122,6 +124,12 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
+  "projects.resource.read": "Consulter les ressources futures du projet",
+  "projects.resource.manage": "Planifier les ressources futures du projet",
+  "projects.forecast.read": "Consulter les prévisions de coût du projet",
+  "projects.forecast.manage": "Préparer les prévisions de coût du projet",
+  "projects.forecast.approve": "Approuver les prévisions de coût du projet",
+  "inventory.reservation.manage": "Réserver et libérer du stock",
   "commissioning.activity.read": "Consulter les mises en service",
   "commissioning.activity.manage": "Conduire les essais de mise en service",
   "commissioning.activity.accept": "Réceptionner et remettre les installations",

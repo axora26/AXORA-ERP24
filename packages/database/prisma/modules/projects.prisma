@@ -61,6 +61,12 @@ enum ProjectRiskStatus {
   CLOSED
 }
 
+enum ProjectForecastStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Project {
   id                String        @id @default(cuid())
   organizationId    String
@@ -92,6 +98,8 @@ model Project {
   milestones   ProjectMilestone[]
   changeOrders ProjectChangeOrder[]
   risks        ProjectRisk[]
+  stockReservations StockReservation[]
+  forecastRevisions ProjectForecastRevision[]
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
@@ -117,6 +125,8 @@ model ProjectWbsItem {
   budgetLines  ProjectBudgetLine[]
   tasks        ProjectTask[]
   changeOrders ProjectChangeOrder[]
+  stockReservations StockReservation[]
+  forecastLines ProjectForecastLine[]
 
   @@unique([projectId, code])
   @@index([organizationId, companyId, projectId])
@@ -234,4 +244,55 @@ model ProjectRisk {
 
   @@index([organizationId, companyId, projectId, status])
   @@map("project_risks")
+}
+
+/// Révision EAC : consommé réel figé à la soumission + reste explicitement évalué.
+model ProjectForecastRevision {
+  id               String                @id @default(cuid())
+  organizationId   String
+  companyId        String
+  projectId        String
+  revisionNumber   Int
+  status           ProjectForecastStatus @default(PENDING)
+  justification    String
+  asOf             DateTime              @default(now())
+  currency         String                @db.Char(3)
+  contractAmount   Decimal               @db.Decimal(18, 2)
+  revisedBudget    Decimal               @db.Decimal(18, 2)
+  consumedAmount   Decimal               @db.Decimal(18, 2)
+  remainingAmount  Decimal               @db.Decimal(18, 2)
+  eacAmount        Decimal               @db.Decimal(18, 2)
+  marginAmount     Decimal               @db.Decimal(18, 2)
+  requestedByUserId String
+  decidedByUserId  String?
+  decidedAt        DateTime?
+  decisionNote     String?
+  createdAt        DateTime              @default(now())
+
+  project Project @relation(fields: [projectId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  lines   ProjectForecastLine[]
+
+  @@unique([projectId, revisionNumber])
+  @@index([organizationId, companyId, projectId, status])
+  @@map("project_forecast_revisions")
+}
+
+model ProjectForecastLine {
+  id             String             @id @default(cuid())
+  revisionId     String
+  organizationId String
+  companyId      String
+  category       ProjectCostCategory
+  wbsItemId      String?
+  description    String
+  remainingAmount Decimal            @db.Decimal(18, 2)
+  createdAt      DateTime           @default(now())
+
+  revision ProjectForecastRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  wbsItem  ProjectWbsItem?         @relation(fields: [wbsItemId], references: [id], onDelete: Restrict)
+
+  @@unique([revisionId, category])
+  @@index([organizationId, companyId, revisionId])
+  @@index([wbsItemId])
+  @@map("project_forecast_lines")
 }

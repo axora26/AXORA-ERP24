@@ -57,6 +57,11 @@ export const SALES_PERMISSIONS = {
 export const PROJECT_PERMISSIONS = {
   PROJECT_READ: "projects.project.read",
   PROJECT_MANAGE: "projects.project.manage",
+  RESOURCE_READ: "projects.resource.read",
+  RESOURCE_MANAGE: "projects.resource.manage",
+  FORECAST_READ: "projects.forecast.read",
+  FORECAST_MANAGE: "projects.forecast.manage",
+  FORECAST_APPROVE: "projects.forecast.approve",
   BUDGET_MANAGE: "projects.budget.manage",
   CHANGE_ORDER_APPROVE: "projects.changeorder.approve",
   TASK_MANAGE: "projects.task.manage",
@@ -81,6 +86,7 @@ export const INVENTORY_PERMISSIONS = {
   MOVEMENT_CREATE: "inventory.movement.create",
   ADJUSTMENT_CREATE: "inventory.adjustment.create",
   COUNT_MANAGE: "inventory.count.manage",
+  RESERVATION_MANAGE: "inventory.reservation.manage",
 } as const;
 
 /** INC-08 — Finance. Saisie, approbation et paiement des factures fournisseurs sont separes. */

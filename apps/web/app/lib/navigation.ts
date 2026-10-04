@@ -3,6 +3,7 @@ import {
   Building2,
   Calculator,
   FolderKanban,
+  ChartNoAxesCombined,
   KeyRound,
   LayoutDashboard,
   Receipt,
@@ -74,6 +75,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Projets & chantiers",
     items: [
       { href: "/projects", label: "Projets", icon: FolderKanban, permission: "projects.project.read", keywords: "wbs budget planning gantt avenants affaires" },
+      { href: "/projects/forecasts", label: "Prévisions EAC", icon: ChartNoAxesCombined, permission: "projects.forecast.read", keywords: "eac coût budget marge" },
       { href: "/field", label: "Chantier", icon: HardHat, permission: "field.site.read", keywords: "journal reserves photos terrain hors ligne punch list" },
       { href: "/qhse", label: "QHSE", icon: ShieldPlus, permission: "qhse.inspection.read", keywords: "securite qualite environnement ncr non-conformite incident accident permis feu inspection" },
       { href: "/documents", label: "Documents (GED)", icon: FileStack, permission: "documents.document.read", keywords: "ged plans visa revisions indices fichiers" },
@@ -102,6 +104,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/procurement", label: "Achats", icon: ShoppingCart, permission: "procurement.request.read", keywords: "demandes commandes fournisseurs receptions" },
       { href: "/inventory", label: "Stock & logistique", icon: Boxes, permission: "inventory.item.read", keywords: "articles magasins inventaire sorties transferts" },
+      { href: "/inventory/reservations", label: "Réservations de stock", icon: Boxes, permission: "inventory.item.read", keywords: "réservations allocations matériel chantier libre" },
     ],
   },
   {

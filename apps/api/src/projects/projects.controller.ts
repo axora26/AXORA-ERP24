@@ -7,12 +7,13 @@ import type { CompanyScope } from "../common/company-scope.service.js";
 import type { AuthenticatedUser } from "../auth/session.guard.js";
 import { ProjectsService } from "./projects.service.js";
 import { ProjectOperationsService } from "./project-operations.service.js";
+import { ProjectForecastService } from "./project-forecast.service.js";
 
 /** INC-05 — Projets & Construction. */
 @Controller("projects")
 @ScopedController()
 export class ProjectsController {
-  constructor(private readonly projects: ProjectsService, private readonly operations: ProjectOperationsService) {}
+  constructor(private readonly projects: ProjectsService, private readonly operations: ProjectOperationsService, private readonly forecasts: ProjectForecastService) {}
 
   @Get(":id/operations")
   @RequirePermission(PROJECT_PERMISSIONS.PROJECT_READ)
@@ -159,5 +160,29 @@ export class ProjectsController {
     @Body() body: unknown,
   ) {
     return this.projects.updateRisk(scope, id, riskId, body, user.id, request.axoraPermissions ?? new Set());
+  }
+
+  @Get(":id/forecasts")
+  @RequirePermission(PROJECT_PERMISSIONS.FORECAST_READ)
+  forecastsList(@Scope() scope: CompanyScope, @Req() request: Request, @Param("id") id: string) {
+    return this.forecasts.list(scope, id, request.axoraPermissions ?? new Set());
+  }
+
+  @Post(":id/forecasts")
+  @RequirePermission(PROJECT_PERMISSIONS.FORECAST_MANAGE)
+  forecastCreate(@Scope() scope: CompanyScope, @Req() request: Request, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.forecasts.create(scope, id, body, user.id, request.axoraPermissions ?? new Set());
+  }
+
+  @Post(":id/forecasts/:revisionId/approve")
+  @RequirePermission(PROJECT_PERMISSIONS.FORECAST_APPROVE)
+  forecastApprove(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Param("revisionId") revisionId: string, @Body() body: unknown) {
+    return this.forecasts.decide(scope, id, revisionId, "APPROVED", body, user.id);
+  }
+
+  @Post(":id/forecasts/:revisionId/reject")
+  @RequirePermission(PROJECT_PERMISSIONS.FORECAST_APPROVE)
+  forecastReject(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Param("revisionId") revisionId: string, @Body() body: unknown) {
+    return this.forecasts.decide(scope, id, revisionId, "REJECTED", body, user.id);
   }
 }
