@@ -100,12 +100,11 @@ export interface PayrollRunView {
   currency: string;
   closedAt: string | null;
   totalGross: string;
-  /** Rappel explicite : aucune retenue legale n'est calculee. */
-  statutoryDeductions: "NOT_CONFIGURED";
+  totalDeductions: string;
+  netAmount: string | null;
+  statutoryDeductions: "CONFIGURED" | "NOT_CONFIGURED";
   policy?: PayrollPolicyView;
   warnings?: PayrollWarning[];
-  /** No net salary is claimed before explicit statutory deduction configuration. */
-  netAmount?: null;
   lines: Array<{
     employeeId: string;
     employeeName: string;
@@ -119,5 +118,10 @@ export interface PayrollRunView {
     overtimeHours?: string;
     hourlyRate?: string;
     automaticAmount?: string;
+    incomeTax?: string;
+    socialContribution?: string;
+    healthContribution?: string;
+    totalDeductions?: string;
+    netAmount?: string;
   }>;
 }

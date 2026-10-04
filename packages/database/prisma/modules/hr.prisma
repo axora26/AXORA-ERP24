@@ -254,6 +254,10 @@ model PayrollRun {
   period          String
   status          PayrollStatus @default(DRAFT)
   currency        String        @db.Char(3)
+  /// Total des retenues légales calculées à partir de la photographie de politique.
+  totalDeductions Decimal       @default(0) @db.Decimal(18, 2)
+  /// Net à payer figé lors de la préparation.
+  netAmount       Decimal       @default(0) @db.Decimal(18, 2)
   createdByUserId String
   closedByUserId  String?
   closedAt        DateTime?
@@ -285,6 +289,11 @@ model PayrollLine {
   overtimeHours   Decimal @default(0) @db.Decimal(7, 2)
   hourlyRate      Decimal @default(0) @db.Decimal(18, 6)
   automaticAmount Decimal @default(0) @db.Decimal(18, 2)
+  incomeTax       Decimal @default(0) @db.Decimal(18, 2)
+  socialContribution Decimal @default(0) @db.Decimal(18, 2)
+  healthContribution Decimal @default(0) @db.Decimal(18, 2)
+  totalDeductions Decimal @default(0) @db.Decimal(18, 2)
+  netAmount       Decimal @default(0) @db.Decimal(18, 2)
 
   run PayrollRun @relation(fields: [runId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
 
@@ -304,6 +313,12 @@ model CompanyPayrollPolicy {
   mode                  PayrollCalculationMode @default(MONTHLY_BASE)
   standardMonthlyHours  Decimal? @db.Decimal(7, 2)
   overtimeCoefficient   Decimal? @db.Decimal(5, 2)
+  /// Code pays/territoire paramétré par l'administrateur (aucune règle n'est déduite).
+  countryCode           String?  @db.Char(2)
+  employeeSocialRate    Decimal? @db.Decimal(5, 2)
+  employeeHealthRate    Decimal? @db.Decimal(5, 2)
+  incomeTaxRate         Decimal? @db.Decimal(5, 2)
+  taxFreeAllowance      Decimal? @db.Decimal(18, 2)
   version               Int @default(1)
   updatedByUserId        String
   createdAt             DateTime @default(now())

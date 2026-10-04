@@ -39,3 +39,23 @@ describe("finance controls", () => {
     expect(result.points.some((point) => point.expectedIn === "80.00" && point.expectedOut === "20.00")).toBe(true);
   });
 });
+
+describe("Invoice signature canonical evidence", () => {
+  it("refuse une empreinte fournie qui ne correspond pas à la facture", async () => {
+    const invoice = {
+      id: "inv-1",
+      code: "FAC-1",
+      currency: "USD",
+      issueDate: new Date("2026-10-04T00:00:00Z"),
+      dueDate: new Date("2026-11-03T00:00:00Z"),
+      status: "ISSUED",
+      subtotal: "100.00",
+      taxTotal: "0.00",
+      total: "100.00",
+      lines: [{ position: 1, description: "Service", quantity: "1", unitPrice: "100.00", taxRate: "0", lineTotal: "100.00", lineTax: "0.00" }],
+    };
+    const prisma = { customerInvoice: { findFirst: vi.fn().mockResolvedValue(invoice) } };
+    const service = new InvoiceSignatureService(prisma as never);
+    await expect(service.sign({ organizationId: "org-a", companyId: "company-a" }, "inv-1", { documentHash: "a".repeat(64) }, "user-1")).rejects.toMatchObject({ status: 409 });
+  });
+});

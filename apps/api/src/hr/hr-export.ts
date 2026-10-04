@@ -28,6 +28,20 @@ export async function payrollSlipPdf(run: PayrollRunView, employeeId: string, co
   if (line.adjustmentNotes) doc.paragraph(`Justification des éléments variables : ${line.adjustmentNotes}`);
   doc.paragraph(`Total calculé : ${line.grossAmount} ${run.currency}`, 13, "#1E3A8A");
   doc.section("Cotisations et net à payer");
+  if (run.statutoryDeductions === "CONFIGURED") {
+    doc.table(
+      [{ label: "Retenue", width: 378 }, { label: `Montant ${run.currency}`, width: 145, align: "right" }],
+      [
+        ["Cotisation sociale salarié", line.socialContribution ?? "0.00"],
+        ["Assurance santé salarié", line.healthContribution ?? "0.00"],
+        ["Impôt sur le revenu", line.incomeTax ?? "0.00"],
+        ["Total des retenues", line.totalDeductions ?? "0.00"],
+        ["Net à payer", line.netAmount ?? line.grossAmount],
+      ],
+    );
+  } else {
+    doc.paragraph("Retenues légales non paramétrées : le net à payer n'est pas calculé.");
+  }
   doc.paragraph("Les retenues légales ne sont pas configurées. Le net à payer n’est pas calculé. Cette fiche présente le calcul de rémunération et doit être complétée selon les règles applicables avant paiement.");
   const warnings = run.warnings?.filter(warning => warning.employeeId === employeeId) ?? [];
   if (warnings.length) { doc.section("Points à vérifier"); warnings.forEach(warning => doc.paragraph(warning.message)); }

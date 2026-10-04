@@ -151,7 +151,7 @@ export default function CustomerInvoicePage(): React.ReactElement {
         </Panel>
       </div>
 
-      {dialog === "issue" && <IssueModal saving={mutation.saving} error={mutation.error} onClose={() => setDialog(null)} onSubmit={(input) => apply(() => financeApi.issueInvoice(invoice.id, input), "Facture émise : numéro légal attribué.")} />}
+      {dialog === "issue" && <IssueModal saving={mutation.saving} error={mutation.error} onClose={() => setDialog(null)} onSubmit={(input) => apply(async () => { const { autoSign, ...issueInput } = input; const issued = await financeApi.issueInvoice(invoice.id, issueInput); if (autoSign) { await financeApi.signInvoice(invoice.id); await signatures.reload(); } return issued; }, input.autoSign ? "Facture émise et signée électroniquement." : "Facture émise : numéro légal attribué.")} />}
       {dialog === "cancel" && (
         <Modal title="Annuler le brouillon" onClose={() => setDialog(null)}>
           <Feedback error={mutation.error} />
@@ -185,15 +185,17 @@ export default function CustomerInvoicePage(): React.ReactElement {
   );
 }
 
-function IssueModal({ saving, error, onClose, onSubmit }: { saving: boolean; error: string; onClose: () => void; onSubmit: (input: { issueDate?: string; dueDays?: number }) => Promise<void> }): React.ReactElement {
+function IssueModal({ saving, error, onClose, onSubmit }: { saving: boolean; error: string; onClose: () => void; onSubmit: (input: { issueDate?: string; dueDays?: number; autoSign?: boolean }) => Promise<void> }): React.ReactElement {
   const [issueDate, setIssueDate] = useState("");
   const [dueDays, setDueDays] = useState("30");
+  const [autoSign, setAutoSign] = useState(true);
   return (
     <Modal title="Émettre la facture" onClose={onClose}>
       <Feedback error={error} />
-      <Form submitLabel="Émettre" saving={saving} onSubmit={() => onSubmit({ issueDate: issueDate || undefined, dueDays: Number(dueDays || "30") })}>
+      <Form submitLabel={autoSign ? "Émettre et signer" : "Émettre"} saving={saving} onSubmit={() => onSubmit({ issueDate: issueDate || undefined, dueDays: Number(dueDays || "30"), autoSign })}>
         <DateField label="Date d'émission" value={issueDate} onChange={setIssueDate} hint="Aujourd'hui par défaut ; jamais antérieure à la dernière facture émise." />
         <TextField label="Délai de paiement (jours)" inputMode="numeric" value={dueDays} onChange={setDueDays} />
+        <label className="checkbox-field"><input type="checkbox" checked={autoSign} onChange={(event) => setAutoSign(event.currentTarget.checked)} /> <span><strong>Signer automatiquement</strong><small>Empreinte interne HMAC-SHA256 ajoutée dès l'émission et visible sur le PDF.</small></span></label>
       </Form>
     </Modal>
   );

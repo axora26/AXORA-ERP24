@@ -41,7 +41,7 @@ export default function PayrollRunPage(): React.ReactElement {
       <PageHeader
         breadcrumb={`RH / Paie / ${run.period}`}
         title={`Paie ${run.period}`}
-        subtitle={`${run.lines.length} salarié(s) · brut total ${formatMoney(run.totalGross, run.currency)}`}
+        subtitle={`${run.lines.length} salarié(s) · brut ${formatMoney(run.totalGross, run.currency)} · net ${run.netAmount === null ? "à paramétrer" : formatMoney(run.netAmount, run.currency)}`}
         actions={
           <>
             <StatusChip status={run.status === "DRAFT" ? "draft" : "closed"} label={run.status === "DRAFT" ? "En préparation" : "Clôturée"} />
@@ -58,20 +58,21 @@ export default function PayrollRunPage(): React.ReactElement {
         <DetailList
           items={[
             { label: "Brut total", value: <strong>{formatMoney(run.totalGross, run.currency)}</strong> },
+            { label: "Retenues légales", value: run.statutoryDeductions === "CONFIGURED" ? formatMoney(run.totalDeductions, run.currency) : <StatusChip status="not_tested" label="À paramétrer" /> },
+            { label: "Net à payer", value: run.netAmount === null ? "Non calculé" : <strong className="text-success">{formatMoney(run.netAmount, run.currency)}</strong> },
             { label: "Devise", value: run.currency },
             { label: "Calcul enregistré", value: hourly ? "Heures validées" : "Salaire de base mensuel" },
             ...(hourly ? [
               { label: "Heures mensuelles de référence", value: `${run.policy?.standardMonthlyHours} h` },
               { label: "Coefficient heures supplémentaires", value: run.policy?.overtimeCoefficient ?? "—" },
             ] : []),
-            { label: "Retenues légales", value: <StatusChip status="not_tested" label="Non paramétrées — aucune règle présumée" /> },
             { label: "Clôture", value: run.closedAt ? formatDateTime(run.closedAt) : "—" },
           ]}
         />
         <p className="inline-note">
           {hourly ? "Le montant automatique provient des heures validées et des règles enregistrées à la préparation." : "Le montant automatique reprend le salaire de base mensuel."} Les éléments variables sont ajoutés explicitement. Les règles et les heures de cette préparation sont conservées.
         </p>
-        <p className="inline-note">Les retenues légales ne sont pas paramétrées : aucun net à payer n’est calculé. Les documents indiquent le brut préparé.</p>
+        <p className="inline-note">{run.statutoryDeductions === "CONFIGURED" ? "Les cotisations et l'impôt sont calculés selon la photographie de politique enregistrée à la préparation." : "Les retenues légales ne sont pas paramétrées : aucun net à payer n'est calculé. Configurez-les dans les règles RH avant une nouvelle préparation."}</p>
         {!!run.warnings?.length && <div className="payroll-warnings"><h3>Points à vérifier</h3><ul>{run.warnings.map((warning, index) => <li key={`${warning.employeeId}-${warning.code}-${index}`}><strong>{run.lines.find(line => line.employeeId === warning.employeeId)?.employeeName ?? "Salarié"}</strong> : {warning.message}</li>)}</ul></div>}
         {canManage && (
           <ActionBar note="La clôture fige définitivement la paie de la période.">
@@ -109,6 +110,10 @@ export default function PayrollRunPage(): React.ReactElement {
                 ),
               },
               { key: "gross", header: "Brut", align: "right", render: (line) => <strong className="num">{formatMoney(line.grossAmount, run.currency)}</strong> },
+              ...(run.statutoryDeductions === "CONFIGURED" ? [
+                { key: "deductions", header: "Retenues", align: "right" as const, render: (line: PayrollRunView["lines"][number]) => <span className="num">{formatMoney(line.totalDeductions ?? "0.00", run.currency)}</span> },
+                { key: "net", header: "Net à payer", align: "right" as const, render: (line: PayrollRunView["lines"][number]) => <strong className="num text-success">{formatMoney(line.netAmount ?? line.grossAmount, run.currency)}</strong> },
+              ] : []),
               { key: "pdf", header: "Document", render: (line) => <FileDownloadButton path={`/hr/payroll/${run.id}/employees/${line.employeeId}/export.pdf`} filename={`paie-${run.period}-${line.employeeId}.pdf`} onError={setDownloadError}>{run.status === "CLOSED" ? "Bulletin / PDF" : "Fiche de préparation / PDF"}</FileDownloadButton> },
             ]}
           />

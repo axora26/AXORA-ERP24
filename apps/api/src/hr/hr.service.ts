@@ -14,7 +14,7 @@ import { writeAudit } from "../common/audit.js";
 import { dec, money, sumDecimals } from "../common/decimal.js";
 import { attendanceIntervals, splitIntervalUtc } from "./attendance-intervals.js";
 import { loadAttendanceFacts } from "./project-presence.js";
-import { calculateAutomaticPay } from "./payroll-calculation.js";
+import { calculateAutomaticPay, calculateStatutoryDeductions } from "./payroll-calculation.js";
 import { payrollPolicyView } from "./payroll-policy.service.js";
 import { serviceCardView } from "./service-card.service.js";
 import {
@@ -678,7 +678,19 @@ export class HrService {
     const employees = await this.prisma.employee.findMany({ where: { id: { in: run.lines.map((line) => line.employeeId) }, ...scope } });
     const names = new Map(employees.map((employee) => [employee.id, `${employee.firstName} ${employee.lastName}`]));
     const snapshot = run.policySnapshot && typeof run.policySnapshot === "object" && !Array.isArray(run.policySnapshot) ? run.policySnapshot : {};
-    const policy: PayrollPolicyView = { mode: snapshot.mode === "VALIDATED_HOURS" ? "VALIDATED_HOURS" : "MONTHLY_BASE", version: run.policyVersion ?? 0, configured: snapshot.configured === true, standardMonthlyHours: typeof snapshot.standardMonthlyHours === "string" ? snapshot.standardMonthlyHours : null, overtimeCoefficient: typeof snapshot.overtimeCoefficient === "string" ? snapshot.overtimeCoefficient : null };
+    const policy: PayrollPolicyView = {
+      mode: snapshot.mode === "VALIDATED_HOURS" ? "VALIDATED_HOURS" : "MONTHLY_BASE",
+      version: run.policyVersion ?? 0,
+      configured: snapshot.configured === true,
+      standardMonthlyHours: typeof snapshot.standardMonthlyHours === "string" ? snapshot.standardMonthlyHours : null,
+      overtimeCoefficient: typeof snapshot.overtimeCoefficient === "string" ? snapshot.overtimeCoefficient : null,
+      countryCode: typeof snapshot.countryCode === "string" ? snapshot.countryCode : null,
+      employeeSocialRate: typeof snapshot.employeeSocialRate === "string" ? snapshot.employeeSocialRate : null,
+      employeeHealthRate: typeof snapshot.employeeHealthRate === "string" ? snapshot.employeeHealthRate : null,
+      incomeTaxRate: typeof snapshot.incomeTaxRate === "string" ? snapshot.incomeTaxRate : null,
+      taxFreeAllowance: typeof snapshot.taxFreeAllowance === "string" ? snapshot.taxFreeAllowance : null,
+      statutoryConfigured: snapshot.statutoryConfigured === true,
+    };
     const warnings: PayrollWarning[] = Array.isArray(snapshot.warnings) ? snapshot.warnings.flatMap((warning) => warning && typeof warning === "object" && !Array.isArray(warning) && typeof warning.employeeId === "string" && typeof warning.code === "string" && typeof warning.message === "string" ? [{ employeeId: warning.employeeId, code: warning.code, message: warning.message }] : []) : [];
     const frozenNames = new Map<string, string>();
     if (Array.isArray(snapshot.employees)) for (const employee of snapshot.employees) if (employee && typeof employee === "object" && !Array.isArray(employee) && typeof employee.employeeId === "string" && typeof employee.fullName === "string") frozenNames.set(employee.employeeId, employee.fullName);
@@ -689,10 +701,11 @@ export class HrService {
       currency: run.currency.trim(),
       closedAt: run.closedAt?.toISOString() ?? null,
       totalGross: money(sumDecimals(run.lines.map((line) => line.grossAmount))),
-      statutoryDeductions: "NOT_CONFIGURED",
+      totalDeductions: money(run.totalDeductions),
+      statutoryDeductions: policy.statutoryConfigured ? "CONFIGURED" : "NOT_CONFIGURED",
       policy,
       warnings,
-      netAmount: null,
+      netAmount: policy.statutoryConfigured ? money(run.netAmount) : null,
       lines: run.lines
         .map((line) => ({
           employeeId: line.employeeId,
@@ -708,7 +721,14 @@ export class HrService {
           overtimeHours: dec(line.overtimeHours).toFixed(2),
           hourlyRate: dec(line.hourlyRate).toFixed(6),
         }),
-          automaticAmount: money(line.automaticAmount),
+           automaticAmount: money(line.automaticAmount),
+           ...(policy.statutoryConfigured ? {
+             incomeTax: money(line.incomeTax),
+             socialContribution: money(line.socialContribution),
+             healthContribution: money(line.healthContribution),
+             totalDeductions: money(line.totalDeductions),
+             netAmount: money(line.netAmount),
+           } : {}),
         }))
         .sort((left, right) => left.employeeName.localeCompare(right.employeeName)),
     };
@@ -783,21 +803,28 @@ export class HrService {
         if (!dec(attendanceByEmployee.get(employee.id)).toDecimalPlaces(2).equals(dec(validated).toDecimalPlaces(2))) warnings.push({ employeeId: employee.id, code: "ATTENDANCE_TIMESHEET_DIFFERENCE", message: "Les heures pointées et les heures validées diffèrent ; la paie utilise uniquement les heures validées." });
       }
       const policySnapshot: Prisma.InputJsonObject = { ...policy, warnings: warnings.map((warning) => ({ ...warning })), employees: employees.map((employee) => ({ employeeId: employee.id, code: employee.code, fullName: `${employee.firstName} ${employee.lastName}`, jobTitle: employee.jobTitle, sourceTimesheetIds: sheets.filter((sheet) => sheet.employeeId === employee.id).map((sheet) => sheet.id) })) };
-      const run = await tx.payrollRun.create({ data: { ...scope, period, currency, createdByUserId: actorUserId, policySnapshot, policyVersion: policy.version } });
-      if (employees.length > 0) {
-        await tx.payrollLine.createMany({
-          data: employees.map((employee) => ({
-            ...scope,
-            runId: run.id,
-            employeeId: employee.id,
-            baseSalary: employee.baseSalary,
-            validatedHours: hoursByEmployee.get(employee.id) ?? new Prisma.Decimal(0),
-            attendanceHours: dec(attendanceByEmployee.get(employee.id)).toDecimalPlaces(2),
-            ...calculateAutomaticPay(employee.baseSalary, hoursByEmployee.get(employee.id) ?? new Prisma.Decimal(0), policy),
-            grossAmount: calculateAutomaticPay(employee.baseSalary, hoursByEmployee.get(employee.id) ?? new Prisma.Decimal(0), policy).automaticAmount,
-          })),
-        });
-      }
+      const preparedLines = employees.map((employee) => {
+        const automatic = calculateAutomaticPay(employee.baseSalary, hoursByEmployee.get(employee.id) ?? new Prisma.Decimal(0), policy);
+        const statutory = calculateStatutoryDeductions(automatic.automaticAmount, policy);
+        return {
+          ...scope,
+          employeeId: employee.id,
+          baseSalary: employee.baseSalary,
+          validatedHours: hoursByEmployee.get(employee.id) ?? new Prisma.Decimal(0),
+          attendanceHours: dec(attendanceByEmployee.get(employee.id)).toDecimalPlaces(2),
+          ...automatic,
+          grossAmount: automatic.automaticAmount,
+          incomeTax: statutory?.incomeTax ?? new Prisma.Decimal(0),
+          socialContribution: statutory?.socialContribution ?? new Prisma.Decimal(0),
+          healthContribution: statutory?.healthContribution ?? new Prisma.Decimal(0),
+          totalDeductions: statutory?.totalDeductions ?? new Prisma.Decimal(0),
+          netAmount: statutory?.netAmount ?? automatic.automaticAmount,
+        };
+      });
+      const totalDeductions = sumDecimals(preparedLines.map((line) => line.totalDeductions));
+      const netAmount = sumDecimals(preparedLines.map((line) => line.netAmount));
+      const run = await tx.payrollRun.create({ data: { ...scope, period, currency, totalDeductions, netAmount, createdByUserId: actorUserId, policySnapshot, policyVersion: policy.version } });
+      if (preparedLines.length > 0) await tx.payrollLine.createMany({ data: preparedLines.map((line) => ({ ...line, runId: run.id })) });
       await writeAudit(tx, scope, actorUserId, "hr.payroll.prepared", "PayrollRun", run.id, { period, employeeCount: employees.length });
       return run.id;
     });
@@ -820,11 +847,37 @@ export class HrService {
       const adjustments = dec(line.adjustments).plus(amount);
       const gross = dec(line.automaticAmount).plus(adjustments);
       if (gross.isNegative()) throw new BadRequestException("Gross amount cannot become negative");
+      const snapshot = run.policySnapshot && typeof run.policySnapshot === "object" && !Array.isArray(run.policySnapshot) ? run.policySnapshot as Record<string, unknown> : {};
+      const policy: PayrollPolicyView = {
+        version: run.policyVersion ?? 0,
+        mode: snapshot.mode === "VALIDATED_HOURS" ? "VALIDATED_HOURS" : "MONTHLY_BASE",
+        standardMonthlyHours: typeof snapshot.standardMonthlyHours === "string" ? snapshot.standardMonthlyHours : null,
+        overtimeCoefficient: typeof snapshot.overtimeCoefficient === "string" ? snapshot.overtimeCoefficient : null,
+        countryCode: typeof snapshot.countryCode === "string" ? snapshot.countryCode : null,
+        employeeSocialRate: typeof snapshot.employeeSocialRate === "string" ? snapshot.employeeSocialRate : null,
+        employeeHealthRate: typeof snapshot.employeeHealthRate === "string" ? snapshot.employeeHealthRate : null,
+        incomeTaxRate: typeof snapshot.incomeTaxRate === "string" ? snapshot.incomeTaxRate : null,
+        taxFreeAllowance: typeof snapshot.taxFreeAllowance === "string" ? snapshot.taxFreeAllowance : null,
+        statutoryConfigured: snapshot.statutoryConfigured === true,
+        configured: snapshot.configured === true,
+      };
+      const statutory = calculateStatutoryDeductions(gross, policy);
       const note = `${label} : ${amount.greaterThan(0) ? "+" : ""}${money(amount)}`;
       await tx.payrollLine.update({
         where: { id: line.id },
-        data: { adjustments, grossAmount: gross, adjustmentNotes: line.adjustmentNotes ? `${line.adjustmentNotes} · ${note}` : note },
+        data: {
+          adjustments,
+          grossAmount: gross,
+          incomeTax: statutory?.incomeTax ?? 0,
+          socialContribution: statutory?.socialContribution ?? 0,
+          healthContribution: statutory?.healthContribution ?? 0,
+          totalDeductions: statutory?.totalDeductions ?? 0,
+          netAmount: statutory?.netAmount ?? gross,
+          adjustmentNotes: line.adjustmentNotes ? `${line.adjustmentNotes} · ${note}` : note,
+        },
       });
+      const totals = await tx.payrollLine.aggregate({ where: { runId, ...scope }, _sum: { totalDeductions: true, netAmount: true } });
+      await tx.payrollRun.update({ where: { id: runId }, data: { totalDeductions: totals._sum.totalDeductions ?? 0, netAmount: totals._sum.netAmount ?? 0 } });
       await writeAudit(tx, scope, actorUserId, "hr.payroll.adjusted", "PayrollRun", runId, { employeeId, label, amount: money(amount) });
     });
     return this.getPayrollRun(scope, runId);

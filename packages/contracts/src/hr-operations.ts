@@ -4,6 +4,12 @@ export interface PayrollPolicyView {
   mode: PayrollCalculationMode;
   standardMonthlyHours: string | null;
   overtimeCoefficient: string | null;
+  countryCode: string | null;
+  employeeSocialRate: string | null;
+  employeeHealthRate: string | null;
+  incomeTaxRate: string | null;
+  taxFreeAllowance: string | null;
+  statutoryConfigured: boolean;
   configured: boolean;
 }
 export interface PayrollPolicyUpdateInput {
@@ -11,6 +17,11 @@ export interface PayrollPolicyUpdateInput {
   mode: PayrollCalculationMode;
   standardMonthlyHours?: string;
   overtimeCoefficient?: string;
+  countryCode?: string;
+  employeeSocialRate?: string;
+  employeeHealthRate?: string;
+  incomeTaxRate?: string;
+  taxFreeAllowance?: string;
 }
 export interface PayrollWarning { employeeId: string; code: string; message: string }
 export interface EmployeeServiceCardView {

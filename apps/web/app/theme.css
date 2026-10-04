@@ -168,6 +168,9 @@
 .service-card-body img { display: block; width: 156px; height: 156px; background: white; }
 .service-card-contact { background: #1e3a8a; color: #fff; text-align: center; padding: 9px 12px; font-size: 11px; overflow-wrap: anywhere; }
 .service-card-action { padding: 16px 0; }
+.payroll-statutory-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--theme-raised) 70%, transparent); }
+.payroll-statutory-form h3, .payroll-statutory-form p { grid-column: 1 / -1; margin: 0; }
+.payroll-statutory-form .field { margin: 0; }
 @media (max-width: 480px) { .service-card-body { grid-template-columns: minmax(0, 1fr); } .service-card-body img { margin: 0 auto; } }
 @media (max-width: 650px) {
   .crm-resource-panel { padding: 14px; }
@@ -175,4 +178,5 @@
   .crm-filters { align-items: stretch; }
   .crm-filters .field { flex-basis: 100%; }
   .crm-pagination > span { flex-basis: 100%; }
+  .payroll-statutory-form { grid-template-columns: 1fr; padding: 12px; }
 }

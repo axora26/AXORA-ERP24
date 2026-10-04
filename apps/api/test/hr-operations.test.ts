@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Prisma } from "@axora24/database";
 import { attendanceIntervals, splitIntervalUtc, type AttendanceFact } from "../src/hr/attendance-intervals.js";
-import { calculateAutomaticPay } from "../src/hr/payroll-calculation.js";
+import { calculateAutomaticPay, calculateStatutoryDeductions } from "../src/hr/payroll-calculation.js";
 import { cardPayload, createCardCredential, normalizeCardToken } from "../src/hr/service-card-credentials.js";
 import { hashSessionToken } from "@axora24/security";
 
@@ -38,5 +38,26 @@ describe("HR evidence and explicit payroll calculations", () => {
       expect(() => normalizeCardToken("BADGE-001")).toThrow(/Invalid/);
       expect(() => cardPayload(first.tokenCiphertext.slice(0, -5))).toThrow(/decrypt/);
     } finally { if (previous === undefined) delete process.env.SERVICE_CARD_ENCRYPTION_KEY; else process.env.SERVICE_CARD_ENCRYPTION_KEY = previous; }
+  });
+});
+
+describe("Retenues légales de paie", () => {
+  it("calcule le net à partir d'une politique complète", () => {
+    const result = calculateStatutoryDeductions(new Prisma.Decimal("3500"), {
+      version: 2,
+      mode: "MONTHLY_BASE",
+      standardMonthlyHours: null,
+      overtimeCoefficient: null,
+      countryCode: "CD",
+      employeeSocialRate: "3.00",
+      employeeHealthRate: "1.50",
+      incomeTaxRate: "10.00",
+      taxFreeAllowance: "500.00",
+      statutoryConfigured: true,
+      configured: true,
+    });
+    expect(result?.incomeTax.toFixed(2)).toBe("300.00");
+    expect(result?.totalDeductions.toFixed(2)).toBe("457.50");
+    expect(result?.netAmount.toFixed(2)).toBe("3042.50");
   });
 });

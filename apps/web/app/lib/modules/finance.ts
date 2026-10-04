@@ -24,6 +24,7 @@ export const financeApi = {
   createAccountingJournal: (input: Record<string, unknown>) => api.post<AccountingJournalView[]>("/finance/accounting/journals", input),
   accountingEntries: (query?: { from?: string; to?: string; journalId?: string }) => api.get<AccountingEntryView[]>(`/finance/accounting/entries${query ? `?${new URLSearchParams(query).toString()}` : ""}`),
   accountingTrialBalance: (query?: { from?: string; to?: string }) => api.get<AccountingTrialBalanceView>(`/finance/accounting/trial-balance${query ? `?${new URLSearchParams(query).toString()}` : ""}`),
+  accountingStatements: (query?: { from?: string; to?: string }) => api.get<import("@axora24/contracts").AccountingFinancialStatementsView>(`/finance/accounting/statements${query ? `?${new URLSearchParams(query).toString()}` : ""}`),
   createAccountingEntry: (input: Record<string, unknown>) => api.post<AccountingEntryView>("/finance/accounting/entries", input),
   summary: () => api.get<FinanceSummaryView>("/finance/summary"),
   collectionReminders: () => api.get<import("@axora24/contracts").CollectionReminderView[]>("/finance/collection-reminders"),

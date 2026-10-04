@@ -72,3 +72,24 @@ export interface AccountingTrialBalanceView {
   totalCredit: string;
   rows: AccountingTrialBalanceRow[];
 }
+
+export interface AccountingStatementRow {
+  accountId: string;
+  code: string;
+  name: string;
+  amount: string;
+}
+
+export interface AccountingFinancialStatementsView {
+  currency: string;
+  from: string | null;
+  to: string | null;
+  incomeStatement: AccountingStatementRow[];
+  balanceSheet: AccountingStatementRow[];
+  totalRevenue: string;
+  totalExpenses: string;
+  netIncome: string;
+  totalAssets: string;
+  totalLiabilities: string;
+  totalEquity: string;
+}

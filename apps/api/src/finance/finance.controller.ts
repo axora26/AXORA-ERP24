@@ -65,6 +65,12 @@ export class FinanceController {
     return this.accounting.trialBalance(scope, query);
   }
 
+  @Get("accounting/statements")
+  @RequirePermission(F.ACCOUNTING_READ)
+  accountingStatements(@Scope() scope: CompanyScope, @Query() query: Record<string, unknown>) {
+    return this.accounting.financialStatements(scope, query);
+  }
+
   @Post("accounting/entries")
   @RequirePermission(F.ACCOUNTING_POST)
   accountingManualEntry(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {

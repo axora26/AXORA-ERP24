@@ -3,6 +3,7 @@ import { Prisma } from "@axora24/database";
 import type {
   AccountingAccountView,
   AccountingEntryView,
+  AccountingFinancialStatementsView,
   AccountingJournalView,
   AccountingTrialBalanceView,
 } from "@axora24/contracts";
@@ -170,6 +171,46 @@ export class AccountingService {
       totalDebit: money(sumDecimals(rows.map((row) => row.debit))),
       totalCredit: money(sumDecimals(rows.map((row) => row.credit))),
       rows,
+    };
+  }
+
+  async financialStatements(scope: CompanyScope, query: Record<string, unknown>): Promise<AccountingFinancialStatementsView> {
+    const from = query.from ? requiredDate(query.from, "from") : null;
+    const to = query.to ? requiredDate(query.to, "to") : null;
+    const lines = await this.prisma.accountingEntryLine.findMany({
+      where: { ...scope, entry: { status: "POSTED", ...(from || to ? { entryDate: { ...(from ? { gte: from } : {}), ...(to ? { lte: new Date(to.getTime() + 86_399_999) } : {}) } } : {}) } },
+      include: { account: true },
+    });
+    const totals = new Map<string, { account: (typeof lines)[number]["account"]; debit: Prisma.Decimal; credit: Prisma.Decimal }>();
+    for (const line of lines) {
+      const total = totals.get(line.accountId) ?? { account: line.account, debit: new Prisma.Decimal(0), credit: new Prisma.Decimal(0) };
+      total.debit = total.debit.plus(line.debit);
+      total.credit = total.credit.plus(line.credit);
+      totals.set(line.accountId, total);
+    }
+    const revenueRows = [...totals.values()].filter((row) => row.account.type === "REVENUE").map((row) => ({ accountId: row.account.id, code: row.account.code, name: row.account.name, amount: row.credit.minus(row.debit) })).filter((row) => !row.amount.isZero()).sort((a, b) => a.code.localeCompare(b.code));
+    const expenseRows = [...totals.values()].filter((row) => row.account.type === "EXPENSE").map((row) => ({ accountId: row.account.id, code: row.account.code, name: row.account.name, amount: row.debit.minus(row.credit) })).filter((row) => !row.amount.isZero()).sort((a, b) => a.code.localeCompare(b.code));
+    const assetRows = [...totals.values()].filter((row) => row.account.type === "ASSET").map((row) => ({ accountId: row.account.id, code: row.account.code, name: row.account.name, amount: row.debit.minus(row.credit) })).filter((row) => !row.amount.isZero()).sort((a, b) => a.code.localeCompare(b.code));
+    const liabilityRows = [...totals.values()].filter((row) => row.account.type === "LIABILITY").map((row) => ({ accountId: row.account.id, code: row.account.code, name: row.account.name, amount: row.credit.minus(row.debit) })).filter((row) => !row.amount.isZero()).sort((a, b) => a.code.localeCompare(b.code));
+    const equityRows = [...totals.values()].filter((row) => row.account.type === "EQUITY").map((row) => ({ accountId: row.account.id, code: row.account.code, name: row.account.name, amount: row.credit.minus(row.debit) })).filter((row) => !row.amount.isZero()).sort((a, b) => a.code.localeCompare(b.code));
+    const totalRevenue = sumDecimals(revenueRows.map((row) => row.amount));
+    const totalExpenses = sumDecimals(expenseRows.map((row) => row.amount));
+    const netIncome = totalRevenue.minus(totalExpenses);
+    const totalAssets = sumDecimals(assetRows.map((row) => row.amount));
+    const totalLiabilities = sumDecimals(liabilityRows.map((row) => row.amount));
+    const totalEquity = sumDecimals(equityRows.map((row) => row.amount)).plus(netIncome);
+    return {
+      currency: (await this.prisma.company.findUniqueOrThrow({ where: { id: scope.companyId }, select: { currency: true } })).currency.trim(),
+      from: from?.toISOString() ?? null,
+      to: to?.toISOString() ?? null,
+      incomeStatement: [...revenueRows, ...expenseRows].map((row) => ({ ...row, amount: money(row.amount) })),
+      balanceSheet: [...assetRows, ...liabilityRows, ...equityRows, ...(netIncome.isZero() ? [] : [{ accountId: "net-income", code: "RESULTAT", name: "Résultat de la période", amount: netIncome }])].map((row) => ({ ...row, amount: money(row.amount) })),
+      totalRevenue: money(totalRevenue),
+      totalExpenses: money(totalExpenses),
+      netIncome: money(netIncome),
+      totalAssets: money(totalAssets),
+      totalLiabilities: money(totalLiabilities),
+      totalEquity: money(totalEquity),
     };
   }
 

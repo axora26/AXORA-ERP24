@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { BookOpen, Database, Plus, RefreshCw, Scale } from "lucide-react";
-import type { AccountingEntryView, AccountingTrialBalanceView } from "@axora24/contracts";
+import type { AccountingEntryView, AccountingFinancialStatementsView, AccountingTrialBalanceView } from "@axora24/contracts";
 import { financeApi } from "../lib/modules/finance";
 import { formatDate, formatMoney } from "../lib/format";
 import { useMutation, useResource } from "../lib/hooks";
@@ -23,7 +23,7 @@ import {
   TextField,
 } from "./ui";
 
-type AccountingTab = "accounts" | "entries" | "balance";
+type AccountingTab = "accounts" | "entries" | "balance" | "statements";
 type Dialog = "account" | "journal" | "entry" | null;
 type EntryLine = { accountId: string; label: string; debit: string; credit: string };
 
@@ -36,11 +36,12 @@ export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; 
   const configuration = useResource(() => financeApi.accountingConfiguration(), []);
   const entries = useResource<AccountingEntryView[]>(() => financeApi.accountingEntries(), [configuration.data?.accounts.length]);
   const balance = useResource<AccountingTrialBalanceView>(() => financeApi.accountingTrialBalance(), [configuration.data?.accounts.length, entries.data?.length]);
+  const statements = useResource<AccountingFinancialStatementsView>(() => financeApi.accountingStatements(), [configuration.data?.accounts.length, entries.data?.length]);
   const accounts = configuration.data?.accounts ?? [];
   const journals = configuration.data?.journals ?? [];
 
   const refresh = async (): Promise<void> => {
-    await Promise.all([configuration.reload(), entries.reload(), balance.reload()]);
+    await Promise.all([configuration.reload(), entries.reload(), balance.reload(), statements.reload()]);
   };
 
   async function bootstrap(): Promise<void> {
@@ -62,7 +63,7 @@ export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; 
 
   return (
     <section className="stack accounting-workspace" aria-label="Comptabilité générale">
-      <Feedback error={configuration.error || entries.error || balance.error || mutation.error} notice={mutation.notice} />
+      <Feedback error={configuration.error || entries.error || balance.error || statements.error || mutation.error} notice={mutation.notice} />
       <Panel
         title="Comptabilité générale"
         subtitle="Plan de comptes, journaux et écritures équilibrées. Chaque écriture source est figée et auditée."
@@ -86,11 +87,12 @@ export function FinanceAccounting({ canManage, canPost }: { canManage: boolean; 
               <Metric icon={<Scale size={19} />} tone={trial && trial.totalDebit !== trial.totalCredit ? "red" : "green"} label="Total crédit" value={formatMoney(trial?.totalCredit ?? "0.00", trial?.currency)} detail={trial && trial.totalDebit === trial.totalCredit ? "Balance équilibrée" : "Écart à contrôler"} />
             </Metrics>
             <nav className="accounting-tabs" aria-label="Vues comptables">
-              {([['accounts', 'Plan comptable'], ['entries', 'Journal'], ['balance', 'Balance générale']] as const).map(([id, label]) => <button type="button" key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>)}
+              {([['accounts', 'Plan comptable'], ['entries', 'Journal'], ['balance', 'Balance générale'], ['statements', 'États financiers']] as const).map(([id, label]) => <button type="button" key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>)}
             </nav>
             {tab === "accounts" && <Panel title="Plan comptable" subtitle="Les comptes système sont utilisés automatiquement pour les factures et paiements."><DataTable rows={accounts} empty={<Empty title="Aucun compte" />} columns={[{ key: "code", header: "Compte", render: (account) => <><strong>{account.code}</strong><small>{account.name}</small></> }, { key: "type", header: "Classe", render: (account) => account.type }, { key: "debit", header: "Débit", align: "right", render: (account) => <span className="num">{formatMoney(account.debit, trial?.currency)}</span> }, { key: "credit", header: "Crédit", align: "right", render: (account) => <span className="num">{formatMoney(account.credit, trial?.currency)}</span> }, { key: "balance", header: "Solde", align: "right", render: (account) => <strong className="num">{formatMoney(account.balance, trial?.currency)}</strong> }, { key: "status", header: "État", render: (account) => <StatusChip status={account.isActive ? "done" : "pending"} label={account.isActive ? "Actif" : "Inactif"} /> }]} /></Panel>}
             {tab === "entries" && <Panel title="Journal des écritures" subtitle="Écritures issues des factures, paiements ou saisies autorisées. Débit = crédit sur chaque pièce."><DataTable rows={entries.data ?? []} empty={<Empty title="Aucune écriture" body={canPost ? "Les émissions et paiements généreront automatiquement les premières écritures." : undefined} />} columns={[{ key: "date", header: "Date", render: (entry) => formatDate(entry.entryDate) }, { key: "number", header: "N°", render: (entry) => <><strong>{entry.number}</strong><small>{entry.journalCode} · {entry.description}</small></> }, { key: "source", header: "Origine", render: (entry) => entry.sourceType ? entry.sourceType.replaceAll("_", " ") : "Saisie" }, { key: "debit", header: "Débit", align: "right", render: (entry) => <span className="num">{formatMoney(entry.totalDebit, entry.currency)}</span> }, { key: "credit", header: "Crédit", align: "right", render: (entry) => <span className="num">{formatMoney(entry.totalCredit, entry.currency)}</span> }, { key: "status", header: "État", render: (entry) => <StatusChip status={entry.status === "POSTED" ? "done" : "pending"} label={entry.status === "POSTED" ? "Comptabilisée" : "Extournée"} /> }]} /></Panel>}
             {tab === "balance" && <Panel title="Balance générale" subtitle="Cumul des écritures comptabilisées, par compte et période."><DataTable rows={(trial?.rows ?? []).map((row) => ({ ...row, id: row.accountId }))} empty={<Empty title="Balance vide" />} columns={[{ key: "code", header: "Compte", render: (row) => <><strong>{row.code}</strong><small>{row.name}</small></> }, { key: "type", header: "Classe", render: (row) => row.type }, { key: "debit", header: "Débit", align: "right", render: (row) => <span className="num">{formatMoney(row.debit, trial?.currency)}</span> }, { key: "credit", header: "Crédit", align: "right", render: (row) => <span className="num">{formatMoney(row.credit, trial?.currency)}</span> }, { key: "balance", header: "Solde", align: "right", render: (row) => <strong className="num">{formatMoney(row.balance, trial?.currency)}</strong> }]} /></Panel>}
+            {tab === "statements" && statements.data && <div className="module-grid cols-2 financial-statements-grid"><Panel title="Compte de résultat" subtitle="Produits et charges des écritures comptabilisées."><Metrics label="Résultat"><Metric icon={<Scale size={18} />} tone={Number(statements.data.netIncome) >= 0 ? "green" : "red"} label="Résultat net" value={formatMoney(statements.data.netIncome, statements.data.currency)} detail={`Produits ${formatMoney(statements.data.totalRevenue, statements.data.currency)} · Charges ${formatMoney(statements.data.totalExpenses, statements.data.currency)}`} /></Metrics><DataTable rows={statements.data.incomeStatement.map((row) => ({ ...row, id: row.accountId }))} empty={<Empty title="Aucun produit ou charge" />} columns={[{ key: "account", header: "Compte", render: (row) => <><strong>{row.code}</strong><small>{row.name}</small></> }, { key: "amount", header: "Montant", align: "right", render: (row) => <span className="num">{formatMoney(row.amount, statements.data?.currency)}</span> }]} /></Panel><Panel title="Bilan" subtitle="Actif, passif et capitaux propres à la période sélectionnée."><Metrics label="Équilibre"><Metric icon={<Scale size={18} />} tone="blue" label="Actif" value={formatMoney(statements.data.totalAssets, statements.data.currency)} /><Metric icon={<Scale size={18} />} tone="amber" label="Passif + capitaux propres" value={formatMoney((Number(statements.data.totalLiabilities) + Number(statements.data.totalEquity)).toFixed(2), statements.data.currency)} /></Metrics><DataTable rows={statements.data.balanceSheet.map((row) => ({ ...row, id: `${row.accountId}-${row.code}` }))} empty={<Empty title="Bilan vide" />} columns={[{ key: "account", header: "Compte", render: (row) => <><strong>{row.code}</strong><small>{row.name}</small></> }, { key: "amount", header: "Montant", align: "right", render: (row) => <span className="num">{formatMoney(row.amount, statements.data?.currency)}</span> }]} /></Panel></div>}
           </>
         )}
       </Panel>
