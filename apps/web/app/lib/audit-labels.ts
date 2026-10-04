@@ -236,6 +236,8 @@ const LABELS: Record<string, string> = {
   "finance.accounting.account.created": "Compte comptable créé",
   "finance.accounting.journal.created": "Journal comptable créé",
   "finance.accounting.entry.posted": "Écriture comptable postée",
+  "finance.invoice.signed": "Facture signée électroniquement",
+  "finance.invoice.signature.revoked": "Signature de facture révoquée",
 };
 
 export function describeAudit(action: string): string {
