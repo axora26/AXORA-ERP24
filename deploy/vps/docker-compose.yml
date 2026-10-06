@@ -88,6 +88,8 @@ services:
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL requis}
+      # Seule source autorisee a transmettre l'adresse du client (tailscale serve via la passerelle Docker).
+      PROXY_GATEWAY: ${PROXY_GATEWAY:-172.24.0.1/32}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

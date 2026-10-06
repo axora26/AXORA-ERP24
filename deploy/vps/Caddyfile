@@ -7,8 +7,17 @@
 #    l'acces prive, sans course possible avec un visiteur d'Internet.
 # 2. Acces d'administration prive (:3110) : publie uniquement sur 127.0.0.1 du
 #    VPS et expose au tailnet par `tailscale serve` (HTTPS Tailscale).
+#
+# Adresse du client : seul tailscale serve (vu par Caddy depuis la passerelle
+# Docker, PROXY_GATEWAY) peut fournir X-Forwarded-For ; c'est l'adresse
+# tailnet reelle de l'appareil. Sur le site public, aucun en-tete client
+# n'est cru : l'adresse vue par Caddy fait foi (pas d'usurpation possible).
 {
 	email {$ACME_EMAIL}
+	servers {
+		trusted_proxies static {$PROXY_GATEWAY:172.24.0.1/32}
+		client_ip_headers X-Forwarded-For
+	}
 }
 
 (proxy_web) {
@@ -20,7 +29,8 @@
 	}
 
 	reverse_proxy web:3100 {
-		header_up X-Real-IP {remote_host}
+		header_up X-Real-IP {client_ip}
+		header_up X-Forwarded-For {client_ip}
 	}
 
 	log {

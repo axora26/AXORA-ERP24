@@ -12,6 +12,7 @@ Tailnet  ──► tailscale serve :10443 ──► Caddy :3110 (127.0.0.1) ─�
 - **Caddy** est le seul service exposé. Il obtient le certificat HTTPS (Let's Encrypt) pour `PUBLIC_HOST` et active HTTP/2 et HTTP/3.
 - **La création d'organisations est toujours refusée sur le domaine public** (Caddy renvoie 403). L'API applique en plus `REGISTRATION_MODE=first-organization` : seule la toute première organisation peut être créée, puis l'administrateur ajoute les utilisateurs.
 - **Accès d'administration privé** : `https://axora-vps.taild4cfa4.ts.net:10443`, réservé aux appareils du tailnet Tailscale (pas de Funnel). C'est par là que le premier administrateur crée son compte.
+- **Adresse des visiteurs** : Caddy ne croit l'en-tête `X-Forwarded-For` que s'il vient de la passerelle Docker (`PROXY_GATEWAY`, `172.24.0.1/32` par défaut), c'est-à-dire de `tailscale serve`. L'API reçoit ainsi l'adresse tailnet réelle de l'appareil (journal d'audit, limites anti-abus par adresse). Sur le site public, un en-tête envoyé par le visiteur est ignoré.
 - L'API, l'interface et PostgreSQL restent sur le réseau Docker interne `axora-erp24_internal`.
 - Volumes nommés : `axora-erp24_postgres-data`, `axora-erp24_files-data` (GED, preuves), `axora-erp24_caddy-data` (certificats).
 
