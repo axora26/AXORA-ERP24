@@ -43,6 +43,22 @@ export class CreditNotesController {
   @Post("supplier-credit-notes/:id/refunds") @RequirePermission(F.REFUND_MANAGE)
   supplierRefund(@Req() request: Request, @Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) { requireExtra(request, F.PAYABLE_READ); return this.credits.refund(scope, "SUPPLIER", id, body, user.id); }
 }
+
+/**
+ * Avoir fournisseur prepare depuis un retour d'achat. Expose sous la commande
+ * (parcours Achats) mais regi par les droits Finance : gestion des avoirs et
+ * lecture des factures fournisseur.
+ */
+@Controller("procurement")
+@ScopedController()
+export class SupplierReturnCreditController {
+  constructor(private readonly credits: CreditNotesService) {}
+  @Post("orders/:orderId/returns/:returnId/credit-note") @RequirePermission(F.CREDIT_MANAGE)
+  draft(@Req() request: Request, @Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("orderId") orderId: string, @Param("returnId") returnId: string) {
+    requireExtra(request, F.PAYABLE_READ);
+    return this.credits.draftFromSupplierReturn(scope, orderId, returnId, user.id);
+  }
+}
 function requireExtra(request: Request, permission: string) {
   if (!request.axoraPermissions?.has(permission)) throw new ForbiddenException(`Missing permission: ${permission}`);
 }

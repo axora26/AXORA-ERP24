@@ -45,7 +45,14 @@ const ORDER_INCLUDE = {
   supplier: { select: { name: true } },
   request: { select: { code: true } },
   receipts: { include: { lines: true }, orderBy: { receivedAt: "asc" } },
-  returns: { include: { lines: true }, orderBy: { returnedAt: "asc" } },
+  returns: {
+    include: {
+      lines: true,
+      // Avoir courant prepare depuis le retour (les avoirs annules restent dans l'historique).
+      creditLinks: { where: { creditNote: { status: { not: "CANCELLED" } } }, select: { creditNoteId: true, creditNote: { select: { status: true, code: true } } } },
+    },
+    orderBy: { returnedAt: "asc" },
+  },
 } satisfies Prisma.PurchaseOrderInclude;
 
 /**
@@ -891,6 +898,10 @@ function toOrderView(order: OrderWithRelations, names: Names): PurchaseOrderView
       returnedByName: names.userNames.get(entry.returnedByUserId) ?? null,
       reason: entry.reason,
       warehouseId: entry.warehouseId,
+      creditNoteId: entry.creditLinks[0]?.creditNoteId ?? null,
+      // Les liens annules sont exclus par la requete : seul un brouillon ou un avoir emis remonte.
+      creditNoteStatus: entry.creditLinks[0]?.creditNote.status === "ISSUED" ? "ISSUED" : entry.creditLinks[0] ? "DRAFT" : null,
+      creditNoteCode: entry.creditLinks[0]?.creditNote.code ?? null,
       value: money(sumDecimals(entry.lines.map((line) => dec(line.value)))),
       lines: entry.lines.map((line) => ({ orderLineId: line.orderLineId, quantity: qty(line.quantity), value: money(line.value) })),
     })),

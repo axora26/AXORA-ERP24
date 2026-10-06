@@ -272,9 +272,11 @@ model SupplierReturn {
 
   order PurchaseOrder        @relation(fields: [orderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
   lines SupplierReturnLine[]
+  creditLinks SupplierReturnCreditNote[]
 
   @@unique([companyId, code])
   @@unique([companyId, idempotencyKey])
+  @@unique([id, organizationId, companyId])
   @@index([organizationId, companyId, orderId])
   @@map("supplier_returns")
 }
@@ -293,6 +295,27 @@ model SupplierReturnLine {
   @@unique([returnId, orderLineId])
   @@index([orderLineId])
   @@map("supplier_return_lines")
+}
+
+/// Avoir fournisseur prepare depuis un retour (historique immuable, trigger).
+/// Un avoir n'est lie qu'a un seul retour ; un retour garde au plus un avoir
+/// non annule (verrou du retour dans le service Finance, le statut etant
+/// porte par l'avoir).
+model SupplierReturnCreditNote {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  supplierReturnId String
+  creditNoteId     String
+  createdByUserId  String
+  createdAt        DateTime @default(now())
+
+  supplierReturn SupplierReturn     @relation(fields: [supplierReturnId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  creditNote     SupplierCreditNote @relation(fields: [creditNoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([creditNoteId, organizationId, companyId])
+  @@index([organizationId, companyId, supplierReturnId])
+  @@map("supplier_return_credit_notes")
 }
 
 /// Evaluation fournisseur (1 a 5) sur la qualite, le respect des delais et le prix.

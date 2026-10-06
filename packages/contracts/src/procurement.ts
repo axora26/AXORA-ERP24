@@ -106,6 +106,10 @@ export interface SupplierReturnView {
   returnedByName: string | null;
   reason: string;
   warehouseId: string | null;
+  /** Avoir fournisseur courant prepare depuis ce retour (null si aucun ou annule). */
+  creditNoteId: string | null;
+  creditNoteStatus: "DRAFT" | "ISSUED" | null;
+  creditNoteCode: string | null;
   /** Valeur au prix de commande. */
   value: string;
   lines: Array<{ orderLineId: string; quantity: string; value: string }>;

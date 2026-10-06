@@ -44,12 +44,24 @@ export default function PurchaseOrderPage(): React.ReactElement {
     }
   }
 
+  async function prepareCredit(returnId: string): Promise<void> {
+    const draft = await mutation.run(
+      () => procurementApi.draftReturnCreditNote(id, returnId),
+      "Brouillon d’avoir préparé sur la facture approuvée : il reste à l’émettre dans Finance.",
+    );
+    if (draft) {
+      setOverride(null);
+      await resource.reload();
+    }
+  }
+
   if (resource.loading && !order) return <Loading label="Chargement de la commande…" />;
   if (!order) return <Feedback error={resource.error || "Commande introuvable."} />;
 
   const canManage = session.can("procurement.order.manage");
   const canReceive = session.can("procurement.receipt.create");
   const canReturn = session.can("procurement.return.create");
+  const canCredit = session.can("finance.credit.manage") && session.can("finance.payable.read");
   const receivable = order.status === "ISSUED" || order.status === "PARTIALLY_RECEIVED";
   const returnable = order.status !== "DRAFT" && order.status !== "CANCELLED" && order.lines.some((line) => Number(line.receivedQuantity) > 0);
   const receivedRatio = Number(order.total) > 0 ? (Number(order.receivedValue) / Number(order.total)) * 100 : 0;
@@ -185,6 +197,25 @@ export default function PurchaseOrderPage(): React.ReactElement {
               },
               { key: "reason", header: "Motif", render: (entry) => entry.reason },
               { key: "value", header: "Valeur", align: "right", render: (entry) => <span className="num">{formatMoney(entry.value, order.currency)}</span> },
+              {
+                key: "credit",
+                header: "Avoir fournisseur",
+                render: (entry) =>
+                  entry.creditNoteId ? (
+                    <Link href="/finance?tab=credits">
+                      {entry.creditNoteStatus === "ISSUED" ? `Avoir ${entry.creditNoteCode ?? ""} émis` : "Brouillon d’avoir à émettre"}
+                    </Link>
+                  ) : canCredit ? (
+                    <Button
+                      disabled={mutation.saving}
+                      onClick={() => void prepareCredit(entry.id)}
+                    >
+                      Préparer l’avoir
+                    </Button>
+                  ) : (
+                    <span className="field-note">Aucun avoir (droits Finance requis)</span>
+                  ),
+              },
             ]}
           />
         </Panel>

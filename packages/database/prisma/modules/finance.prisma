@@ -355,6 +355,7 @@ model SupplierCreditNote {
   sourceInvoice SupplierInvoice @relation(fields: [sourceInvoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
   lines SupplierCreditNoteLine[]
   refunds CreditRefund[]
+  returnLinks SupplierReturnCreditNote[]
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])

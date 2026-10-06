@@ -37,6 +37,9 @@ export const procurementApi = {
     id: string,
     input: { idempotencyKey: string; reason: string; warehouseId?: string; lines: Array<{ orderLineId: string; quantity: string }> },
   ) => api.post<PurchaseOrderView>(`/procurement/orders/${id}/returns`, input),
+  /** Brouillon d'avoir fournisseur sur la facture approuvee correspondant au retour (droits Finance). */
+  draftReturnCreditNote: (orderId: string, returnId: string) =>
+    api.post<{ id: string; status: string; total: string; currency: string }>(`/procurement/orders/${orderId}/returns/${returnId}/credit-note`),
 };
 
 export const REQUEST_STATUS_LABEL: Record<string, string> = {

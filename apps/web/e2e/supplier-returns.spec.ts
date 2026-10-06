@@ -45,3 +45,33 @@ test("Achats : retour fournisseur depuis une commande réceptionnée", async ({ 
   expect(overflow).toBeLessThanOrEqual(1);
   expect(problems).toEqual([]);
 });
+
+/**
+ * Avoir fournisseur prepare depuis le retour : le compte DEMO (droits Finance)
+ * prepare un brouillon sur la facture approuvee de la commande, puis le lien
+ * mene a l'onglet Avoirs de Finance. Rejouable : un retour deja crédité affiche
+ * directement son lien.
+ */
+test("Achats : préparer l'avoir fournisseur d'un retour", async ({ page }) => {
+  const problems = watchProblems(page);
+  await openScreen(page, "/procurement");
+  const orders = (await (await page.request.get("/api/v1/procurement/orders")).json()) as Array<{ id: string; returns: Array<{ id: string; creditNoteId: string | null }> }>;
+  const payables = (await (await page.request.get("/api/v1/finance/payables")).json()) as Array<{ orderId: string | null; status: string }>;
+  const credited = new Set(payables.filter((invoice) => invoice.orderId && ["APPROVED", "PARTIALLY_PAID", "PAID"].includes(invoice.status)).map((invoice) => invoice.orderId));
+  const order = orders.find((entry) => entry.returns.length > 0 && credited.has(entry.id));
+  test.skip(!order, "Aucun retour sur une commande facturée et approuvée dans le jeu DEMO");
+
+  await openScreen(page, `/procurement/orders/${order!.id}`);
+  await expect(page.getByRole("columnheader", { name: "Avoir fournisseur" })).toBeVisible();
+  const prepare = page.getByRole("button", { name: "Préparer l’avoir" }).first();
+  if (await prepare.isVisible()) {
+    await prepare.click();
+    await expect(page.getByText(/Brouillon d’avoir préparé/)).toBeVisible();
+  }
+  const link = page.getByRole("link", { name: /Brouillon d’avoir à émettre|Avoir .* émis/ }).first();
+  await expect(link).toBeVisible();
+  await link.click();
+  await expect(page).toHaveURL(/\/finance\?tab=credits$/);
+  await expect(page.getByRole("tab", { name: "Avoirs & remboursements", selected: true })).toBeVisible();
+  expect(problems).toEqual([]);
+});

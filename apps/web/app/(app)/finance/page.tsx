@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Banknote, BellRing, CheckCircle2, FileText, Landmark, Plus, Receipt, Scale, Wallet } from "lucide-react";
 import { CUSTOMER_STATUS_LABEL, MATCH_LABEL, METHOD_LABEL, SUPPLIER_STATUS_LABEL, financeApi } from "../../lib/modules/finance";
 import { procurementApi } from "../../lib/modules/procurement";
@@ -43,7 +43,13 @@ export default function FinancePage(): React.ReactElement {
   const canPayables = session.can("finance.payable.read");
   const canCredits = session.can("finance.credit.read");
   const canAccounting = session.can("finance.accounting.read");
-  const [tab, setTab] = useState<TabId>(canInvoices ? "receivables" : canPayables ? "payables" : canCredits ? "credits" : "accounting");
+  // Lien direct vers un onglet (ex. /finance?tab=credits depuis un retour fournisseur), s'il est autorise.
+  const requestedTab = useSearchParams().get("tab");
+  const initialTab: TabId =
+    requestedTab === "credits" && canCredits ? "credits"
+    : requestedTab === "payables" && canPayables ? "payables"
+    : canInvoices ? "receivables" : canPayables ? "payables" : canCredits ? "credits" : "accounting";
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const mutation = useMutation();
   const data = useResource(() =>

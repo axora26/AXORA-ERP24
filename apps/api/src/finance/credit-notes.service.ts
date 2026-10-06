@@ -62,6 +62,94 @@ export class CreditNotesService {
     return this.get(scope, kind, id);
   }
 
+  /**
+   * Avoir fournisseur BROUILLON prepare depuis un retour physique (INC-06).
+   *
+   * Pour chaque ligne retournee, les quantites sont reparties sur les lignes
+   * des factures fournisseur APPROUVEES de la commande, dans l'ordre des
+   * factures, a hauteur de ce qui n'est pas deja avoirise (avoirs emis ou en
+   * brouillon). Le calcul monetaire reutilise celui des avoirs saisis en
+   * Finance (prix, TVA et arrondis d'origine). Une seule facture source par
+   * avoir : un retour couvrant plusieurs factures est refuse explicitement.
+   * Idempotent : un retour garde au plus un avoir non annule (verrou du retour).
+   * L'emission suit le circuit Finance habituel.
+   */
+  async draftFromSupplierReturn(scope: CompanyScope, orderId: string, returnId: string, actorUserId: string): Promise<CreditNoteView> {
+    const id = await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "supplier_returns"
+        WHERE "id" = ${returnId} AND "orderId" = ${orderId}
+          AND "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId}
+        FOR UPDATE`;
+      if (!locked.length) throw new NotFoundException("Supplier return not found");
+      const existing = await tx.supplierReturnCreditNote.findFirst({
+        where: { ...scope, supplierReturnId: returnId, creditNote: { status: { not: "CANCELLED" } } },
+        select: { creditNoteId: true },
+      });
+      if (existing) return existing.creditNoteId;
+
+      const supplierReturn = await tx.supplierReturn.findUniqueOrThrow({ where: { id: returnId }, include: { lines: true } });
+      const invoices = await tx.supplierInvoice.findMany({
+        where: { ...scope, orderId, status: { in: ["APPROVED", "PARTIALLY_PAID", "PAID"] } },
+        include: { lines: true },
+        orderBy: [{ invoiceDate: "asc" }, { createdAt: "asc" }],
+      });
+      if (!invoices.length) {
+        throw new BadRequestException("No approved supplier invoice of this order can be credited for this return");
+      }
+      const invoiceLineIds = invoices.flatMap((invoice) => invoice.lines.map((line) => line.id));
+      const credited = await tx.supplierCreditNoteLine.groupBy({
+        by: ["sourceInvoiceLineId"],
+        where: { ...scope, sourceInvoiceLineId: { in: invoiceLineIds }, creditNote: { status: { in: ["DRAFT", "ISSUED"] } } },
+        _sum: { quantity: true },
+      });
+      const alreadyCredited = new Map(credited.map((entry) => [entry.sourceInvoiceLineId, dec(entry._sum.quantity)]));
+
+      const allocations = new Map<string, Map<string, Prisma.Decimal>>();
+      for (const returned of supplierReturn.lines) {
+        let remaining = dec(returned.quantity);
+        for (const invoice of invoices) {
+          for (const line of invoice.lines.filter((candidate) => candidate.orderLineId === returned.orderLineId)) {
+            if (!remaining.greaterThan(0)) break;
+            const available = dec(line.quantity).minus(alreadyCredited.get(line.id) ?? 0);
+            if (!available.greaterThan(0)) continue;
+            const take = Prisma.Decimal.min(available, remaining);
+            const perInvoice = allocations.get(invoice.id) ?? new Map<string, Prisma.Decimal>();
+            perInvoice.set(line.id, (perInvoice.get(line.id) ?? new Prisma.Decimal(0)).plus(take));
+            allocations.set(invoice.id, perInvoice);
+            alreadyCredited.set(line.id, (alreadyCredited.get(line.id) ?? new Prisma.Decimal(0)).plus(take));
+            remaining = remaining.minus(take);
+          }
+        }
+        if (remaining.greaterThan(0)) {
+          throw new BadRequestException("The returned quantity is not fully invoiced on approved supplier invoices of this order");
+        }
+      }
+      if (allocations.size !== 1) {
+        throw new BadRequestException("This return spans several supplier invoices: create one credit note per invoice in Finance");
+      }
+      const [allocation] = [...allocations.entries()];
+      const [invoiceId, lineQuantities] = allocation!;
+      const source = await this.lockSource(tx, scope, "SUPPLIER", invoiceId);
+      assertSource(source, "SUPPLIER");
+      const lines = await this.buildLines(tx, scope, "SUPPLIER", source,
+        [...lineQuantities.entries()].map(([sourceInvoiceLineId, quantity]) => ({ sourceInvoiceLineId, quantity })));
+      const reason = `Retour fournisseur ${supplierReturn.code} : ${supplierReturn.reason}`.slice(0, 2000);
+      const note = await tx.supplierCreditNote.create({
+        data: { ...scope, sourceInvoiceId: invoiceId, currency: source.currency.trim(), reason, createdByUserId: actorUserId, ...lineTotals(lines) },
+      });
+      await this.replaceLines(tx, scope, "SUPPLIER", note.id, lines);
+      await tx.supplierReturnCreditNote.create({
+        data: { ...scope, supplierReturnId: returnId, creditNoteId: note.id, createdByUserId: actorUserId },
+      });
+      await writeAudit(tx, scope, actorUserId, "finance.credit.drafted", "SUPPLIERCreditNote", note.id, {
+        sourceInvoiceId: invoiceId, total: money(note.total), kind: "SUPPLIER", supplierReturnId: returnId, supplierReturnCode: supplierReturn.code,
+      });
+      return note.id;
+    });
+    return this.get(scope, "SUPPLIER", id);
+  }
+
   async update(scope: CompanyScope, kind: CreditNoteKind, id: string, body: unknown, actorUserId: string) {
     const input = inputFields(body, ["companyId", "expectedVersion", "reason", "lines"]);
     const version = versionInput(input.expectedVersion);
