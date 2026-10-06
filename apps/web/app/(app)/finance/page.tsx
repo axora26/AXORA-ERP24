@@ -1,15 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Banknote, FileText, Landmark, Plus, Receipt, Scale, Wallet } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Banknote, BellRing, CheckCircle2, FileText, Landmark, Plus, Receipt, Scale, Wallet } from "lucide-react";
 import { CUSTOMER_STATUS_LABEL, MATCH_LABEL, METHOD_LABEL, SUPPLIER_STATUS_LABEL, financeApi } from "../../lib/modules/finance";
 import { procurementApi } from "../../lib/modules/procurement";
 import { salesApi } from "../../lib/api";
 import { formatDate, formatMoney } from "../../lib/format";
+import type { CollectionReminderView, TreasuryForecastView } from "@axora24/contracts";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import {
+import { FinanceCreditNotes } from "../../components/finance-credit-notes";
+import { BankReconciliation } from "../../components/bank-reconciliation";
+import { FinanceAccounting } from "../../components/finance-accounting";
+import { DataUnavailable,
   Button,
   DataTable,
   DateField,
@@ -29,27 +33,39 @@ import {
   TextField,
 } from "../../components/ui";
 
-type TabId = "receivables" | "payables" | "payments" | "treasury";
+type TabId = "receivables" | "payables" | "payments" | "treasury" | "credits" | "accounting" | "collections";
 type Dialog = "invoice" | "payable" | "bank" | "tax";
 
 export default function FinancePage(): React.ReactElement {
   const session = useSession();
   const router = useRouter();
+  const canInvoices = session.can("finance.invoice.read");
   const canPayables = session.can("finance.payable.read");
-  const [tab, setTab] = useState<TabId>("receivables");
+  const canCredits = session.can("finance.credit.read");
+  const canAccounting = session.can("finance.accounting.read");
+  // Lien direct vers un onglet (ex. /finance?tab=credits depuis un retour fournisseur), s'il est autorise.
+  const requestedTab = useSearchParams().get("tab");
+  const initialTab: TabId =
+    requestedTab === "credits" && canCredits ? "credits"
+    : requestedTab === "payables" && canPayables ? "payables"
+    : canInvoices ? "receivables" : canPayables ? "payables" : canCredits ? "credits" : "accounting";
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const mutation = useMutation();
   const data = useResource(() =>
     Promise.all([
-      financeApi.summary(),
-      financeApi.invoices(),
+      canInvoices ? financeApi.summary() : Promise.resolve(null),
+      canInvoices ? financeApi.invoices() : Promise.resolve([]),
       canPayables ? financeApi.payables() : Promise.resolve([]),
-      financeApi.payments(),
-      financeApi.bankAccounts(),
-      financeApi.taxRates(),
+      canInvoices ? financeApi.payments() : Promise.resolve([]),
+      canInvoices ? financeApi.bankAccounts() : Promise.resolve([]),
+      canInvoices ? financeApi.taxRates() : Promise.resolve([]),
+      canInvoices ? financeApi.collectionReminders() : Promise.resolve([]),
     ]),
+    [canInvoices, canPayables],
   );
-  const [summary, invoices, payables, payments, accounts, taxRates] = data.data ?? [null, [], [], [], [], []];
+  const [summary, invoices, payables, payments, accounts, taxRates, reminders] = data.data ?? [null, [], [], [], [], [], []];
+  const forecast = useResource<TreasuryForecastView | null>(() => canInvoices ? financeApi.treasuryForecast(30) : Promise.resolve(null), [canInvoices]);
 
   async function done(action: () => Promise<unknown>, success: string, open?: (result: { id: string }) => string): Promise<void> {
     const result = await mutation.run(action, success);
@@ -60,12 +76,14 @@ export default function FinancePage(): React.ReactElement {
     }
   }
 
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Finance" error={data.error} onRetry={() => void data.reload()}/>;
+
   return (
     <>
       <PageHeader
         breadcrumb="Finance"
         title="Finance"
-        subtitle="Facturation clients, factures fournisseurs rapprochées, paiements et trésorerie. Aucun taux fiscal n'est présumé."
+        subtitle="Factures clients et fournisseurs, avoirs, remboursements et trésorerie. Aucun taux fiscal n'est présumé."
         onRefresh={() => void data.reload()}
         actions={
           <>
@@ -119,15 +137,18 @@ export default function FinancePage(): React.ReactElement {
             active={tab}
             onChange={setTab}
             tabs={[
-              { id: "receivables", label: "Factures clients", count: invoices.length },
+              ...(canInvoices ? [{ id: "receivables" as const, label: "Factures clients", count: invoices.length }] : []),
               ...(canPayables ? [{ id: "payables" as const, label: "Factures fournisseurs", count: payables.length }] : []),
-              { id: "payments", label: "Paiements", count: payments.length },
-              { id: "treasury", label: "Trésorerie & paramètres" },
+              ...(canCredits ? [{ id: "credits" as const, label: "Avoirs & remboursements" }] : []),
+              ...(canInvoices ? [{ id: "payments" as const, label: "Paiements", count: payments.length }, { id: "collections" as const, label: "Relances clients", count: reminders.filter((reminder) => reminder.status === "DRAFT").length }, { id: "treasury" as const, label: "Trésorerie & paramètres" }] : []),
+              ...(canAccounting ? [{ id: "accounting" as const, label: "Comptabilité générale" }] : []),
             ]}
           />
 
           <div className="stack">
-            {tab === "receivables" && (
+            {tab === "credits" && canCredits && <FinanceCreditNotes onChanged={data.reload} />}
+            {tab === "accounting" && canAccounting && <FinanceAccounting canManage={session.can("finance.accounting.manage")} canPost={session.can("finance.accounting.post")} />}
+            {tab === "receivables" && canInvoices && (
               <Panel title="Factures clients" subtitle="Le numéro légal est attribué à l'émission, dans l'ordre chronologique">
                 <DataTable
                   rows={invoices}
@@ -161,7 +182,7 @@ export default function FinancePage(): React.ReactElement {
               </Panel>
             )}
 
-            {tab === "payables" && (
+            {tab === "payables" && canPayables && (
               <Panel title="Factures fournisseurs" subtitle="Rapprochement 3-way commande ↔ réception ↔ facture ; validation par un tiers avant paiement">
                 <DataTable
                   rows={payables}
@@ -201,7 +222,7 @@ export default function FinancePage(): React.ReactElement {
               </Panel>
             )}
 
-            {tab === "payments" && (
+            {tab === "payments" && canInvoices && (
               <Panel title="Paiements" subtitle="Encaissements et décaissements — faits comptables immuables">
                 <DataTable
                   rows={payments}
@@ -238,7 +259,24 @@ export default function FinancePage(): React.ReactElement {
               </Panel>
             )}
 
-            {tab === "treasury" && (
+            {tab === "collections" && canInvoices && (
+              <CollectionReminders reminders={reminders} canManage={session.can("finance.invoice.manage")} onChanged={data.reload} />
+            )}
+
+            {tab === "treasury" && canInvoices && (
+              <>
+              <Panel title="Prévision de trésorerie à 30 jours" subtitle="Projection des échéances clients et fournisseurs validées, à compléter avec vos hypothèses de gestion.">
+                {forecast.data ? <DataTable rows={forecast.data.points.filter((point) => point.expectedIn !== "0.00" || point.expectedOut !== "0.00").slice(0, 12).map((point) => ({ ...point, id: point.date }))} empty={<Empty title="Aucune échéance dans l'horizon" />} columns={[
+                  { key: "date", header: "Date", render: (point) => formatDate(point.date) },
+                  { key: "in", header: "Entrées prévues", align: "right", render: (point) => <span className="text-success num">{formatMoney(point.expectedIn, forecast.data?.currency)}</span> },
+                  { key: "out", header: "Sorties prévues", align: "right", render: (point) => <span className="text-danger num">{formatMoney(point.expectedOut, forecast.data?.currency)}</span> },
+                  { key: "balance", header: "Solde projeté", align: "right", render: (point) => <strong className="num">{formatMoney(point.projectedBalance, forecast.data?.currency)}</strong> },
+                ]} /> : <Loading label="Calcul de la prévision…" />}
+                {forecast.data?.assumptions.map((assumption) => <p className="inline-note" key={assumption}>{assumption}</p>)}
+              </Panel>
+              <Panel title="Rapprochement bancaire" subtitle="Importez les lignes du relevé puis rapprochez chaque opération avec un paiement AXORA de même compte et montant.">
+                <BankReconciliation accounts={accounts} payments={payments} canManage={session.can("finance.bank.manage")} />
+              </Panel>
               <div className="module-grid cols-2">
                 <Panel
                   title="Comptes bancaires et caisses"
@@ -293,6 +331,7 @@ export default function FinancePage(): React.ReactElement {
                   />
                 </Panel>
               </div>
+              </>
             )}
           </div>
         </>
@@ -309,6 +348,38 @@ export default function FinancePage(): React.ReactElement {
         />
       )}
     </>
+  );
+}
+
+function CollectionReminders({ reminders, canManage, onChanged }: { reminders: CollectionReminderView[]; canManage: boolean; onChanged: () => Promise<void> }): React.ReactElement {
+  const mutation = useMutation();
+  const draftCount = reminders.filter((reminder) => reminder.status === "DRAFT").length;
+  return (
+    <Panel
+      title="Relances clients"
+      subtitle="Paliers 1, 2 et 3 générés sur les créances échues. Le canal e-mail reste désactivé tant qu'aucun SMTP n'est configuré."
+      actions={
+        <div className="panel-actions">
+          <Button onClick={() => void mutation.run(() => financeApi.generateCollectionReminders(), "Relances recalculées.").then(() => onChanged())} disabled={mutation.saving}>
+            <BellRing size={14} aria-hidden="true" /> Générer les relances
+          </Button>
+        </div>
+      }
+    >
+      <Feedback error={mutation.error} notice={mutation.notice} />
+      {reminders.length === 0 ? <Empty icon={<BellRing size={22} />} title="Aucune relance à traiter" body="Les factures échues avec un reste dû apparaîtront ici après génération." /> : (
+        <DataTable rows={reminders} empty={null} columns={[
+          { key: "invoice", header: "Facture", render: (reminder) => <><strong>{reminder.invoiceCode ?? "Facture"}</strong><small>{reminder.customerName}</small></> },
+          { key: "due", header: "Échéance", render: (reminder) => formatDate(reminder.dueDate) },
+          { key: "delay", header: "Retard", render: (reminder) => <StatusChip status={reminder.daysOverdue >= 60 ? "critical" : reminder.daysOverdue >= 30 ? "warning" : "overdue"} label={`${reminder.daysOverdue} j`} /> },
+          { key: "level", header: "Palier", render: (reminder) => `Niveau ${reminder.level}` },
+          { key: "balance", header: "Reste dû", align: "right", render: (reminder) => <span className="num">{formatMoney(reminder.balanceDue, reminder.currency)}</span> },
+          { key: "status", header: "État", render: (reminder) => reminder.status === "SENT" ? <StatusChip status="done" label="Traitée" /> : <StatusChip status="pending" label="À traiter" /> },
+          { key: "action", header: "Action", align: "right", render: (reminder) => reminder.status === "DRAFT" && canManage ? <Button variant="ghost" disabled={mutation.saving} onClick={() => void mutation.run(() => financeApi.markCollectionReminderSent(reminder.id), "Relance marquée comme traitée.").then(() => onChanged())}><CheckCircle2 size={14} aria-hidden="true" /> Traiter</Button> : "—" },
+        ]} />
+      )}
+      <p className="inline-note">{draftCount} relance(s) interne(s) en attente. Chaque génération est idempotente et conservée dans l'audit.</p>
+    </Panel>
   );
 }
 

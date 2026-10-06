@@ -79,7 +79,8 @@ describe("Stock & Logistique (e2e)", () => {
       lines: [{ itemId: cement, quantity: "15.001" }],
     });
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain("Stock insuffisant");
+    // Depuis les reservations, le controle porte d'abord sur le stock LIBRE (physique - reserve).
+    expect(response.body.message).toMatch(/Stock (libre )?insuffisant/);
     // La base elle-meme refuse un solde negatif (contrainte CHECK).
     await expect(
       harness.prisma.stockBalance.updateMany({ where: { itemId: cement, warehouseId: central }, data: { quantity: -1 } }),
@@ -158,6 +159,22 @@ describe("Stock & Logistique (e2e)", () => {
     expect((await api().delete(`/inventory/movements/${movementId}`)).status).toBe(404);
     await expect(harness.prisma.stockMovement.update({ where: { id: movementId }, data: { reason: "falsifie" } })).rejects.toThrow(/append-only/);
     await expect(harness.prisma.stockMovement.delete({ where: { id: movementId } })).rejects.toThrow(/append-only/);
+  });
+
+  it("detail d'un mouvement : meme vue que le grand livre, permission et isolation", async () => {
+    const ledger = await api().get(`/inventory/movements?itemId=${cement}`);
+    const movement = ledger.body[0];
+    expect((await api().get(`/inventory/movements/${movement.id}`)).body).toEqual(movement);
+    expect((await harness.http().get(`/api/v1/inventory/movements/${movement.id}`)).status).toBe(401);
+    expect((await as(harness, other).get(`/inventory/movements/${movement.id}`)).status).toBe(404);
+    const reader = await createUserWith(harness, owner, ["inventory.item.read"], "stock-reader");
+    const denied = await createUserWith(harness, owner, ["crm.lead.read"], "stock-denied");
+    expect((await as(harness, reader).get(`/inventory/movements/${movement.id}`)).body).toEqual(movement);
+    expect((await as(harness, denied).get(`/inventory/movements/${movement.id}`)).status).toBe(403);
+    const second = await harness.prisma.company.create({ data: { organizationId: owner.organizationId, name: "Autre magasin" } });
+    expect((await as(harness, reader).get(`/inventory/movements/${movement.id}?companyId=${second.id}`)).status).toBe(403);
+    await harness.prisma.companyMembership.create({ data: { userId: reader.userId, companyId: second.id } });
+    expect((await as(harness, reader).get(`/inventory/movements/${movement.id}?companyId=${second.id}`)).status).toBe(404);
   });
 
   it("inventaire physique : gel du magasin, ecarts transformes en ajustements traces", async () => {

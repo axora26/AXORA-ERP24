@@ -27,8 +27,11 @@ export function isAuthorized(
   return serverResolvedGrants.some((grant) => {
     if (grant.permissionKey !== check.key) return false;
     if (grant.organizationId !== check.organizationId) return false;
-    if (check.companyId && grant.companyId !== check.companyId) return false;
-    if (check.projectId && grant.projectId !== check.projectId) return false;
+    // A scoped grant cannot authorize a parent scope or another child.
+    // Explicit organisation grants cover its children; membership is checked
+    // independently by the API before applying this predicate.
+    if (grant.companyId && grant.companyId !== check.companyId) return false;
+    if (grant.projectId && grant.projectId !== check.projectId) return false;
     return true;
   });
 }

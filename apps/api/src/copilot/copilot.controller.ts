@@ -27,14 +27,14 @@ export class CopilotController {
 
   @Get("sessions")
   @RequirePermission(AI.USE)
-  sessions(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser) {
-    return this.service.sessions(scope, user);
+  sessions(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @EffectivePermissions() permissions: Set<string>) {
+    return this.service.sessions(scope, user, permissions);
   }
 
   @Get("sessions/:id")
   @RequirePermission(AI.USE)
-  session(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
-    return this.service.session(scope, user, id);
+  session(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @EffectivePermissions() permissions: Set<string>) {
+    return this.service.session(scope, user, id, permissions);
   }
 
   @Get("evidence")

@@ -1,0 +1,107 @@
+# AXORA-ERP24 — pile de production pour le VPS.
+#
+#   cd /srv/axora/docker/stacks/erp24
+#   docker compose --env-file .env.production up -d --build
+#
+# Seul Caddy publie des ports (80/443) ; l'API, l'interface et PostgreSQL
+# restent sur le reseau interne Docker. Les secrets viennent exclusivement de
+# .env.production (jamais versionne). Volumes nommes : donnees PostgreSQL,
+# fichiers GED/preuves et certificats TLS.
+
+name: axora-erp24
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: axora_erp24
+      POSTGRES_USER: axora
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U axora -d axora_erp24"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  api:
+    build:
+      context: ../..
+      target: api
+    image: axora-erp24-api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://axora:${POSTGRES_PASSWORD}@postgres:5432/axora_erp24?schema=public
+      API_HOST: 0.0.0.0
+      API_PORT: "4000"
+      CORS_ORIGIN: https://${PUBLIC_HOST:?PUBLIC_HOST requis}${ADMIN_ORIGIN:+,${ADMIN_ORIGIN}}
+      # Chaine de proxys : Caddy puis Next.js, tous deux sur le reseau Docker prive.
+      TRUST_PROXY: loopback, uniquelocal
+      REGISTRATION_MODE: ${REGISTRATION_MODE:-first-organization}
+      REGISTRATION_LIMIT: ${REGISTRATION_LIMIT:-5}
+      SESSION_COOKIE_NAME: axora_erp24_session
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?MFA_ENCRYPTION_KEY requis}
+      INTEGRATION_ENCRYPTION_KEY: ${INTEGRATION_ENCRYPTION_KEY:?INTEGRATION_ENCRYPTION_KEY requis}
+      SERVICE_CARD_ENCRYPTION_KEY: ${SERVICE_CARD_ENCRYPTION_KEY:?SERVICE_CARD_ENCRYPTION_KEY requis}
+      AXORA_INVOICE_SIGNING_SECRET: ${AXORA_INVOICE_SIGNING_SECRET:?AXORA_INVOICE_SIGNING_SECRET requis}
+      AUTOMATION_AUTORUN: "true"
+      WEBHOOK_ALLOW_PRIVATE_TARGETS: "false"
+      FILE_STORAGE_DIR: /data/files
+    volumes:
+      - files-data:/data/files
+    networks: [internal]
+
+  web:
+    build:
+      context: ../..
+      target: web
+    image: axora-erp24-web:latest
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_INTERNAL_URL: http://api:4000
+    networks: [internal]
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      # Interface publique uniquement : Tailscale occupe deja 443 sur ses propres adresses.
+      - "${PUBLIC_IPV4:-0.0.0.0}:80:80"
+      - "${PUBLIC_IPV4:-0.0.0.0}:443:443"
+      - "${PUBLIC_IPV4:-0.0.0.0}:443:443/udp"
+      # Acces d'administration prive : boucle locale, publie au tailnet par `tailscale serve`.
+      - "127.0.0.1:3110:3110"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL requis}
+      # Seule source autorisee a transmettre l'adresse du client (tailscale serve via la passerelle Docker).
+      PROXY_GATEWAY: ${PROXY_GATEWAY:-172.24.0.1/32}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [internal]
+
+volumes:
+  postgres-data:
+  files-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  internal:
+    driver: bridge

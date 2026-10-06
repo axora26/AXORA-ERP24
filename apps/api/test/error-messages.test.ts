@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { MESSAGE_CATALOGUE, translateMessage } from "../src/common/i18n/translate.js";
 
 const SRC = join(__dirname, "..", "src");
-const START = /(?:NotFound|BadRequest|Forbidden|Conflict|Unauthorized|UnprocessableEntity|Http)Exception\(\s*(["`])/g;
+const START = /(?:NotFound|BadRequest|Forbidden|Conflict|Unauthorized|UnprocessableEntity|ServiceUnavailable|PayloadTooLarge|Http)Exception\(\s*(?:\{\s*message:\s*)?(["`])/g;
 /** Messages deja rediges en francais (ou sans mot anglais) : hors catalogue. */
 const FRENCH = /[éèàêçùâîôûœÉÈÀ]|\b(introuvable|obligatoire|doit|refus|Aucun|aucun|impossible|inconnu|inconnue|seul|seule|valeur|attendu|attendue|indisponible|requis|requise|entre|jamais|indicateur)\b|\b(de|du|la|le|les|des|une|est|pas|ne|au|aux|sur|pour|par|avec|sans) /;
 const NEUTRAL = new Set(["actions[{x}].url : {x}"]);

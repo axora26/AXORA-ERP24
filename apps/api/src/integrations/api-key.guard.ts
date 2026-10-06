@@ -4,6 +4,7 @@ import type { Request, Response } from "express";
 import { Prisma } from "@axora24/database";
 import { PrismaService } from "../core/prisma.service.js";
 import { LoginThrottleService } from "../auth/login-throttle.service.js";
+import { resolveDelegatedPermissions } from "../auth/delegated-permissions.js";
 import { bearerKey, hashApiKey, ipAllowed, normalizeIp, rateWindows } from "./api-key.js";
 
 export interface ApiKeyContext {
@@ -67,12 +68,8 @@ export class ApiKeyGuard implements CanActivate {
     if (!ipAllowed(ip, key.allowedIps)) throw new ForbiddenException("Adresse IP non autorisée pour cette clé");
 
     // La cle n'est jamais plus puissante que son createur, a chaque requete.
-    const creator = await this.prisma.user.findFirst({
-      where: { id: key.createdByUserId, organizationId: key.organizationId, isActive: true, companyMemberships: { some: { companyId: key.companyId } } },
-      select: { roleAssignments: { select: { role: { select: { organizationId: true, permissions: { select: { permission: { select: { key: true } } } } } } } } },
-    });
-    if (!creator) throw new UnauthorizedException("Clé suspendue : son créateur n'a plus accès à cette entreprise");
-    const held = new Set(creator.roleAssignments.filter((assignment) => assignment.role.organizationId === key.organizationId).flatMap((assignment) => assignment.role.permissions.map((entry) => entry.permission.key)));
+    const held = await resolveDelegatedPermissions(this.prisma, key, key.createdByUserId);
+    if (!held) throw new UnauthorizedException("Clé suspendue : son créateur n'a plus accès à cette entreprise");
     const permissions = new Set(key.permissions.filter((permission) => held.has(permission)));
     request.axoraApiKey = { id: key.id, name: key.name, organizationId: key.organizationId, companyId: key.companyId, createdByUserId: key.createdByUserId, permissions };
 

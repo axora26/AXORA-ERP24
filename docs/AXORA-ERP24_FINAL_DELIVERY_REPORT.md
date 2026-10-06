@@ -1,5 +1,93 @@
 # AXORA-ERP24 — FINAL DELIVERY REPORT
 
+## Rapport courant — qualification locale des 3 et 4 octobre 2026
+
+**Branche** : `feat/product-qualification`, base `54930c1462a5af4be5428c1846e66d09397e6465`.
+**Révision finale de code** : `b1a6cb1a27575c4c96484c393a0099eabe99baa8`, poussée ; [PR brouillon #2](https://github.com/axora26/AXORA-ERP24/pull/2) vers `claude/funny-meitner-l317n1`.
+**Conclusion courante** : contrôles locaux réussis ; produit global `IN_PROGRESS`, CI distante `BLOCKED`, aucun statut global `VERIFIED`.
+
+La tranche ajoute les thèmes clair/sombre/système, l'onboarding et le durcissement de session,
+les corrections versionnées CRM et Etudes/DQE, les avoirs/remboursements, les opérations de
+chantier et les cartes, imports de présence et paramètres de paie. Les neuf impressions métier
+et les exports serveur portent l'identité AXORA officielle et conservent la mention DEMO.
+Ces ajouts ne signifient pas que l'ensemble du backlog fondateur est terminé ; les écarts
+fonctionnels restent décrits dans `docs/MODULE_STATUS.md`.
+
+| Contrôle | Résultat local réellement obtenu | État de clôture |
+|---|---|---|
+| Migrations | 41 migrations appliquées sur bases isolées | Données historiques préservées |
+| Types et builds | Types et reconstructions finales API/web réussis | API après correction du libellé PDF ; web après pagination/contraste |
+| Lint | 0 erreur, 7 avertissements | Avertissements d'images documentés, aucune prétention de lint sans avertissement |
+| Unitaires | 200 réussis : sécurité 25, web 74, API 101 | Résultat local consigné |
+| API PostgreSQL | 347/347 dans 42 fichiers ; 12/12 RH/exports après correction historique ; dernière reprise **15/15 RH/exports** | **351 cas uniques**, sans cumul des réexécutions |
+| PDF/XLSX serveur | 6/6 contrôles AppModule ; rendu A4 et pagination vérifiés, QR imprimé relu après rasterisation | Droits, entreprise, cache privé, décimales exactes et politique version 0 avec photographie présente contrôlés |
+| Impressions navigateur | Neuf genres métier et facture ; défauts initiaux corrigés | **10 PDF / 11 pages A4** inspectés : lignes, totaux, coordonnées en bas de page, aucun dépassement ou recouvrement |
+| Audit des dépendances | 0 vulnérabilité connue après surcharge `exceljs>uuid: 11.1.1` | Résultat de l'audit local courant |
+| Navigateur global initial | 163 scénarios dans 18 fichiers : **157 réussites, 6 échecs** | Quatre contrôles d'accès et deux parcours d'inscription ; run antérieur aux dernières corrections, conservé distinctement |
+| Navigateur après correction | Authentification et impressions : **15/15 réussis** ; nouvelle globale **163/163 réussie** en 4,4 min | `qualification-browser-final-pass.log`, derniers bundles API/web de `b1a6cb1` |
+| Exemple de paie DEMO | Novembre 2026 futur et DRAFT : brut automatique 4200 USD, MONTHLY_BASE version 0 avec photographie présente, 0 heure, aucun net | PDF d'une page inspecté ; bulletin historique de septembre conservé ; aucune validation, clôture ou paiement |
+| CI finale | Push `37161782565` et PR `37161799570` sur `b1a6cb1` bloqués avant exécution | Jobs initiaux sans runner ni étapes ; annotations de compte verrouillé pour facturation confirmées |
+| CI distante | Run historique du 25 septembre bloqué avant démarrage, cause documentée par GitHub | Runs push `37161782565` et PR `37161799570` observés `BLOCKED` sur `b1a6cb1`, avant exécution |
+
+Les 351 cas API sont les 347 complets, un nouveau cas de bulletin historique, deux nouveaux
+cas d'import refusé sur projet COMPLETED/CANCELLED et l'export de politique version 0 avec
+photographie présente. Les 12, 9, 14 et 15 cas rejoués ne sont pas des
+cas supplémentaires à additionner. Un succès ciblé après correction ne sera pas présenté
+comme un succès de la suite navigateur globale. La nouvelle globale 163/163 et le code
+`b1a6cb1` sont maintenant rattachés à `docs/AXORA-ERP24_TEST_EVIDENCE.md`.
+
+### Documents et limites de la préparation de paie
+
+Les exports serveur couvrent DQE PDF/XLSX, avoir client/fournisseur, opérations du projet,
+carte de service QR et préparation de paie par employé. Les impressions navigateur couvrent
+devis, contrats, demandes d'achat, commandes, réceptions exactes, journaux chantier,
+mise en service, feuilles de temps et mouvements de stock. Logo et coordonnées publics
+d'AXORA GROUP sont repris depuis [axora.cd](https://axora.cd/) : `infos@axora.cd`,
+`+243 810 364 612`, `945, Boulevard du 30 Juin, Gombe, Kinshasa, République démocratique du Congo`.
+L'entreprise émettrice reste distinctement visible. Les contrôles de lecture s'appliquent aussi
+à l'impression et au téléchargement ; le QR exige la gestion des cartes, le bulletin la lecture
+de paie et un employé appartenant à sa préparation.
+
+Les préparations anciennes sans photographie de paramètres ne sont pas recalculées : les
+nouveaux détails horaires et leurs paramètres historiques ne sont pas disponibles. L'interface
+affiche **Non disponible (historique)** et conserve les montants et heures validées déjà connus.
+Les préparations nouvelles figent les paramètres et les sources de leur calcul. Les cotisations
+et impôts restent `NOT_CONFIGURED`, le net est absent ; le PDF ne certifie pas un bulletin légal
+complet ni un net à payer. Le QR peut être révoqué et ne valide pas automatiquement les heures.
+
+### CI : preuve historique et correction des déclencheurs
+
+Le [run 36157192308](https://github.com/axora26/AXORA-ERP24/actions/runs/36157192308/job/108144506522)
+sur `54930c1462a5af4be5428c1846e66d09397e6465`, le 25 septembre, a échoué avec `runner_id: 0`,
+aucune étape et aucun journal. L'annotation GitHub confirme : « The job was not started because
+your account is locked due to a billing issue. » Le diagnostic est historique ; il ne prouve pas
+qu'un nouveau run serait aujourd'hui bloqué ou réussi.
+
+Le filtre de PR de ce commit excluait la base `claude/funny-meitner-l317n1`, car il ne visait
+que `main` et `feat/**`. Le workflow courant ajoute explicitement cette base et des clés
+`SERVICE_CARD_ENCRYPTION_KEY` éphémères aux jobs API/navigateur. Les pushes de branches
+`feat/**` étaient déjà autorisés. Aucun réglage de facturation ni relance de CI n'a été effectué
+pour établir ce diagnostic.
+
+### Traçabilité et réserves actuelles
+
+Le contrôle des espaces du candidat passe avec l'exclusion des lignes blanches finales :
+deux migrations déjà appliquées gardent leurs octets et leurs sommes de contrôle. Le
+contrôle standard les signale ; il n'est pas présenté comme entièrement sans signalement.
+
+Les journaux réels et scripts de QA sont listés dans le bloc courant de `TEST_EVIDENCE` ; les
+originaux de session restent dans `work/` du workspace, hors dépôt. Le guide d'utilisation
+`AXORA-guide-projets-RH.md` est livré séparément dans `outputs/` du workspace.
+La nouvelle globale navigateur réussit 163/163 ; exports et imprimés corrigés sont
+revalidés sur le code `b1a6cb1`, sans modification de source pendant la finalisation documentaire.
+Firefox/Safari, charge, DAST, signatures natives et connecteurs matériels/services externes
+conservent leurs limites explicites ; les preuves de septembre ci-dessous restent historiques.
+
+## Archive — rapport du 25 septembre 2026
+
+Le rapport suivant est conservé pour sa date et ses révisions propres. Ses chiffres, versions,
+mesures et limites ne sont pas des résultats de la qualification courante.
+
 **Date** : 2026-09-25
 **Branche** : `claude/funny-meitner-l317n1` → PR draft [axora26/AXORA-ERP24#1](https://github.com/axora26/AXORA-ERP24/pull/1) (base `feat/foundation`)
 **SHA du code qualifie** : `6c2b576` (les preuves detaillees, commande par commande, sont dans `docs/AXORA-ERP24_TEST_EVIDENCE.md`)
@@ -7,7 +95,7 @@
 
 ---
 
-## 1. Verdict
+### 1. Verdict historique
 
 - **Les 25 increments INC-00 a INC-24 sont implementes** et fonctionnent ensemble sur une instance locale reelle (PostgreSQL 16, API NestJS, interface Next.js), avec un jeu de donnees DEMO charge exclusivement par l'API.
 - **Tous les controles executes reussissent** sur le SHA qualifie : schema, typage, lint, 136 tests unitaires, 248 tests d'integration/API sur base reelle, 134 tests navigateur, builds de production, audit des dependances, installation neuve reproductible. Quatre gates restent `PARTIAL` faute d'outillage ou de ressources dans l'environnement (revue clavier manuelle, DAST, emballages natifs, test de charge) — voir §3.
@@ -15,7 +103,7 @@
 - **Plateformes** : la PWA est livree et installable. Les emballages natifs Windows, Android et iOS sont `BLOCKED` (identites de signature absentes) — rien n'a ete simule.
 - **Integrations vers des systemes externes reels** (SMTP, SMS, S3, banque, LLM, protocoles GTB, Revit, telematique) : `NOT_TESTED` — aucun systeme reel n'etait joignable ; elles ne sont jamais presentees comme fonctionnelles.
 
-## 2. Perimetre livre (statut par module)
+### 2. Perimetre livre historique (statut par module)
 
 | ID | Module | Statut | Commit |
 |---|---|---|---|
@@ -47,7 +135,7 @@
 
 Le detail des preuves et du reste a faire par module est dans `docs/MODULE_STATUS.md` ; les decisions d'architecture dans `docs/DECISIONS.md` (ADR-0001 a ADR-0015).
 
-## 3. Gates (05-qa-devops §2)
+### 3. Gates historiques (05-qa-devops §2)
 
 | Gate | Statut | Preuve (detail dans TEST_EVIDENCE) |
 |---|---|---|
@@ -65,7 +153,7 @@ Le detail des preuves et du reste a faire par module est dans `docs/MODULE_STATU
 | 11 — Regression | `PASS` (local) | l'integralite des suites est rejouee a chaque increment et sur le SHA qualifie |
 | CI distante | `BLOCKED` | runs 3 a 29 : chaque job echoue en ~3 s, `runner_id: 0`, aucune etape executee (dernier : run 29 sur `c81196e`, job `lint-typecheck`). Cause externe (attribution de runner / facturation du compte GitHub) |
 
-## 4. Securite
+### 4. Securite
 
 - **Authentification** : sessions opaques (empreinte en base), cookie HttpOnly et SameSite=Lax, limitation des essais par couple compte/adresse IP (5 echecs en 15 min), MFA TOTP (secret chiffre AES-256-GCM, anti-rejeu), revocation des sessions a la desactivation d'un compte ou au changement de mot de passe.
 - **Autorisation** : RBAC deny-by-default (permission explicite par route), garde de perimetre entreprise sur chaque requete, heritage strict des droits par le copilote et les cles d'API (cle ∩ droits actuels du createur).
@@ -75,7 +163,7 @@ Le detail des preuves et du reste a faire par module est dans `docs/MODULE_STATU
 - **Dependances** : `pnpm audit --prod` → aucune vulnerabilite connue (surcharges `multer`, `postcss`, `deepmerge-ts`).
 - **Secrets** : aucun secret n'est versionne ; les cles de chiffrement sont generees localement (`pnpm local`) ou ephemeres en CI.
 
-## 5. Plateformes
+### 5. Plateformes
 
 | Plateforme | Statut | Detail |
 |---|---|---|
@@ -85,11 +173,11 @@ Le detail des preuves et du reste a faire par module est dans `docs/MODULE_STATU
 | Android natif (TWA / AAB) | `BLOCKED` | SDK Android et cle de signature absents |
 | iOS natif | `BLOCKED` | compte Apple Developer et poste macOS absents |
 
-## 6. Connecteurs et materiels non testes (`NOT_TESTED`)
+### 6. Connecteurs et materiels non testes (`NOT_TESTED`)
 
 SMTP (e-mails), SMS, stockage objet S3, flux bancaires, fournisseur LLM, add-in Revit (Windows + licence), pilotes BACnet/IP, Modbus TCP, KNXnet/IP et MQTT (aucun equipement), telematique GPS (aucun boitier), capteurs biometriques. Chacun est affiche comme tel dans l'application (registre des connecteurs a grille de verite, ADR-0014).
 
-## 7. Limites connues
+### 7. Limites connues
 
 - Aucun calcul normatif (thermique, electrique, hydraulique, sprinklers), aucune regle fiscale, comptable ou de paie presumee : parametrage pays a fournir (backlog §8).
 - Le mode hors ligne couvre le module Chantier ; les autres ecrans attendent la connexion.
@@ -98,7 +186,7 @@ SMTP (e-mails), SMS, stockage objet S3, flux bancaires, fournisseur LLM, add-in 
 - Mesures de performance mono-utilisateur sur un poste de developpement ; pas de test de charge.
 - La liste detaillee du reste a faire par module figure dans `docs/MODULE_STATUS.md`.
 
-## 8. Lancer la version locale
+### 8. Lancer la version locale
 
 Prerequis : Node ≥ 20, pnpm 9, PostgreSQL joignable par `DATABASE_URL` (par exemple `docker compose -f docker-compose.dev.yml up -d`).
 
@@ -111,7 +199,7 @@ Ouvrir http://localhost:3100.
 
 | Profil | Identifiant | Mot de passe |
 |---|---|---|
-| Administrateur DEMO | `demo@axora-erp24.local` | `Demo2026!` |
+| Administrateur DEMO | `demo@axora-erp24.local` | `Demo2026!Axora` |
 | Direction | `direction@axora-erp24.local` | `Direction2026!` |
 | DAF (circuit d'approbation) | `daf@axora-erp24.local` | `Controle2026!` |
 | Portail client | `moa@clinique-saint-luc.demo` | `PortailClient2026!` |
@@ -126,14 +214,14 @@ pnpm db:validate && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e
 pnpm test:browser     # instance lancee (pnpm local) ; E2E_BASE_URL pour une autre adresse
 ```
 
-## 9. Hypotheses retenues
+### 9. Hypotheses retenues
 
 - Base de developpement preservee : la preuve d'installation neuve a ete faite sur une base distincte (`axora_erp24_fresh`) plutot que par reinitialisation de la base existante (operation destructive non autorisee).
 - Aucune norme metier (fiscalite, paie, calculs d'ingenierie) n'est presumee sans source verifiee.
 - Le copilote reste deterministe tant qu'aucun fournisseur de modele n'est configure.
 - Les jeux DEMO et identifiants ci-dessus sont destines exclusivement a la demonstration locale.
 
-## 10. Tracabilite
+### 10. Tracabilite
 
 - PR : https://github.com/axora26/AXORA-ERP24/pull/1
 - Commits : INC-00/01 `9a24863`, `166f76e` · INC-05..20 `f721596` → `f24e4b9` · INC-21 `dc5425a` · INC-22 `fbe5d1d` · INC-23 `45cce5a`, `f1ae91e` · INC-24 `c81196e`, `6c2b576`

@@ -5,7 +5,7 @@ import { Building2, Plus } from "lucide-react";
 import { adminApi } from "../../../lib/modules/admin";
 import { formatDate } from "../../../lib/format";
 import { useMutation, useResource } from "../../../lib/hooks";
-import { Button, DataTable, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, TextField } from "../../../components/ui";
+import { DataUnavailable, Button, DataTable, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, TextField } from "../../../components/ui";
 
 export default function CompaniesPage(): React.ReactElement {
   const companies = useResource(() => adminApi.companies());
@@ -13,6 +13,8 @@ export default function CompaniesPage(): React.ReactElement {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [legalName, setLegalName] = useState("");
+
+  if (companies.error && !companies.data && !companies.loading) return <DataUnavailable title="Entreprises" error={companies.error} onRetry={() => void companies.reload()}/>;
 
   return (
     <>

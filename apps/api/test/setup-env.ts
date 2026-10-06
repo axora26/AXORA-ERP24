@@ -6,4 +6,7 @@
 //  - WEBHOOK_ALLOW_PRIVATE_TARGETS=true : recepteurs HTTP locaux des tests.
 process.env.AUTOMATION_AUTORUN ??= "false";
 process.env.WEBHOOK_ALLOW_PRIVATE_TARGETS ??= "true";
+// Existing suites include explicit bootstrap helpers sharing a loopback peer.
+// Keep a finite budget here; security regression tests set the production limit (5).
+process.env.REGISTRATION_LIMIT ??= "1000";
 await import("../src/config/load-env.js");

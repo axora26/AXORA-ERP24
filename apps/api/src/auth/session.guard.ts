@@ -7,6 +7,7 @@ import {
 import type { Request } from "express";
 import { hashSessionToken } from "@axora24/security";
 import { PrismaService } from "../core/prisma.service.js";
+import { SESSION_MAX_AGE_MS, nextSessionExpiry } from "./session-policy.js";
 
 export interface AuthenticatedUser {
   id: string;
@@ -43,7 +44,7 @@ export class SessionGuard implements CanActivate {
     const rawCookie = request.headers.cookie ?? "";
     const plainToken = parseCookie(rawCookie, cookieName);
 
-    if (!plainToken) {
+    if (!plainToken || !/^[A-Za-z0-9_-]{43}$/.test(plainToken)) {
       throw new UnauthorizedException("No session cookie");
     }
 
@@ -53,13 +54,16 @@ export class SessionGuard implements CanActivate {
       include: { user: true },
     });
 
-    if (!session || session.revokedAt || session.expiresAt < new Date()) {
+    const now = Date.now();
+    if (!session || session.revokedAt || session.expiresAt.getTime() <= now || session.createdAt.getTime() + SESSION_MAX_AGE_MS <= now) {
       throw new UnauthorizedException("Invalid or expired session");
     }
 
     if (!session.user.isActive) {
       throw new UnauthorizedException("User is disabled");
     }
+    const extended = await this.prisma.session.updateMany({ where: { id: session.id, revokedAt: null, expiresAt: { gt: new Date(now) } }, data: { expiresAt: nextSessionExpiry(session.createdAt, now) } });
+    if (extended.count !== 1) throw new UnauthorizedException("Invalid or expired session");
 
     request.axoraUser = {
       id: session.user.id,
@@ -76,7 +80,7 @@ function parseCookie(rawCookie: string, name: string): string | undefined {
   for (const part of parts) {
     const [key, ...rest] = part.split("=");
     if (key === name) {
-      return decodeURIComponent(rest.join("="));
+      try { return decodeURIComponent(rest.join("=")); } catch { return undefined; }
     }
   }
   return undefined;

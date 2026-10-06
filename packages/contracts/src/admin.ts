@@ -5,6 +5,24 @@ export interface NamedRef {
   name: string;
 }
 
+/** Affectation RBAC avec une portee optionnelle entreprise/projet. */
+export interface AdminRoleAssignmentView {
+  id: string;
+  roleId: string;
+  roleName: string;
+  companyId: string | null;
+  projectId: string | null;
+}
+
+export interface AdminProjectView {
+  id: string;
+  code: string;
+  name: string;
+  companyId: string;
+  companyName: string;
+  status: string;
+}
+
 export interface AdminUserView {
   id: string;
   email: string;
@@ -15,6 +33,7 @@ export interface AdminUserView {
   createdAt: string;
   roles: NamedRef[];
   companies: NamedRef[];
+  roleAssignments: AdminRoleAssignmentView[];
 }
 
 export interface AdminRoleView {

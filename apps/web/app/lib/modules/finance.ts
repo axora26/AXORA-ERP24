@@ -1,6 +1,13 @@
 import type {
+  AccountingAccountView,
+  AccountingEntryView,
+  AccountingJournalView,
+  AccountingTrialBalanceView,
   BankAccountView,
   CustomerInvoiceView,
+  InvoiceSignatureView,
+  TreasuryForecastView,
+  BankStatementEntryView,
   FinanceSummaryView,
   PaymentView,
   SupplierInvoiceView,
@@ -9,13 +16,34 @@ import type {
 import { api } from "../api";
 
 export const financeApi = {
+  accountingConfiguration: () => api.get<{ accounts: AccountingAccountView[]; journals: AccountingJournalView[] }>("/finance/accounting/configuration"),
+  accountingBootstrap: () => api.post<{ accounts: AccountingAccountView[]; journals: AccountingJournalView[] }>("/finance/accounting/bootstrap", {}),
+  accountingAccounts: () => api.get<AccountingAccountView[]>("/finance/accounting/accounts"),
+  createAccountingAccount: (input: Record<string, unknown>) => api.post<AccountingAccountView[]>("/finance/accounting/accounts", input),
+  accountingJournals: () => api.get<AccountingJournalView[]>("/finance/accounting/journals"),
+  createAccountingJournal: (input: Record<string, unknown>) => api.post<AccountingJournalView[]>("/finance/accounting/journals", input),
+  accountingEntries: (query?: { from?: string; to?: string; journalId?: string }) => api.get<AccountingEntryView[]>(`/finance/accounting/entries${accountingQuery(query)}`),
+  accountingTrialBalance: (query?: { from?: string; to?: string }) => api.get<AccountingTrialBalanceView>(`/finance/accounting/trial-balance${accountingQuery(query)}`),
+  accountingStatements: (query?: { from?: string; to?: string }) => api.get<import("@axora24/contracts").AccountingFinancialStatementsView>(`/finance/accounting/statements${accountingQuery(query)}`),
+  createAccountingEntry: (input: Record<string, unknown>) => api.post<AccountingEntryView>("/finance/accounting/entries", input),
   summary: () => api.get<FinanceSummaryView>("/finance/summary"),
+  collectionReminders: () => api.get<import("@axora24/contracts").CollectionReminderView[]>("/finance/collection-reminders"),
+  generateCollectionReminders: () => api.post<import("@axora24/contracts").CollectionReminderView[]>("/finance/collection-reminders/generate", {}),
+  markCollectionReminderSent: (id: string) => api.post<import("@axora24/contracts").CollectionReminderView>(`/finance/collection-reminders/${id}/mark-sent`, {}),
   taxRates: () => api.get<TaxRateView[]>("/finance/tax-rates"),
   createTaxRate: (input: { name: string; rate: string }) => api.post<TaxRateView[]>("/finance/tax-rates", input),
   bankAccounts: () => api.get<BankAccountView[]>("/finance/bank-accounts"),
   createBankAccount: (input: Record<string, unknown>) => api.post<BankAccountView[]>("/finance/bank-accounts", input),
   invoices: () => api.get<CustomerInvoiceView[]>("/finance/invoices"),
   invoice: (id: string) => api.get<CustomerInvoiceView>(`/finance/invoices/${id}`),
+  invoiceSignatures: (id: string) => api.get<InvoiceSignatureView[]>(`/finance/invoices/${id}/signatures`),
+  signInvoice: (id: string, documentHash?: string) => api.post<InvoiceSignatureView>(`/finance/invoices/${id}/sign`, documentHash ? { documentHash } : {}),
+  revokeInvoiceSignature: (id: string, signatureId: string, reason: string) => api.post<InvoiceSignatureView>(`/finance/invoices/${id}/signatures/${signatureId}/revoke`, { reason }),
+  verifyInvoiceSignature: (id: string, signatureId: string) => api.get<{ valid: boolean; documentHash: string; invoiceCode: string; algorithm: string; signedAt: string; status: string }>(`/finance/invoices/${id}/signatures/${signatureId}/verify`),
+  treasuryForecast: (days = 30) => api.get<TreasuryForecastView>(`/finance/treasury-forecast?days=${days}`),
+  bankStatements: (bankAccountId?: string) => api.get<BankStatementEntryView[]>(`/finance/bank-statements${bankAccountId ? `?bankAccountId=${encodeURIComponent(bankAccountId)}` : ""}`),
+  importBankStatement: (input: { bankAccountId: string; entries: Array<Record<string, unknown>> }) => api.post<{ imported: number; skipped: number; entries: BankStatementEntryView[] }>("/finance/bank-statements/import", input),
+  matchBankStatement: (id: string, paymentId: string) => api.post<BankStatementEntryView>(`/finance/bank-statements/${id}/match`, { paymentId }),
   createInvoice: (input: Record<string, unknown>) => api.post<CustomerInvoiceView>("/finance/invoices", input),
   issueInvoice: (id: string, input: { issueDate?: string; dueDays?: number }) => api.post<CustomerInvoiceView>(`/finance/invoices/${id}/issue`, input),
   cancelInvoice: (id: string, reason: string) => api.post<CustomerInvoiceView>(`/finance/invoices/${id}/cancel`, { reason }),
@@ -36,6 +64,14 @@ export const financeApi = {
     idempotencyKey: string;
   }) => api.post<T>("/finance/payments", input),
 };
+
+function accountingQuery(query?: Record<string, string | undefined>): string {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value);
+  const encoded = params.toString();
+  return encoded ? `?${encoded}` : "";
+}
 
 export const CUSTOMER_STATUS_LABEL: Record<string, string> = {
   DRAFT: "Brouillon",

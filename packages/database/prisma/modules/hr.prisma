@@ -113,6 +113,9 @@ model Employee {
   skills           EmployeeSkill[]
   timesheets       Timesheet[]
   leaves           LeaveRequest[]
+  advances         EmployeeAdvance[]
+  serviceCards     EmployeeServiceCard[]
+  attendanceEvents AttendanceEvent[]
 
   @@unique([companyId, code])
   @@unique([companyId, badgeCode])
@@ -150,7 +153,16 @@ model AttendanceEvent {
   note             String?
   capturedByUserId String
   createdAt        DateTime         @default(now())
+  serviceCardId    String?
+  idempotencyKey   String?
 
+  employee Employee @relation(fields: [employeeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  serviceCard EmployeeServiceCard? @relation(fields: [serviceCardId, employeeId, organizationId, companyId], references: [id, employeeId, organizationId, companyId], onDelete: Restrict)
+  timesheetIns TimesheetEntry[] @relation("TimesheetAttendanceIn")
+  timesheetOuts TimesheetEntry[] @relation("TimesheetAttendanceOut")
+
+  @@unique([id, organizationId, companyId])
+  @@unique([companyId, idempotencyKey])
   @@index([organizationId, companyId, employeeId, occurredAt])
   @@index([projectId])
   @@map("hr_attendance_events")
@@ -195,9 +207,14 @@ model TimesheetEntry {
   description    String?
   /// Cout fige a la validation (heures x cout horaire), jamais avant.
   costAmount     Decimal? @db.Decimal(18, 2)
+  attendanceInId String?
+  attendanceOutId String?
 
   timesheet Timesheet @relation(fields: [timesheetId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  attendanceIn AttendanceEvent? @relation("TimesheetAttendanceIn", fields: [attendanceInId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  attendanceOut AttendanceEvent? @relation("TimesheetAttendanceOut", fields: [attendanceOutId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
 
+  @@unique([companyId, attendanceInId, attendanceOutId, workDate])
   @@index([timesheetId])
   @@index([projectId])
   @@map("hr_timesheet_entries")
@@ -238,10 +255,16 @@ model PayrollRun {
   period          String
   status          PayrollStatus @default(DRAFT)
   currency        String        @db.Char(3)
+  /// Total des retenues légales calculées à partir de la photographie de politique.
+  totalDeductions Decimal       @default(0) @db.Decimal(18, 2)
+  /// Net à payer figé lors de la préparation.
+  netAmount       Decimal       @default(0) @db.Decimal(18, 2)
   createdByUserId String
   closedByUserId  String?
   closedAt        DateTime?
   createdAt       DateTime      @default(now())
+  policySnapshot Json?
+  policyVersion  Int?
 
   lines PayrollLine[]
 
@@ -262,9 +285,135 @@ model PayrollLine {
   adjustments     Decimal @default(0) @db.Decimal(18, 2)
   grossAmount     Decimal @db.Decimal(18, 2)
   adjustmentNotes String?
+  attendanceHours Decimal @default(0) @db.Decimal(7, 2)
+  regularHours    Decimal @default(0) @db.Decimal(7, 2)
+  overtimeHours   Decimal @default(0) @db.Decimal(7, 2)
+  hourlyRate      Decimal @default(0) @db.Decimal(18, 6)
+  automaticAmount Decimal @default(0) @db.Decimal(18, 2)
+  incomeTax       Decimal @default(0) @db.Decimal(18, 2)
+  socialContribution Decimal @default(0) @db.Decimal(18, 2)
+  healthContribution Decimal @default(0) @db.Decimal(18, 2)
+  totalDeductions Decimal @default(0) @db.Decimal(18, 2)
+  netAmount       Decimal @default(0) @db.Decimal(18, 2)
 
   run PayrollRun @relation(fields: [runId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
 
   @@unique([runId, employeeId])
   @@map("hr_payroll_lines")
+}
+
+enum PayrollCalculationMode {
+  MONTHLY_BASE
+  VALIDATED_HOURS
+}
+
+model CompanyPayrollPolicy {
+  id                    String @id @default(cuid())
+  organizationId        String
+  companyId             String @unique
+  mode                  PayrollCalculationMode @default(MONTHLY_BASE)
+  standardMonthlyHours  Decimal? @db.Decimal(7, 2)
+  overtimeCoefficient   Decimal? @db.Decimal(5, 2)
+  /// Code pays/territoire paramétré par l'administrateur (aucune règle n'est déduite).
+  countryCode           String?  @db.Char(2)
+  employeeSocialRate    Decimal? @db.Decimal(5, 2)
+  employeeHealthRate    Decimal? @db.Decimal(5, 2)
+  incomeTaxRate         Decimal? @db.Decimal(5, 2)
+  taxFreeAllowance      Decimal? @db.Decimal(18, 2)
+  version               Int @default(1)
+  updatedByUserId        String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  company Company @relation(fields: [companyId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([companyId, organizationId])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId])
+  @@map("hr_company_payroll_policies")
+}
+
+model EmployeeServiceCard {
+  id               String @id @default(cuid())
+  organizationId   String
+  companyId        String
+  employeeId       String
+  tokenHash        String @unique
+  tokenCiphertext  String
+  issuedByUserId   String
+  issuedAt         DateTime @default(now())
+  expiresAt        DateTime?
+  revokedAt        DateTime?
+  revokedByUserId  String?
+
+  employee Employee @relation(fields: [employeeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  attendanceEvents AttendanceEvent[]
+
+  @@unique([id, organizationId, companyId])
+  @@unique([id, employeeId, organizationId, companyId])
+  @@index([organizationId, companyId, employeeId, revokedAt])
+  @@map("hr_employee_service_cards")
+}
+
+enum EmployeeAdvanceStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PAID
+  PARTIALLY_REPAID
+  SETTLED
+  CANCELLED
+}
+
+enum EmployeeAdvanceRepaymentMethod {
+  PAYROLL
+  BANK
+  CASH
+}
+
+/// INC-09 — avance salarié : le principal et les remboursements restent auditables.
+model EmployeeAdvance {
+  id                String                @id @default(cuid())
+  organizationId    String
+  companyId         String
+  employeeId        String
+  amount            Decimal               @db.Decimal(18, 2)
+  currency          String                @db.Char(3)
+  reason            String
+  status            EmployeeAdvanceStatus @default(REQUESTED)
+  requestedByUserId String
+  requestedAt       DateTime              @default(now())
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  decisionNote      String?
+  paidAt            DateTime?
+  settledAt         DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  employee    Employee                 @relation(fields: [employeeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  repayments  EmployeeAdvanceRepayment[]
+
+  @@index([organizationId, companyId, status, requestedAt])
+  @@index([organizationId, companyId, employeeId, status])
+  @@map("hr_employee_advances")
+}
+
+/// Journal append-only des remboursements d'avances.
+model EmployeeAdvanceRepayment {
+  id          String                         @id @default(cuid())
+  organizationId String
+  companyId   String
+  advanceId   String
+  amount      Decimal                        @db.Decimal(18, 2)
+  method      EmployeeAdvanceRepaymentMethod
+  repaymentDate DateTime
+  note        String?
+  createdByUserId String
+  createdAt   DateTime                       @default(now())
+
+  advance EmployeeAdvance @relation(fields: [advanceId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId, advanceId, repaymentDate])
+  @@map("hr_employee_advance_repayments")
 }

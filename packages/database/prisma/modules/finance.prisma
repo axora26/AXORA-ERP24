@@ -85,6 +85,7 @@ model BankAccount {
   createdAt      DateTime        @default(now())
 
   payments Payment[]
+  creditRefunds CreditRefund[]
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
@@ -118,6 +119,8 @@ model CustomerInvoice {
 
   lines    CustomerInvoiceLine[]
   payments Payment[]
+  creditNotes CustomerCreditNote[]
+  collectionReminders CustomerInvoiceReminder[]
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
@@ -127,6 +130,35 @@ model CustomerInvoice {
   @@map("customer_invoices")
 }
 
+enum CollectionReminderStatus {
+  DRAFT
+  SENT
+  CANCELLED
+}
+
+/// Relances de créances générées par paliers. L'envoi externe reste séparé :
+/// cette trace interne est idempotente et auditable même sans SMTP configuré.
+model CustomerInvoiceReminder {
+  id              String                   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  invoiceId       String
+  level           Int
+  scheduledFor    DateTime
+  status          CollectionReminderStatus @default(DRAFT)
+  sentAt          DateTime?
+  sentByUserId    String?
+  note            String?
+  createdAt       DateTime                 @default(now())
+
+  invoice CustomerInvoice @relation(fields: [invoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([companyId, invoiceId, level])
+  @@index([organizationId, companyId, status, scheduledFor])
+  @@index([invoiceId])
+  @@map("customer_invoice_reminders")
+}
+
 model CustomerInvoiceLine {
   id             String  @id @default(cuid())
   organizationId String
@@ -134,15 +166,17 @@ model CustomerInvoiceLine {
   invoiceId      String
   position       Int
   description    String
-  quantity       Decimal @db.Decimal(18, 3)
-  unitPrice      Decimal @db.Decimal(18, 2)
+  quantity       Decimal @db.Decimal(24, 6)
+  unitPrice      Decimal @db.Decimal(24, 6)
   taxRate        Decimal @default(0) @db.Decimal(5, 2)
   lineTotal      Decimal @db.Decimal(18, 2)
   lineTax        Decimal @db.Decimal(18, 2)
 
   invoice CustomerInvoice @relation(fields: [invoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  creditLines CustomerCreditNoteLine[]
 
   @@unique([invoiceId, position])
+  @@unique([id, invoiceId, organizationId, companyId])
   @@map("customer_invoice_lines")
 }
 
@@ -174,6 +208,7 @@ model SupplierInvoice {
 
   lines    SupplierInvoiceLine[]
   payments Payment[]
+  creditNotes SupplierCreditNote[]
 
   @@unique([companyId, code])
   @@unique([supplierId, supplierReference])
@@ -199,8 +234,10 @@ model SupplierInvoiceLine {
   lineTax        Decimal @db.Decimal(18, 2)
 
   invoice SupplierInvoice @relation(fields: [invoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  creditLines SupplierCreditNoteLine[]
 
   @@unique([invoiceId, position])
+  @@unique([id, invoiceId, organizationId, companyId])
   @@index([orderLineId])
   @@map("supplier_invoice_lines")
 }
@@ -231,4 +268,209 @@ model Payment {
   @@unique([companyId, idempotencyKey])
   @@index([organizationId, companyId, paidAt])
   @@map("payments")
+}
+
+enum CreditNoteStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}
+
+model CustomerCreditNote {
+  id              String           @id @default(cuid())
+  organizationId  String
+  companyId       String
+  sourceInvoiceId String
+  code            String?
+  currency        String           @db.Char(3)
+  reason          String
+  status          CreditNoteStatus @default(DRAFT)
+  version         Int              @default(1)
+  issueDate       DateTime?
+  subtotal        Decimal          @db.Decimal(18, 2)
+  taxTotal        Decimal          @db.Decimal(18, 2)
+  total           Decimal          @db.Decimal(18, 2)
+  createdByUserId String
+  issuedByUserId  String?
+  cancelReason    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  sourceInvoice CustomerInvoice @relation(fields: [sourceInvoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  lines CustomerCreditNoteLine[]
+  refunds CreditRefund[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@unique([id, sourceInvoiceId, organizationId, companyId])
+  @@index([organizationId, companyId, status, createdAt])
+  @@index([sourceInvoiceId])
+  @@map("customer_credit_notes")
+}
+
+model CustomerCreditNoteLine {
+  id                  String  @id @default(cuid())
+  organizationId      String
+  companyId           String
+  creditNoteId        String
+  sourceInvoiceId     String
+  sourceInvoiceLineId String
+  position            Int
+  description         String
+  quantity            Decimal @db.Decimal(24, 6)
+  unitPrice           Decimal @db.Decimal(24, 6)
+  taxRate             Decimal @db.Decimal(5, 2)
+  lineTotal           Decimal @db.Decimal(18, 2)
+  lineTax             Decimal @db.Decimal(18, 2)
+
+  creditNote CustomerCreditNote @relation(fields: [creditNoteId, sourceInvoiceId, organizationId, companyId], references: [id, sourceInvoiceId, organizationId, companyId], onDelete: Restrict)
+  sourceInvoiceLine CustomerInvoiceLine @relation(fields: [sourceInvoiceLineId, sourceInvoiceId, organizationId, companyId], references: [id, invoiceId, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([creditNoteId, sourceInvoiceLineId])
+  @@unique([creditNoteId, position])
+  @@index([sourceInvoiceLineId])
+  @@map("customer_credit_note_lines")
+}
+
+model SupplierCreditNote {
+  id              String           @id @default(cuid())
+  organizationId  String
+  companyId       String
+  sourceInvoiceId String
+  code            String?
+  currency        String           @db.Char(3)
+  reason          String
+  status          CreditNoteStatus @default(DRAFT)
+  version         Int              @default(1)
+  issueDate       DateTime?
+  subtotal        Decimal          @db.Decimal(18, 2)
+  taxTotal        Decimal          @db.Decimal(18, 2)
+  total           Decimal          @db.Decimal(18, 2)
+  createdByUserId String
+  issuedByUserId  String?
+  cancelReason    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  sourceInvoice SupplierInvoice @relation(fields: [sourceInvoiceId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  lines SupplierCreditNoteLine[]
+  refunds CreditRefund[]
+  returnLinks SupplierReturnCreditNote[]
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@unique([id, sourceInvoiceId, organizationId, companyId])
+  @@index([organizationId, companyId, status, createdAt])
+  @@index([sourceInvoiceId])
+  @@map("supplier_credit_notes")
+}
+
+model SupplierCreditNoteLine {
+  id                  String  @id @default(cuid())
+  organizationId      String
+  companyId           String
+  creditNoteId        String
+  sourceInvoiceId     String
+  sourceInvoiceLineId String
+  position            Int
+  description         String
+  quantity            Decimal @db.Decimal(18, 3)
+  unitPrice           Decimal @db.Decimal(18, 2)
+  taxRate             Decimal @db.Decimal(5, 2)
+  lineTotal           Decimal @db.Decimal(18, 2)
+  lineTax             Decimal @db.Decimal(18, 2)
+
+  creditNote SupplierCreditNote @relation(fields: [creditNoteId, sourceInvoiceId, organizationId, companyId], references: [id, sourceInvoiceId, organizationId, companyId], onDelete: Restrict)
+  sourceInvoiceLine SupplierInvoiceLine @relation(fields: [sourceInvoiceLineId, sourceInvoiceId, organizationId, companyId], references: [id, invoiceId, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([creditNoteId, sourceInvoiceLineId])
+  @@unique([creditNoteId, position])
+  @@index([sourceInvoiceLineId])
+  @@map("supplier_credit_note_lines")
+}
+
+model CreditRefund {
+  id                   String           @id @default(cuid())
+  organizationId       String
+  companyId            String
+  code                 String
+  direction            PaymentDirection
+  customerCreditNoteId String?
+  supplierCreditNoteId String?
+  bankAccountId        String
+  amount               Decimal          @db.Decimal(18, 2)
+  currency             String           @db.Char(3)
+  refundedAt           DateTime
+  method               PaymentMethod
+  reference            String?
+  idempotencyKey       String
+  createdByUserId      String
+  createdAt            DateTime         @default(now())
+
+  customerCreditNote CustomerCreditNote? @relation(fields: [customerCreditNoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  supplierCreditNote SupplierCreditNote? @relation(fields: [supplierCreditNoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  bankAccount BankAccount @relation(fields: [bankAccountId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([companyId, code])
+  @@unique([companyId, idempotencyKey])
+  @@index([organizationId, companyId, refundedAt])
+  @@map("credit_refunds")
+}
+
+// Signature interne append-only des factures clients. La signature qualifiée/légale
+// reste soumise à un certificat et un prestataire eIDAS configurés séparément.
+model InvoiceSignature {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  invoiceId       String
+  invoiceCode     String
+  documentHash    String   @db.Char(64)
+  signature       String   @db.Text
+  algorithm       String   @default("HMAC-SHA256")
+  signerUserId    String
+  signedAt        DateTime @default(now())
+  status          InvoiceSignatureStatus @default(VALID)
+  revokedAt       DateTime?
+  revokedByUserId String?
+  revokeReason    String?
+  createdAt       DateTime @default(now())
+
+  @@unique([companyId, invoiceId, documentHash])
+  @@index([organizationId, companyId, invoiceId, status])
+  @@map("invoice_signatures")
+}
+
+enum InvoiceSignatureStatus {
+  VALID
+  REVOKED
+}
+
+enum BankStatementMatchStatus {
+  UNMATCHED
+  MATCHED
+  IGNORED
+}
+
+model BankStatementEntry {
+  id              String   @id @default(cuid())
+  organizationId  String
+  companyId       String
+  bankAccountId   String
+  externalId      String
+  bookedAt        DateTime
+  valueDate       DateTime?
+  description     String
+  amount          Decimal  @db.Decimal(18, 2)
+  currency        String   @db.Char(3)
+  status          BankStatementMatchStatus @default(UNMATCHED)
+  matchedPaymentId String?
+  matchedAt       DateTime?
+  matchedByUserId String?
+  createdAt       DateTime @default(now())
+  importedAt      DateTime @default(now())
+
+  @@unique([companyId, bankAccountId, externalId])
+  @@index([organizationId, companyId, bankAccountId, status, bookedAt])
+  @@map("bank_statement_entries")
 }

@@ -5,6 +5,7 @@ import { SessionGuard } from "../auth/session.guard.js";
 import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequirePermission } from "../auth/require-permission.decorator.js";
 import { CompanyScopeService } from "../common/company-scope.service.js";
+import { CompanyScopeGuard } from "../common/scope.guard.js";
 import { SalesService } from "./sales.service.js";
 import type {
   AcceptQuoteDto,
@@ -16,7 +17,7 @@ import type {
 
 /** INC-04 — Devis (issus d'un DQE finalise) -> Contrat (issu d'un devis accepte). */
 @Controller("sales")
-@UseGuards(SessionGuard, PermissionGuard)
+@UseGuards(SessionGuard, CompanyScopeGuard, PermissionGuard)
 export class SalesController {
   constructor(
     private readonly sales: SalesService,

@@ -1,0 +1,108 @@
+/// Comptabilite generale : plan de comptes, journaux et ecritures append-only.
+enum AccountingAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AccountingJournalType {
+  SALES
+  PURCHASES
+  BANK
+  CASH
+  GENERAL
+}
+
+enum AccountingEntryStatus {
+  POSTED
+  REVERSED
+}
+
+model AccountingAccount {
+  id             String                @id @default(cuid())
+  organizationId String
+  companyId      String
+  code           String
+  name           String
+  type           AccountingAccountType
+  systemKey      String?
+  parentId       String?
+  isActive       Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  parent         AccountingAccount?    @relation("AccountingAccountTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children       AccountingAccount[]   @relation("AccountingAccountTree")
+  lines          AccountingEntryLine[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, systemKey])
+  @@index([organizationId, companyId, type])
+  @@map("accounting_accounts")
+}
+
+model AccountingJournal {
+  id             String                 @id @default(cuid())
+  organizationId String
+  companyId      String
+  code           String
+  name           String
+  type           AccountingJournalType  @default(GENERAL)
+  isActive       Boolean                @default(true)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  entries        AccountingEntry[]
+
+  @@unique([companyId, code])
+  @@index([organizationId, companyId])
+  @@map("accounting_journals")
+}
+
+model AccountingEntry {
+  id             String                 @id @default(cuid())
+  organizationId String
+  companyId      String
+  journalId      String
+  number         String
+  entryDate      DateTime
+  description    String
+  currency       String                 @db.Char(3)
+  sourceType     String?
+  sourceId       String?
+  status         AccountingEntryStatus  @default(POSTED)
+  postedByUserId String
+  postedAt       DateTime               @default(now())
+  createdAt      DateTime               @default(now())
+
+  journal        AccountingJournal      @relation(fields: [journalId], references: [id], onDelete: Restrict)
+  lines          AccountingEntryLine[]
+
+  @@unique([companyId, number])
+  @@unique([companyId, sourceType, sourceId])
+  @@index([organizationId, companyId, entryDate])
+  @@index([companyId, journalId, entryDate])
+  @@map("accounting_entries")
+}
+
+model AccountingEntryLine {
+  id             String             @id @default(cuid())
+  organizationId String
+  companyId      String
+  entryId        String
+  accountId      String
+  label          String
+  debit          Decimal            @default(0) @db.Decimal(18, 2)
+  credit         Decimal            @default(0) @db.Decimal(18, 2)
+  projectId      String?
+  createdAt      DateTime           @default(now())
+
+  entry          AccountingEntry   @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  account        AccountingAccount  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId, accountId])
+  @@index([entryId])
+  @@map("accounting_entry_lines")
+}

@@ -1,0 +1,108 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
+
+test.describe("Cartes, pointages et paie automatique", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+  test("émettre, pointer, révoquer puis préparer les heures et la paie brute", async ({ page, playwright, baseURL }) => {
+    test.setTimeout(120_000);
+    const unique = Date.now().toString(36);
+    const slug = `hr-${unique}`;
+    const password = "Qualification2026!Axora";
+    const signup = await page.request.post("/api/v1/auth/register-organization", { data: { organizationName: `RH ${unique}`, organizationSlug: slug, companyName: "Entreprise RH", ownerFullName: "Responsable RH", ownerEmail: `hr-${unique}@axora-erp24.local`, ownerPassword: password } });
+    expect(signup.status()).toBe(201);
+    const employeeResponse = await page.request.post("/api/v1/hr/employees", { data: { firstName: "Aline", lastName: "Carte", jobTitle: "Ingénieure", hireDate: "2026-01-01", contractType: "PERMANENT", baseSalary: "1000.00", hourlyCost: "20.00" } });
+    expect(employeeResponse.ok()).toBeTruthy();
+    const employee = await employeeResponse.json() as { id: string };
+    await page.goto("/hr");
+    await page.getByRole("button", { name: "Carte de service", exact: true }).click();
+    let dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Émettre une carte", exact: true }).click();
+    await dialog.getByRole("button", { name: "Confirmer l’émission" }).click();
+    await expect(dialog.getByRole("img", { name: "QR sécurisé de la carte de Aline Carte" })).toBeVisible();
+    const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+    expect(axe.violations.map(violation => violation.id)).toEqual([]);
+    const cardDownload = page.waitForEvent("download");
+    await dialog.getByRole("button", { name: "Imprimer la carte / PDF" }).click();
+    expect((await cardDownload).suggestedFilename()).toMatch(/\.pdf$/);
+    const card = await (await page.request.get(`/api/v1/hr/employees/${employee.id}/service-card`)).json() as { card: { id: string }; qrPayload: string };
+    await dialog.getByRole("button", { name: "Fermer", exact: true }).click();
+    await page.getByRole("tab", { name: /Présence du jour/ }).click();
+    await page.getByLabel("Mode d’identification").selectOption("QR");
+    await page.getByLabel("Code protégé de la carte").fill(card.qrPayload);
+    await page.getByRole("button", { name: "Entrée", exact: true }).click();
+    await expect(page.getByText("Entrée enregistrée pour Aline Carte.", { exact: true })).toBeVisible();
+    await page.getByLabel("Code protégé de la carte").fill(card.qrPayload);
+    await page.getByRole("button", { name: "Sortie", exact: true }).click();
+    await expect(page.getByText("Sortie enregistrée pour Aline Carte.", { exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: /Employés/ }).click();
+    await page.getByRole("button", { name: "Carte de service", exact: true }).click();
+    dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Révoquer la carte" }).click();
+    await dialog.getByLabel(/Motif de la révocation/).fill("Carte remplacée pour qualification");
+    await dialog.getByRole("button", { name: "Confirmer la révocation" }).click();
+    await expect(dialog.getByText("Carte révoquée. Son QR code ne peut plus enregistrer de pointage.")).toBeVisible();
+    await dialog.getByRole("button", { name: "Fermer", exact: true }).click();
+    const denied = await page.request.post("/api/v1/hr/attendance/scan", { data: { cardToken: card.qrPayload, type: "IN", idempotencyKey: crypto.randomUUID() } });
+    expect(denied.ok()).toBeFalsy();
+
+    const paidResponse = await page.request.post("/api/v1/hr/employees", { data: { firstName: "Benoît", lastName: "Paie", jobTitle: "Chef de chantier", hireDate: "2026-01-01", contractType: "PERMANENT", baseSalary: "1000.00", hourlyCost: "20.00" } });
+    expect(paidResponse.ok()).toBeTruthy();
+    const paid = await paidResponse.json() as { id: string };
+    const monday = new Date();
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7) - 7);
+    const date = monday.toISOString().slice(0, 10);
+    for (const [type, hour] of [["IN", "08"], ["OUT", "16"]]) {
+      const event = await page.request.post("/api/v1/hr/attendance", { data: { employeeId: paid.id, type, source: "MANUAL", occurredAt: `${date}T${hour}:00:00.000Z`, note: "Qualification des heures" } });
+      expect(event.ok()).toBeTruthy();
+    }
+    const created = await page.request.post("/api/v1/hr/timesheets", { data: { employeeId: paid.id, weekStart: date } });
+    expect(created.ok()).toBeTruthy();
+    const sheet = await created.json() as { id: string };
+    await page.goto(`/hr/timesheets/${sheet.id}`);
+    await page.getByRole("button", { name: "Préparer depuis les pointages" }).click();
+    dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Importer les heures pointées" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByLabel("Heures", { exact: true })).toHaveValue("8.00");
+    await page.getByRole("button", { name: "Soumettre", exact: true }).click();
+    await expect(page.getByText(/la validation revient à un autre responsable/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Valider", exact: true })).toHaveCount(0);
+    const cardSheetResponse = await page.request.post("/api/v1/hr/timesheets", { data: { employeeId: employee.id, weekStart: date } });
+    expect(cardSheetResponse.ok()).toBeTruthy();
+    const cardSheet = await cardSheetResponse.json() as { id: string };
+    expect((await page.request.put(`/api/v1/hr/timesheets/${cardSheet.id}/entries`, { data: { entries: [{ workDate: date, hours: "8.00", description: "Heures déclarées pour la préparation de paie" }] } })).ok()).toBeTruthy();
+    expect((await page.request.post(`/api/v1/hr/timesheets/${cardSheet.id}/submit`, { data: {} })).ok()).toBeTruthy();
+
+    const context = await (await page.request.get("/api/v1/auth/context")).json() as { companies: Array<{ id: string }> };
+    const roles = await (await page.request.get("/api/v1/admin/roles")).json() as Array<{ id: string; name: string }>;
+    const validatorEmail = `validator-${unique}@axora-erp24.local`;
+    const validatorUser = await page.request.post("/api/v1/admin/users", { data: { email: validatorEmail, fullName: "Validateur indépendant", password, companyIds: context.companies.map(company => company.id), roleIds: roles.map(role => role.id) } });
+    expect(validatorUser.ok()).toBeTruthy();
+    const validator = await playwright.request.newContext({ baseURL });
+    try {
+      expect((await validator.post("/api/v1/auth/login", { data: { email: validatorEmail, password, organizationSlug: slug } })).ok()).toBeTruthy();
+      expect((await validator.post(`/api/v1/hr/timesheets/${sheet.id}/validate`, { data: { note: "Heures contrôlées par un tiers" } })).ok()).toBeTruthy();
+      expect((await validator.post(`/api/v1/hr/timesheets/${cardSheet.id}/validate`, { data: { note: "Heures contrôlées par un tiers" } })).ok()).toBeTruthy();
+    } finally { await validator.dispose(); }
+    await page.goto("/hr");
+    await page.getByRole("tab", { name: /Paie/ }).click();
+    await page.getByRole("button", { name: "Configurer le calcul" }).click();
+    dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/Mode de calcul/).selectOption("VALIDATED_HOURS");
+    await dialog.getByLabel(/Heures mensuelles de référence/).fill("100");
+    await dialog.getByLabel(/Coefficient des heures supplémentaires/).fill("1.50");
+    await dialog.getByRole("button", { name: "Enregistrer les règles" }).click();
+    await expect(dialog).toHaveCount(0);
+    await page.getByRole("button", { name: "Préparer un mois" }).click();
+    dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/Période/).fill(date.slice(0, 7));
+    await dialog.getByRole("button", { name: "Préparer", exact: true }).click();
+    await expect(page).toHaveURL(/\/hr\/payroll\//);
+    const line = page.getByRole("row").filter({ has: page.getByText("Benoît Paie", { exact: true }) });
+    await expect(line).toContainText("80,00");
+    await expect(page.getByText(/aucun net à payer n[’']est calculé/)).toBeVisible();
+    const payslipDownload = page.waitForEvent("download");
+    await line.getByRole("button", { name: "Fiche de préparation / PDF" }).click();
+    expect((await payslipDownload).suggestedFilename()).toMatch(/\.pdf$/);
+  });
+});

@@ -8,6 +8,7 @@ import {
 import { Prisma } from "@axora24/database";
 import type {
   BankAccountView,
+  CollectionReminderView,
   CustomerInvoiceView,
   FinanceSummaryView,
   PaymentView,
@@ -15,11 +16,13 @@ import type {
   TaxRateView,
 } from "@axora24/contracts";
 import { PrismaService } from "../core/prisma.service.js";
+import { invoiceCreditTotals, netInvoiceFigures, zeroCredits, type CreditTotals } from "./credit-ledger.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import { NumberingService } from "../common/numbering.service.js";
 import { writeAudit } from "../common/audit.js";
 import { AutomationService } from "../workflow/automation.service.js";
 import { WorkflowGate } from "../workflow/workflow-gate.service.js";
+import { AccountingService } from "./accounting.service.js";
 import { dec, money, qty, sumDecimals } from "../common/decimal.js";
 import {
   assertBody,
@@ -65,6 +68,7 @@ export class FinanceService {
     private readonly numbering: NumberingService,
     private readonly automation: AutomationService,
     private readonly gate: WorkflowGate,
+    private readonly accounting: AccountingService,
   ) {}
 
   // ---------------------------------------------------------------------
@@ -92,14 +96,15 @@ export class FinanceService {
 
   async listBankAccounts(scope: CompanyScope): Promise<BankAccountView[]> {
     const accounts = await this.prisma.bankAccount.findMany({ where: scope, orderBy: { code: "asc" } });
+    const refunds = await this.prisma.creditRefund.groupBy({ by: ["bankAccountId", "direction"], where: scope, _sum: { amount: true } });
     const flows = await this.prisma.payment.groupBy({
       by: ["bankAccountId", "direction"],
       where: scope,
       _sum: { amount: true },
     });
     return accounts.map((account) => {
-      const incoming = dec(flows.find((flow) => flow.bankAccountId === account.id && flow.direction === "IN")?._sum.amount);
-      const outgoing = dec(flows.find((flow) => flow.bankAccountId === account.id && flow.direction === "OUT")?._sum.amount);
+      const incoming = dec(flows.find((flow) => flow.bankAccountId === account.id && flow.direction === "IN")?._sum.amount).plus(dec(refunds.find((flow) => flow.bankAccountId === account.id && flow.direction === "IN")?._sum.amount));
+      const outgoing = dec(flows.find((flow) => flow.bankAccountId === account.id && flow.direction === "OUT")?._sum.amount).plus(dec(refunds.find((flow) => flow.bankAccountId === account.id && flow.direction === "OUT")?._sum.amount));
       return {
         id: account.id,
         code: account.code,
@@ -142,7 +147,8 @@ export class FinanceService {
       orderBy: { createdAt: "desc" },
     });
     const refs = await this.references(scope, invoices.map((invoice) => invoice.contractId), invoices.map((invoice) => invoice.projectId));
-    return invoices.map((invoice) => toCustomerView(invoice, refs));
+    const credits = await invoiceCreditTotals(this.prisma, scope, "CUSTOMER", invoices.map((invoice) => invoice.id));
+    return invoices.map((invoice) => toCustomerView(invoice, refs, credits.get(invoice.id)));
   }
 
   async getCustomerInvoice(scope: CompanyScope, invoiceId: string): Promise<CustomerInvoiceView> {
@@ -152,7 +158,75 @@ export class FinanceService {
     });
     if (!invoice) throw new NotFoundException("Customer invoice not found");
     const refs = await this.references(scope, [invoice.contractId], [invoice.projectId]);
-    return toCustomerView(invoice, refs);
+    const credits = await invoiceCreditTotals(this.prisma, scope, "CUSTOMER", [invoice.id]);
+    return toCustomerView(invoice, refs, credits.get(invoice.id));
+  }
+
+  async listCollectionReminders(scope: CompanyScope): Promise<CollectionReminderView[]> {
+    const reminders = await this.prisma.customerInvoiceReminder.findMany({
+      where: { ...scope, status: { in: ["DRAFT", "SENT"] } },
+      include: { invoice: { select: { id: true, code: true, customerName: true, currency: true, dueDate: true, total: true, paidAmount: true, status: true } } },
+      orderBy: [{ status: "asc" }, { scheduledFor: "asc" }, { level: "desc" }],
+      take: 500,
+    });
+    const invoiceIds = reminders.map((reminder) => reminder.invoiceId);
+    const credits = await invoiceCreditTotals(this.prisma, scope, "CUSTOMER", invoiceIds);
+    return reminders
+      .map((reminder) => this.toCollectionReminderView(reminder, credits.get(reminder.invoiceId)))
+      // Une facture soldée ne doit plus apparaître dans la file de recouvrement.
+      // La trace historique reste conservée en base et dans l'audit.
+      .filter((reminder) => dec(reminder.balanceDue).greaterThan(0));
+  }
+
+  /** Génère les trois paliers de relance sans doublon. Aucun taux ni canal externe n'est présumé. */
+  async generateCollectionReminders(scope: CompanyScope, actorUserId: string): Promise<CollectionReminderView[]> {
+    const today = startOfToday();
+    const invoices = await this.prisma.customerInvoice.findMany({
+      where: { ...scope, status: { in: ["ISSUED", "PARTIALLY_PAID"] }, dueDate: { not: null, lt: today } },
+      select: { id: true, dueDate: true },
+    });
+    if (invoices.length === 0) return this.listCollectionReminders(scope);
+    const credits = await invoiceCreditTotals(this.prisma, scope, "CUSTOMER", invoices.map((invoice) => invoice.id));
+    await this.prisma.$transaction(async (tx) => {
+      for (const invoice of invoices) {
+        const credit = credits.get(invoice.id);
+        const source = await tx.customerInvoice.findUniqueOrThrow({ where: { id: invoice.id }, select: { total: true, paidAmount: true } });
+        const balance = netInvoiceFigures(source, credit).balanceDue;
+        if (dec(balance).lessThanOrEqualTo(0)) {
+          await tx.customerInvoiceReminder.updateMany({
+            where: { ...scope, invoiceId: invoice.id, status: "DRAFT" },
+            data: { status: "CANCELLED" },
+          });
+          continue;
+        }
+        const overdueDays = Math.max(1, Math.floor((today.getTime() - invoice.dueDate!.getTime()) / 86_400_000));
+        const levels = overdueDays >= 60 ? [1, 2, 3] : overdueDays >= 30 ? [1, 2] : [1];
+        for (const level of levels) {
+          const scheduledFor = new Date(invoice.dueDate!.getTime() + [1, 30, 60][level - 1]! * 86_400_000);
+          await tx.customerInvoiceReminder.upsert({
+            where: { companyId_invoiceId_level: { companyId: scope.companyId, invoiceId: invoice.id, level } },
+            create: { ...scope, invoiceId: invoice.id, level, scheduledFor, note: `Relance niveau ${level} — aucun canal externe configuré`, createdAt: new Date() },
+            update: {},
+          });
+        }
+      }
+      await writeAudit(tx, scope, actorUserId, "finance.collection_reminders.generated", "CustomerInvoiceReminder", scope.companyId, { invoices: invoices.length });
+    });
+    return this.listCollectionReminders(scope);
+  }
+
+  async markCollectionReminderSent(scope: CompanyScope, reminderId: string, actorUserId: string): Promise<CollectionReminderView> {
+    const reminder = await this.prisma.customerInvoiceReminder.findFirst({ where: { id: reminderId, ...scope }, select: { id: true, invoiceId: true, status: true } });
+    if (!reminder) throw new NotFoundException("Collection reminder not found");
+    if (reminder.status !== "DRAFT") throw new BadRequestException("Only a draft reminder can be marked as sent");
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('axora.collection_reminder_mutation', '1', true)`;
+      await tx.customerInvoiceReminder.update({ where: { id: reminder.id }, data: { status: "SENT", sentAt: new Date(), sentByUserId: actorUserId } });
+      await writeAudit(tx, scope, actorUserId, "finance.collection_reminder.sent", "CustomerInvoiceReminder", reminder.id, { invoiceId: reminder.invoiceId });
+    });
+    const view = (await this.listCollectionReminders(scope)).find((row) => row.id === reminder.id);
+    if (!view) throw new NotFoundException("Collection reminder not found");
+    return view;
   }
 
   /** Brouillon de facture : aucun numero legal n'est attribue avant l'emission. */
@@ -185,7 +259,7 @@ export class FinanceService {
           if (percent.greaterThan(100)) throw new BadRequestException("percent must be <= 100");
           const taxRate = await this.taxRateValue(tx, scope, optionalId(input.taxRateId, "taxRateId"));
           lines = contract.lines.map((line, index) =>
-            buildLine(index + 1, `${line.designation} — situation ${percent.toFixed(2)} %`, dec(line.quantity).mul(percent).div(100).toDecimalPlaces(3), dec(line.unitPrice).toDecimalPlaces(2), taxRate, null),
+            buildLine(index + 1, `${line.designation} — situation ${percent.toFixed(2)} %`, dec(line.quantity).mul(percent).div(100), dec(line.unitPrice), taxRate, null),
           );
         } else {
           lines = await this.parseLines(tx, scope, input.lines);
@@ -244,6 +318,14 @@ export class FinanceService {
     const dueDays = optionalInt(input.dueDays, "dueDays", { min: 0, max: 365 }) ?? 30;
 
     await this.prisma.$transaction(async (tx) => {
+      // Chronological numbering spans all invoices, including unrelated
+      // contracts. Lock before checking the last date and assigning a number.
+      const companies = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "companies"
+        WHERE "id" = ${scope.companyId} AND "organizationId" = ${scope.organizationId}
+        FOR UPDATE
+      `;
+      if (!companies.length) throw new NotFoundException("Company not found");
       const invoice = await this.lockCustomerInvoice(tx, scope, invoiceId);
       if (invoice.status !== "DRAFT") throw new BadRequestException("Only a draft invoice can be issued");
       if (dec(invoice.total).lessThanOrEqualTo(0)) throw new BadRequestException("An invoice must have a positive total");
@@ -255,7 +337,8 @@ export class FinanceService {
           where: { contractId: contract.id, ...scope, status: { in: [...OPEN_CUSTOMER] } },
           _sum: { subtotal: true },
         });
-        const cumulative = dec(issued._sum.subtotal).plus(invoice.subtotal);
+        const credit = await tx.customerCreditNote.aggregate({ where: { ...scope, status: "ISSUED", sourceInvoice: { contractId: contract.id } }, _sum: { subtotal: true } });
+        const cumulative = dec(issued._sum.subtotal).minus(dec(credit._sum.subtotal)).plus(invoice.subtotal);
         const ceiling = dec(contract.subtotal).toDecimalPlaces(2);
         if (cumulative.greaterThan(ceiling)) {
           throw new BadRequestException(
@@ -286,6 +369,7 @@ export class FinanceService {
         contractId: invoice.contractId,
       });
     });
+    await this.accounting.postCustomerInvoice(scope, invoiceId, actorUserId);
     return this.getCustomerInvoice(scope, invoiceId);
   }
 
@@ -313,7 +397,8 @@ export class FinanceService {
       orderBy: { createdAt: "desc" },
     });
     const refs = await this.supplierReferences(scope, invoices);
-    return invoices.map((invoice) => toSupplierView(invoice, refs));
+    const credits = await invoiceCreditTotals(this.prisma, scope, "SUPPLIER", invoices.map((invoice) => invoice.id));
+    return invoices.map((invoice) => toSupplierView(invoice, refs, credits.get(invoice.id)));
   }
 
   async getSupplierInvoice(scope: CompanyScope, invoiceId: string): Promise<SupplierInvoiceView> {
@@ -323,7 +408,8 @@ export class FinanceService {
     });
     if (!invoice) throw new NotFoundException("Supplier invoice not found");
     const refs = await this.supplierReferences(scope, [invoice]);
-    return toSupplierView(invoice, refs);
+    const credits = await invoiceCreditTotals(this.prisma, scope, "SUPPLIER", [invoice.id]);
+    return toSupplierView(invoice, refs, credits.get(invoice.id));
   }
 
   async recordSupplierInvoice(scope: CompanyScope, body: unknown, actorUserId: string) {
@@ -364,6 +450,8 @@ export class FinanceService {
           where: { orderLineId: { in: [...orderLines.keys()] }, invoice: { status: { not: "REJECTED" } } },
           select: { orderLineId: true, quantity: true },
         });
+        const credited = await tx.supplierCreditNoteLine.findMany({ where: { ...scope, creditNote: { status: "ISSUED" }, sourceInvoiceLine: { orderLineId: { in: [...orderLines.keys()] } } },
+          select: { quantity: true, sourceInvoiceLine: { select: { orderLineId: true } } } });
         for (const line of lines) {
           if (!line.orderLineId) {
             notes.push(`Ligne ${line.position} : hors commande`);
@@ -371,7 +459,8 @@ export class FinanceService {
           }
           const orderLine = orderLines.get(line.orderLineId);
           if (!orderLine) throw new BadRequestException(`Line ${line.position}: order line does not belong to the order`);
-          const alreadyInvoiced = sumDecimals(previous.filter((entry) => entry.orderLineId === line.orderLineId).map((entry) => entry.quantity));
+          const alreadyInvoiced = sumDecimals(previous.filter((entry) => entry.orderLineId === line.orderLineId).map((entry) => entry.quantity))
+            .minus(sumDecimals(credited.filter((entry) => entry.sourceInvoiceLine.orderLineId === line.orderLineId).map((entry) => entry.quantity)));
           const received = dec(orderLine.receivedQuantity);
           if (alreadyInvoiced.plus(line.quantity).greaterThan(received)) {
             notes.push(
@@ -472,6 +561,7 @@ export class FinanceService {
         { code: invoice.code, matchStatus: invoice.matchStatus, note },
       );
     });
+    if (decision === "APPROVED") await this.accounting.postSupplierInvoice(scope, invoiceId, actorUserId);
     return this.getSupplierInvoice(scope, invoiceId);
   }
 
@@ -497,6 +587,7 @@ export class FinanceService {
       return kind === "CUSTOMER" ? this.getCustomerInvoice(scope, invoiceId) : this.getSupplierInvoice(scope, invoiceId);
     }
 
+    let paymentId: string | null = null;
     try {
       await this.prisma.$transaction(async (tx) => {
         const account = await tx.bankAccount.findFirst({ where: { id: bankAccountId, ...scope } });
@@ -520,12 +611,14 @@ export class FinanceService {
             `Account currency ${account.currency.trim()} differs from invoice currency ${invoice.currency.trim()} (no implicit conversion)`,
           );
         }
-        const remaining = dec(invoice.total).minus(invoice.paidAmount);
+        const credits = await invoiceCreditTotals(tx, scope, kind, [invoice.id]);
+        const figures = netInvoiceFigures(invoice, credits.get(invoice.id));
+        const remaining = dec(figures.balanceDue);
         if (amount.greaterThan(remaining)) {
           throw new BadRequestException(`Payment ${money(amount)} exceeds the remaining balance ${money(remaining)}`);
         }
         const paidAmount = dec(invoice.paidAmount).plus(amount);
-        const status = paidAmount.equals(invoice.total) ? "PAID" : "PARTIALLY_PAID";
+        const status = amount.equals(remaining) ? "PAID" : "PARTIALLY_PAID";
         const code = await this.numbering.next(tx, scope, kind === "CUSTOMER" ? "ENC" : "DEC");
         const payment = await tx.payment.create({
           data: {
@@ -544,6 +637,7 @@ export class FinanceService {
             createdByUserId: actorUserId,
           },
         });
+        paymentId = payment.id;
         if (kind === "CUSTOMER") {
           await tx.customerInvoice.update({ where: { id: invoice.id }, data: { paidAmount, status } });
         } else {
@@ -561,6 +655,7 @@ export class FinanceService {
       // Course sur la meme cle d'idempotence : la contrainte unique arbitre.
       if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) throw error;
     }
+    if (paymentId) await this.accounting.postPayment(scope, paymentId, actorUserId);
     return kind === "CUSTOMER" ? this.getCustomerInvoice(scope, invoiceId) : this.getSupplierInvoice(scope, invoiceId);
   }
 
@@ -605,29 +700,35 @@ export class FinanceService {
     const today = startOfToday();
     const [customer, supplier, accounts, toApprove] = await Promise.all([
       this.prisma.customerInvoice.findMany({
-        where: { ...scope, currency, status: { in: ["ISSUED", "PARTIALLY_PAID"] } },
-        select: { total: true, paidAmount: true, dueDate: true },
+        where: { ...scope, currency, status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID"] } },
+        select: { id: true, total: true, paidAmount: true, dueDate: true },
       }),
       this.prisma.supplierInvoice.findMany({
-        where: { ...scope, currency, status: { in: ["APPROVED", "PARTIALLY_PAID"] } },
-        select: { total: true, paidAmount: true, dueDate: true },
+        where: { ...scope, currency, status: { in: ["APPROVED", "PARTIALLY_PAID", "PAID"] } },
+        select: { id: true, total: true, paidAmount: true, dueDate: true },
       }),
       this.listBankAccounts(scope),
       this.prisma.supplierInvoice.count({ where: { ...scope, status: "RECORDED" } }),
     ]);
-    const due = (rows: Array<{ total: Prisma.Decimal; paidAmount: Prisma.Decimal; dueDate: Date | null }>, overdueOnly: boolean) =>
+    const [customerCredits, supplierCredits] = await Promise.all([
+      invoiceCreditTotals(this.prisma, scope, "CUSTOMER", customer.map((invoice) => invoice.id)),
+      canReadPayables ? invoiceCreditTotals(this.prisma, scope, "SUPPLIER", supplier.map((invoice) => invoice.id)) : new Map<string, CreditTotals>(),
+    ]);
+    const due = (rows: Array<{ id: string; total: Prisma.Decimal; paidAmount: Prisma.Decimal; dueDate: Date | null }>, overdueOnly: boolean, credits: Map<string, CreditTotals>) =>
       sumDecimals(
         rows
           .filter((row) => !overdueOnly || (row.dueDate !== null && row.dueDate < today))
-          .map((row) => dec(row.total).minus(row.paidAmount)),
+          .map((row) => dec(netInvoiceFigures(row, credits.get(row.id)).balanceDue)),
       );
     return {
       currency,
-      receivables: money(due(customer, false)),
-      receivablesOverdue: money(due(customer, true)),
+      receivables: money(due(customer, false, customerCredits)),
+      receivablesOverdue: money(due(customer, true, customerCredits)),
+      customerRefundsDue: money(sumDecimals(customer.map((row) => netInvoiceFigures(row, customerCredits.get(row.id)).refundDue))),
+      supplierRefundsDue: canReadPayables ? money(sumDecimals(supplier.map((row) => netInvoiceFigures(row, supplierCredits.get(row.id)).refundDue))) : null,
       // Deny-by-default : les dettes fournisseurs ne sont exposees qu'avec finance.payable.read.
-      payables: canReadPayables ? money(due(supplier, false)) : null,
-      payablesOverdue: canReadPayables ? money(due(supplier, true)) : null,
+      payables: canReadPayables ? money(due(supplier, false, supplierCredits)) : null,
+      payablesOverdue: canReadPayables ? money(due(supplier, true, supplierCredits)) : null,
       cashPosition: money(sumDecimals(accounts.filter((account) => account.currency === currency).map((account) => account.balance))),
       toApprove,
     };
@@ -682,6 +783,33 @@ export class FinanceService {
     `;
     if (rows.length === 0) throw new NotFoundException("Supplier invoice not found");
     return tx.supplierInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
+  }
+
+  private toCollectionReminderView(
+    reminder: Prisma.CustomerInvoiceReminderGetPayload<{ include: { invoice: { select: { id: true; code: true; customerName: true; currency: true; dueDate: true; total: true; paidAmount: true; status: true } } } }>,
+    credits: CreditTotals = zeroCredits(),
+  ): CollectionReminderView {
+    const today = startOfToday();
+    const dueDate = reminder.invoice.dueDate!;
+    const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / 86_400_000));
+    const balanceDue = netInvoiceFigures(reminder.invoice, credits).balanceDue;
+    return {
+      id: reminder.id,
+      invoiceId: reminder.invoiceId,
+      invoiceCode: reminder.invoice.code,
+      customerName: reminder.invoice.customerName,
+      currency: reminder.invoice.currency.trim(),
+      dueDate: dueDate.toISOString(),
+      scheduledFor: reminder.scheduledFor.toISOString(),
+      daysOverdue,
+      level: reminder.level,
+      balanceDue: money(balanceDue),
+      status: reminder.status,
+      sentAt: reminder.sentAt?.toISOString() ?? null,
+      sentByUserId: reminder.sentByUserId,
+      note: reminder.note,
+      createdAt: reminder.createdAt.toISOString(),
+    };
   }
 
   private async references(scope: CompanyScope, contractIds: Array<string | null>, projectIds: Array<string | null>) {
@@ -758,8 +886,8 @@ function lineView(line: InvoiceLineRow) {
     id: line.id,
     position: line.position,
     description: line.description,
-    quantity: qty(line.quantity),
-    unitPrice: money(line.unitPrice),
+    quantity: dec(line.quantity).toFixed(6),
+    unitPrice: dec(line.unitPrice).toFixed(6),
     taxRate: dec(line.taxRate).toFixed(2),
     lineTotal: money(line.lineTotal),
     lineTax: money(line.lineTax),
@@ -789,9 +917,14 @@ function paymentView(payment: PaymentRow, invoiceCode: string | null, counterpar
 function toCustomerView(
   invoice: Prisma.CustomerInvoiceGetPayload<{ include: { lines: true; payments: { include: { bankAccount: true } } } }>,
   refs: { contracts: Map<string, string>; projects: Map<string, string> },
+  credits: CreditTotals = zeroCredits(),
 ): CustomerInvoiceView {
-  const balance = dec(invoice.total).minus(invoice.paidAmount);
+  const credit = netInvoiceFigures(invoice, credits);
+  const balance = dec(credit.balanceDue);
+  const status = OPEN_CUSTOMER.includes(invoice.status as typeof OPEN_CUSTOMER[number])
+    ? (balance.isZero() ? "PAID" : dec(credit.netPaidAmount).greaterThan(0) ? "PARTIALLY_PAID" : "ISSUED") : invoice.status;
   return {
+    credit,
     id: invoice.id,
     code: invoice.code,
     customerName: invoice.customerName,
@@ -803,7 +936,7 @@ function toCustomerView(
     currency: invoice.currency.trim(),
     issueDate: invoice.issueDate?.toISOString() ?? null,
     dueDate: invoice.dueDate?.toISOString() ?? null,
-    status: invoice.status,
+    status,
     subtotal: money(invoice.subtotal),
     taxTotal: money(invoice.taxTotal),
     total: money(invoice.total),
@@ -821,10 +954,15 @@ function toCustomerView(
 function toSupplierView(
   invoice: Prisma.SupplierInvoiceGetPayload<{ include: { lines: true; payments: { include: { bankAccount: true } } } }>,
   refs: { suppliers: Map<string, string>; orders: Map<string, string>; projects: Map<string, string> },
+  credits: CreditTotals = zeroCredits(),
 ): SupplierInvoiceView {
-  const balance = dec(invoice.total).minus(invoice.paidAmount);
+  const credit = netInvoiceFigures(invoice, credits);
+  const balance = dec(credit.balanceDue);
+  const status = APPROVED_SUPPLIER.includes(invoice.status as typeof APPROVED_SUPPLIER[number])
+    ? (balance.isZero() ? "PAID" : dec(credit.netPaidAmount).greaterThan(0) ? "PARTIALLY_PAID" : "APPROVED") : invoice.status;
   const supplierName = refs.suppliers.get(invoice.supplierId) ?? "—";
   return {
+    credit,
     id: invoice.id,
     code: invoice.code,
     supplierId: invoice.supplierId,
@@ -837,7 +975,7 @@ function toSupplierView(
     currency: invoice.currency.trim(),
     invoiceDate: invoice.invoiceDate.toISOString(),
     dueDate: invoice.dueDate.toISOString(),
-    status: invoice.status,
+    status,
     matchStatus: invoice.matchStatus,
     matchNotes: invoice.matchNotes,
     subtotal: money(invoice.subtotal),

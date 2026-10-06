@@ -88,7 +88,7 @@ export class ProjectsService {
     });
   }
 
-  async detail(scope: CompanyScope, projectId: string): Promise<ProjectDetailView> {
+  async detail(scope: CompanyScope, projectId: string, permissions: Set<string> = new Set()): Promise<ProjectDetailView> {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, ...scope },
       include: {
@@ -112,7 +112,7 @@ export class ProjectsService {
     const progress = taskProgress(project.tasks);
     const taskCounts = { TODO: 0, IN_PROGRESS: 0, BLOCKED: 0, DONE: 0 } as Record<ProjectTaskStatus, number>;
     for (const task of project.tasks) taskCounts[task.status] += 1;
-    const costs = await projectCostFigures(this.prisma, scope, project.id);
+    const costs = await projectCostFigures(this.prisma, scope, project.id, project.currency, permissions);
     const now = new Date();
 
     return {
@@ -191,7 +191,7 @@ export class ProjectsService {
   // Projet
   // ---------------------------------------------------------------------
 
-  async create(scope: CompanyScope, body: unknown, actorUserId: string) {
+  async create(scope: CompanyScope, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const input = assertBody(body);
     const name = requiredText(input.name, "name", 180);
     const contractId = optionalId(input.contractId, "contractId");
@@ -267,10 +267,10 @@ export class ProjectsService {
       });
       return project.id;
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
-  async changeStatus(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string) {
+  async changeStatus(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const input = assertBody(body);
     const target = requiredEnum(input.status, "status", PROJECT_STATUSES);
     const reason = optionalText(input.reason, "reason", 500);
@@ -306,14 +306,14 @@ export class ProjectsService {
         reason,
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
   // ---------------------------------------------------------------------
   // WBS et budget
   // ---------------------------------------------------------------------
 
-  async addWbsItem(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string) {
+  async addWbsItem(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const input = assertBody(body);
     const code = requiredText(input.code, "code", 40);
     const name = requiredText(input.name, "name", 180);
@@ -349,10 +349,10 @@ export class ProjectsService {
         parentId,
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
-  async addBudgetLine(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string) {
+  async addBudgetLine(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const input = assertBody(body);
     const wbsItemId = requiredId(input.wbsItemId, "wbsItemId");
     const category = requiredEnum(input.category, "category", COST_CATEGORIES);
@@ -375,10 +375,10 @@ export class ProjectsService {
         amount: money(amount),
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
-  async removeBudgetLine(scope: CompanyScope, projectId: string, lineId: string, actorUserId: string) {
+  async removeBudgetLine(scope: CompanyScope, projectId: string, lineId: string, actorUserId: string, permissions: Set<string> = new Set()) {
     await this.prisma.$transaction(async (tx) => {
       const project = await this.lockProject(tx, scope, projectId);
       if (project.budgetBaselinedAt) throw new BadRequestException("Budget baseline is frozen: lines are immutable");
@@ -390,10 +390,10 @@ export class ProjectsService {
         amount: money(line.amount),
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
-  async baseline(scope: CompanyScope, projectId: string, actorUserId: string) {
+  async baseline(scope: CompanyScope, projectId: string, actorUserId: string, permissions: Set<string> = new Set()) {
     await this.prisma.$transaction(async (tx) => {
       const project = await this.lockProject(tx, scope, projectId);
       assertEditable(project.status);
@@ -409,14 +409,14 @@ export class ProjectsService {
         lineCount: lines.length,
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
   // ---------------------------------------------------------------------
   // Avenants
   // ---------------------------------------------------------------------
 
-  async requestChangeOrder(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string) {
+  async requestChangeOrder(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const input = assertBody(body);
     const wbsItemId = requiredId(input.wbsItemId, "wbsItemId");
     const title = requiredText(input.title, "title", 180);
@@ -442,7 +442,7 @@ export class ProjectsService {
         amount: money(amount),
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
   async decideChangeOrder(
@@ -452,6 +452,7 @@ export class ProjectsService {
     decision: "APPROVED" | "REJECTED",
     body: unknown,
     actorUserId: string,
+    permissions: Set<string> = new Set(),
   ) {
     const note = optionalText(assertBody(body ?? {}).note, "note", 1000);
     if (decision === "REJECTED" && !note) throw new BadRequestException("A note is required to reject a change order");
@@ -480,14 +481,14 @@ export class ProjectsService {
         { projectId, code: order.code, amount: money(order.amount), note },
       );
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
   // ---------------------------------------------------------------------
   // Taches, jalons, risques
   // ---------------------------------------------------------------------
 
-  async addTask(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string) {
+  async addTask(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const input = assertBody(body);
     const wbsItemId = requiredId(input.wbsItemId, "wbsItemId");
     const name = requiredText(input.name, "name", 180);
@@ -513,10 +514,10 @@ export class ProjectsService {
       });
       await writeAudit(tx, scope, actorUserId, "projects.task.created", "ProjectTask", task.id, { projectId, name });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
-  async setTaskStatus(scope: CompanyScope, projectId: string, taskId: string, body: unknown, actorUserId: string) {
+  async setTaskStatus(scope: CompanyScope, projectId: string, taskId: string, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const status = requiredEnum(assertBody(body).status, "status", TASK_STATUSES);
     await this.prisma.$transaction(async (tx) => {
       const project = await this.lockProject(tx, scope, projectId);
@@ -536,10 +537,10 @@ export class ProjectsService {
         to: status,
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
-  async addMilestone(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string) {
+  async addMilestone(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const input = assertBody(body);
     const name = requiredText(input.name, "name", 180);
     const dueDate = requiredDate(input.dueDate, "dueDate");
@@ -552,10 +553,10 @@ export class ProjectsService {
         name,
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
-  async achieveMilestone(scope: CompanyScope, projectId: string, milestoneId: string, actorUserId: string) {
+  async achieveMilestone(scope: CompanyScope, projectId: string, milestoneId: string, actorUserId: string, permissions: Set<string> = new Set()) {
     await this.prisma.$transaction(async (tx) => {
       await this.lockProject(tx, scope, projectId);
       const updated = await tx.projectMilestone.updateMany({
@@ -567,10 +568,10 @@ export class ProjectsService {
         projectId,
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
-  async addRisk(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string) {
+  async addRisk(scope: CompanyScope, projectId: string, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const input = assertBody(body);
     const title = requiredText(input.title, "title", 180);
     const description = optionalText(input.description, "description", 2000);
@@ -588,10 +589,10 @@ export class ProjectsService {
         score: probability * impact,
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
-  async updateRisk(scope: CompanyScope, projectId: string, riskId: string, body: unknown, actorUserId: string) {
+  async updateRisk(scope: CompanyScope, projectId: string, riskId: string, body: unknown, actorUserId: string, permissions: Set<string> = new Set()) {
     const input = assertBody(body);
     const status = optionalEnum(input.status, "status", RISK_STATUSES);
     const mitigation = optionalText(input.mitigation, "mitigation", 2000);
@@ -608,7 +609,7 @@ export class ProjectsService {
         status,
       });
     });
-    return this.detail(scope, projectId);
+    return this.detail(scope, projectId, permissions);
   }
 
   // ---------------------------------------------------------------------

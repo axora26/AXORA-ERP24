@@ -8,7 +8,7 @@ import { formatDateTime, formatDecimal } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
 import { MonthlyChart, monthLabel } from "../../components/monthly-chart";
-import { Button, CheckboxGroup, DataTable, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextField, Toggle } from "../../components/ui";
+import { DataUnavailable, Button, CheckboxGroup, DataTable, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextField, Toggle } from "../../components/ui";
 
 type TabId = "metrics" | "dashboards" | "snapshots";
 
@@ -33,6 +33,8 @@ export default function AnalyticsPage(): React.ReactElement {
   const views = data.data?.views ?? [];
   const denied = catalog.filter((entry) => !entry.granted);
   const board = (dashboards.data ?? []).find((entry) => entry.id === dashboardId) ?? null;
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Analyses & BI" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

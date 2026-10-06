@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException, creat
 import type { Request } from "express";
 import { hashSessionToken } from "@axora24/security";
 import { PrismaService } from "../core/prisma.service.js";
+import { PORTAL_MAX_AGE_MS, nextSessionExpiry } from "../auth/session-policy.js";
 
 export const PORTAL_COOKIE = "axora_portal_session";
 
@@ -28,7 +29,8 @@ export function readCookie(request: Request, name: string): string | undefined {
     .split(";")
     .map((item) => item.trim())
     .find((item) => item.startsWith(`${name}=`));
-  return part ? decodeURIComponent(part.slice(name.length + 1)) : undefined;
+  if (!part) return undefined;
+  try { return decodeURIComponent(part.slice(name.length + 1)); } catch { return undefined; }
 }
 
 /**
@@ -43,9 +45,12 @@ export class PortalSessionGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
     const token = readCookie(request, PORTAL_COOKIE);
-    if (!token) throw new UnauthorizedException("No portal session");
+    if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) throw new UnauthorizedException("No portal session");
     const session = await this.prisma.portalSession.findUnique({ where: { tokenHash: hashSessionToken(token) }, include: { principal: true } });
-    if (!session || session.revokedAt || session.expiresAt < new Date() || session.principal.status !== "ACTIVE") throw new UnauthorizedException("Invalid or expired portal session");
+    const now = Date.now();
+    if (!session || session.revokedAt || session.expiresAt.getTime() <= now || session.createdAt.getTime() + PORTAL_MAX_AGE_MS <= now || session.principal.status !== "ACTIVE") throw new UnauthorizedException("Invalid or expired portal session");
+    const extended = await this.prisma.portalSession.updateMany({ where: { id: session.id, revokedAt: null, expiresAt: { gt: new Date(now) } }, data: { expiresAt: nextSessionExpiry(session.createdAt, now, PORTAL_MAX_AGE_MS) } });
+    if (extended.count !== 1) throw new UnauthorizedException("Invalid or expired portal session");
     const principal = session.principal;
     request.portalPrincipal = {
       sessionId: session.id,

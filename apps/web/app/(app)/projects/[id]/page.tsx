@@ -17,6 +17,7 @@ import {
 import { formatDate, formatMoney, formatPercent } from "../../../lib/format";
 import { useMutation, useResource } from "../../../lib/hooks";
 import { useSession } from "../../../lib/session";
+import { ProjectOperations } from "../../../components/project-operations";
 import {
   ActionBar,
   Button,
@@ -39,7 +40,7 @@ import {
   TextField,
 } from "../../../components/ui";
 
-type TabId = "cockpit" | "wbs" | "planning" | "changes" | "follow";
+type TabId = "cockpit" | "wbs" | "planning" | "changes" | "follow" | "operations";
 
 type Dialog =
   | { kind: "status"; status: string; label: string }
@@ -148,10 +149,12 @@ export default function ProjectDetailPage(): React.ReactElement {
           { id: "planning", label: "Planning & tâches", count: project.tasks.length },
           { id: "changes", label: "Avenants", count: project.changeOrders.length },
           { id: "follow", label: "Jalons & risques", count: project.milestones.length + project.risks.length },
+          { id: "operations", label: "Opérations chantier" },
         ]}
       />
 
       {tab === "cockpit" && <Cockpit project={project} />}
+      {tab === "operations" && <ProjectOperations projectId={project.id} wbs={project.wbs} />}
 
       {tab === "wbs" && (
         <div className="stack">
@@ -511,8 +514,8 @@ function FigureCard({ label, figure, currency }: { label: string; figure: Projec
   return (
     <div className={`figure ${figure.available ? "" : "pending"}`}>
       <span>{label}</span>
-      <strong>{figure.available ? formatMoney(figure.amount, currency) : "Non alimenté"}</strong>
-      <small>{figure.available ? figure.source : `Source à venir : ${figure.source}`}</small>
+      <strong>{figure.available ? formatMoney(figure.amount, currency) : "Indisponible"}</strong>
+      <small>{figure.source}</small>
     </div>
   );
 }

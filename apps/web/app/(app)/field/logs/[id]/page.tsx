@@ -8,6 +8,7 @@ import { fieldApi } from "../../../../lib/modules/field";
 import { formatDate, formatDateTime, formatQuantity } from "../../../../lib/format";
 import { useMutation, useResource } from "../../../../lib/hooks";
 import { useSession } from "../../../../lib/session";
+import { BusinessPrintLink } from "../../../../components/business-print-link";
 import { EvidenceTimeline } from "../../../../components/field-evidence";
 import { ActionBar, Button, DataTable, DetailList, Empty, Feedback, Loading, PageHeader, Panel, StatusChip } from "../../../../components/ui";
 
@@ -34,7 +35,7 @@ export default function SiteLogPage(): React.ReactElement {
         breadcrumb={`Chantier / Journal / ${log.projectCode ?? ""}`}
         title={`Journal du ${formatDate(log.logDate)}`}
         subtitle={`${log.projectCode ?? ""} · rédigé par ${log.createdByName} · version ${log.version}`}
-        actions={<StatusChip status={log.status === "SIGNED" ? "verified" : "draft"} label={log.status === "SIGNED" ? `Signé le ${formatDateTime(log.signedAt)}` : "Brouillon"} />}
+        actions={<><BusinessPrintLink kind="daily-logs" id={log.id} companyId={session.activeCompanyId ?? undefined} /><StatusChip status={log.status === "SIGNED" ? "verified" : "draft"} label={log.status === "SIGNED" ? `Signé le ${formatDateTime(log.signedAt)}` : "Brouillon"} /></>}
       />
       <Feedback error={mutation.error} notice={mutation.notice} />
       <Panel title="Conditions et effectif">

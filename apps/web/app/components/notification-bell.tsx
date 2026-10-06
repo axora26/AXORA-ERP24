@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { NotificationView } from "@axora24/contracts";
 import { Bell, CheckCheck } from "lucide-react";
@@ -16,6 +16,8 @@ export function NotificationBell(): React.ReactElement {
   const [state, setState] = useState<{ unread: number; items: NotificationView[] }>({ unread: 0, items: [] });
   const [failed, setFailed] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
 
   const load = useCallback(async () => {
     try {
@@ -43,7 +45,10 @@ export function NotificationBell(): React.ReactElement {
       if (panelRef.current && !panelRef.current.contains(event.target as Node)) setOpen(false);
     }
     function onKey(event: KeyboardEvent): void {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     }
     window.addEventListener("mousedown", onDown);
     window.addEventListener("keydown", onKey);
@@ -60,11 +65,15 @@ export function NotificationBell(): React.ReactElement {
   }
 
   return (
-    <div className="notification-bell" ref={panelRef}>
+    <div className="notification-bell" ref={panelRef} onBlur={(event) => {
+      if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
+    }}>
       <button
         className="icon-button"
         aria-label={state.unread > 0 ? `Notifications (${state.unread} non lues)` : "Notifications"}
         aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        ref={triggerRef}
         type="button"
         onClick={() => {
           setOpen((value) => !value);
@@ -75,7 +84,7 @@ export function NotificationBell(): React.ReactElement {
         {state.unread > 0 && <span className="notification-count">{state.unread > 99 ? "99+" : state.unread}</span>}
       </button>
       {open && (
-        <div className="notification-panel" role="dialog" aria-label="Notifications">
+        <div className="notification-panel" role="dialog" aria-label="Notifications" id={panelId}>
           <header>
             <strong>Notifications</strong>
             {state.unread > 0 && (

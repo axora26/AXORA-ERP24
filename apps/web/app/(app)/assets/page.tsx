@@ -25,7 +25,7 @@ import { hrApi } from "../../lib/modules/hr";
 import { formatDate, formatDateTime, formatMoney, formatPercent, todayIso } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import {
+import { DataUnavailable,
   Button,
   DataTable,
   DateField,
@@ -85,6 +85,8 @@ export default function AssetsPage(): React.ReactElement {
   }
 
   const fleet = summary?.fleet;
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Actifs & maintenance" error={data.error} onRetry={() => void data.reload()}/>;
+
   return (
     <>
       <PageHeader

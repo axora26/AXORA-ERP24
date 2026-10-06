@@ -1,4 +1,5 @@
 /** INC-09 — Ressources humaines. Heures a 2 decimales, montants a 2 decimales. */
+import type { EmployeeServiceCardView, PayrollPolicyView, PayrollWarning } from "./hr-operations.js";
 
 export type EmployeeStatus = "ACTIVE" | "SUSPENDED" | "TERMINATED";
 export type ContractTypeHr = "PERMANENT" | "FIXED_TERM" | "TEMPORARY" | "CONTRACTOR" | "INTERN";
@@ -28,6 +29,7 @@ export interface EmployeeView {
   contractType: ContractTypeHr;
   status: EmployeeStatus;
   badgeCode: string | null;
+  serviceCard?: EmployeeServiceCardView | null;
   /** null sans la permission hr.payroll.read (donnees sensibles). */
   hourlyCost: string | null;
   baseSalary: string | null;
@@ -91,6 +93,38 @@ export interface LeaveRequestView {
   createdAt: string;
 }
 
+export type EmployeeAdvanceStatus = "REQUESTED" | "APPROVED" | "REJECTED" | "PAID" | "PARTIALLY_REPAID" | "SETTLED" | "CANCELLED";
+export type EmployeeAdvanceRepaymentMethod = "PAYROLL" | "BANK" | "CASH";
+
+export interface EmployeeAdvanceRepaymentView {
+  id: string;
+  amount: string;
+  method: EmployeeAdvanceRepaymentMethod;
+  repaymentDate: string;
+  note: string | null;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface EmployeeAdvanceView {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  amount: string;
+  repaidAmount: string;
+  remainingAmount: string;
+  currency: string;
+  reason: string;
+  status: EmployeeAdvanceStatus;
+  requestedAt: string;
+  requestedByUserId: string;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  paidAt: string | null;
+  settledAt: string | null;
+  repayments: EmployeeAdvanceRepaymentView[];
+}
+
 export interface PayrollRunView {
   id: string;
   period: string;
@@ -98,8 +132,11 @@ export interface PayrollRunView {
   currency: string;
   closedAt: string | null;
   totalGross: string;
-  /** Rappel explicite : aucune retenue legale n'est calculee. */
-  statutoryDeductions: "NOT_CONFIGURED";
+  totalDeductions: string;
+  netAmount: string | null;
+  statutoryDeductions: "CONFIGURED" | "NOT_CONFIGURED";
+  policy?: PayrollPolicyView;
+  warnings?: PayrollWarning[];
   lines: Array<{
     employeeId: string;
     employeeName: string;
@@ -108,5 +145,15 @@ export interface PayrollRunView {
     adjustments: string;
     adjustmentNotes: string | null;
     grossAmount: string;
+    attendanceHours?: string;
+    regularHours?: string;
+    overtimeHours?: string;
+    hourlyRate?: string;
+    automaticAmount?: string;
+    incomeTax?: string;
+    socialContribution?: string;
+    healthContribution?: string;
+    totalDeductions?: string;
+    netAmount?: string;
   }>;
 }

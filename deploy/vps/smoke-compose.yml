@@ -1,0 +1,44 @@
+# Pile de verification ephemere (aucun port public) : memes images que la
+# production, base jetable. Utilisee avant chaque mise en ligne.
+name: axora-erp24-smoke
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: axora_erp24
+      POSTGRES_USER: axora
+      POSTGRES_PASSWORD: smoke-only-password
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U axora -d axora_erp24"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    image: axora-erp24-api:candidate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://axora:smoke-only-password@postgres:5432/axora_erp24?schema=public
+      CORS_ORIGIN: http://smoke.local
+      TRUST_PROXY: loopback, uniquelocal
+      REGISTRATION_MODE: first-organization
+      MFA_ENCRYPTION_KEY: ${SMOKE_KEY_1}
+      INTEGRATION_ENCRYPTION_KEY: ${SMOKE_KEY_2}
+      SERVICE_CARD_ENCRYPTION_KEY: ${SMOKE_KEY_3}
+      AXORA_INVOICE_SIGNING_SECRET: ${SMOKE_KEY_4}
+      AUTOMATION_AUTORUN: "false"
+
+  web:
+    image: axora-erp24-web:candidate
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    ports:
+      - "127.0.0.1:3199:3100"

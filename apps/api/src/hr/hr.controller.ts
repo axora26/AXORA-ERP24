@@ -6,12 +6,13 @@ import { CurrentUser, Scope, ScopedController } from "../common/scope.guard.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import type { AuthenticatedUser } from "../auth/session.guard.js";
 import { HrService } from "./hr.service.js";
+import { ServiceCardService } from "./service-card.service.js";
 
 /** INC-09 — Ressources humaines. Les pointages sont append-only (aucune route de modification). */
 @Controller("hr")
 @ScopedController()
 export class HrController {
-  constructor(private readonly hr: HrService) {}
+  constructor(private readonly hr: HrService, private readonly cards: ServiceCardService) {}
 
   private permissions(request: Request): Set<string> {
     return request.axoraPermissions ?? new Set<string>();
@@ -80,19 +81,20 @@ export class HrController {
   @Post("attendance/scan")
   @RequirePermission(H.ATTENDANCE_CREATE)
   scanAttendance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    if (body && typeof body === "object" && ("cardToken" in body || ("source" in body && typeof body.source === "string" && body.source.trim().toUpperCase() === "QR"))) return this.cards.scanAttendance(scope, body, user.id);
     return this.hr.scanAttendance(scope, body, user.id);
   }
 
   @Get("timesheets")
   @RequirePermission(H.EMPLOYEE_READ)
-  timesheets(@Scope() scope: CompanyScope, @Query() query: Record<string, unknown>) {
-    return this.hr.listTimesheets(scope, query);
+  timesheets(@Scope() scope: CompanyScope, @Query() query: Record<string, unknown>, @Req() request: Request) {
+    return this.hr.listTimesheets(scope, query, this.permissions(request));
   }
 
   @Get("timesheets/:id")
   @RequirePermission(H.EMPLOYEE_READ)
-  timesheet(@Scope() scope: CompanyScope, @Param("id") id: string) {
-    return this.hr.getTimesheet(scope, id);
+  timesheet(@Scope() scope: CompanyScope, @Param("id") id: string, @Req() request: Request) {
+    return this.hr.getTimesheet(scope, id, this.permissions(request));
   }
 
   @Post("timesheets")
@@ -153,6 +155,42 @@ export class HrController {
   @RequirePermission(H.LEAVE_REQUEST)
   cancelLeave(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
     return this.hr.decideLeave(scope, id, "CANCELLED", body, user.id);
+  }
+
+  @Get("advances")
+  @RequirePermission(H.ADVANCE_READ)
+  advances(@Scope() scope: CompanyScope) {
+    return this.hr.listAdvances(scope);
+  }
+
+  @Post("advances")
+  @RequirePermission(H.ADVANCE_REQUEST)
+  requestAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    return this.hr.requestAdvance(scope, body, user.id);
+  }
+
+  @Post("advances/:id/approve")
+  @RequirePermission(H.ADVANCE_APPROVE)
+  approveAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.hr.decideAdvance(scope, id, "APPROVED", body, user.id);
+  }
+
+  @Post("advances/:id/reject")
+  @RequirePermission(H.ADVANCE_APPROVE)
+  rejectAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.hr.decideAdvance(scope, id, "REJECTED", body, user.id);
+  }
+
+  @Post("advances/:id/cancel")
+  @RequirePermission(H.ADVANCE_REQUEST)
+  cancelAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.hr.decideAdvance(scope, id, "CANCELLED", body, user.id);
+  }
+
+  @Post("advances/:id/repayments")
+  @RequirePermission(H.ADVANCE_REPAY)
+  repayAdvance(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.hr.repayAdvance(scope, id, body, user.id);
   }
 
   @Get("payroll")

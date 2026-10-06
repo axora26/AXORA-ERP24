@@ -3,6 +3,7 @@ import type {
   StockBalanceView,
   StockCountView,
   StockMovementView,
+  StockReservationView,
   WarehouseView,
 } from "@axora24/contracts";
 import { api } from "../api";
@@ -19,9 +20,12 @@ export const inventoryApi = {
   warehouses: () => api.get<WarehouseView[]>("/inventory/warehouses"),
   createWarehouse: (input: Record<string, unknown>) => api.post<WarehouseView>("/inventory/warehouses", input),
   balances: (params: { warehouseId?: string; itemId?: string } = {}) => api.get<StockBalanceView[]>(`/inventory/balances${query(params)}`),
+  reservations: (params: { projectId?: string; warehouseId?: string; itemId?: string; status?: string } = {}) => api.get<StockReservationView[]>(`/inventory/reservations${query(params)}`),
+  createReservation: (input: { projectId: string; itemId: string; warehouseId: string; wbsItemId?: string; quantity: string; neededAt?: string; reason: string; idempotencyKey: string }) => api.post<StockReservationView>("/inventory/reservations", input),
+  releaseReservation: (id: string, input: { reason: string; idempotencyKey: string }) => api.post<StockReservationView>(`/inventory/reservations/${id}/release`, input),
   movements: (params: { warehouseId?: string; itemId?: string; projectId?: string } = {}) =>
     api.get<StockMovementView[]>(`/inventory/movements${query(params)}`),
-  issue: (input: { warehouseId: string; projectId: string; wbsItemId?: string; reference?: string; idempotencyKey: string; lines: Array<{ itemId: string; quantity: string }> }) =>
+  issue: (input: { warehouseId: string; projectId: string; wbsItemId?: string; reference?: string; idempotencyKey: string; lines: Array<{ itemId: string; quantity: string; reservationId?: string }> }) =>
     api.post<{ posted: number }>("/inventory/issues", input),
   returnToStock: (input: { warehouseId: string; projectId: string; reference?: string; idempotencyKey: string; lines: Array<{ itemId: string; quantity: string }> }) =>
     api.post<{ posted: number }>("/inventory/returns", input),
@@ -46,4 +50,5 @@ export const MOVEMENT_LABEL: Record<string, string> = {
   ADJUSTMENT_IN: "Ajustement +",
   ADJUSTMENT_OUT: "Ajustement −",
   MAINTENANCE_ISSUE: "Sortie maintenance (OT)",
+  SUPPLIER_RETURN: "Retour fournisseur",
 };

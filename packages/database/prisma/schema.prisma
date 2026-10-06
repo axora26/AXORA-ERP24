@@ -49,7 +49,9 @@ model Company {
   organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branches     Branch[]
   users        CompanyMembership[]
+  payrollPolicy CompanyPayrollPolicy?
 
+  @@unique([id, organizationId])
   @@unique([organizationId, name])
   @@index([organizationId])
   @@map("companies")
@@ -75,6 +77,8 @@ model Branch {
 // ---------------------------------------------------------------------------
 
 model User {
+  mfaRecoveryCodeHashes String[] @default([])
+  themePreference     String    @default("system")
   id                  String    @id @default(cuid())
   organizationId      String
   email               String
@@ -263,6 +267,8 @@ enum CrmActivityType {
 }
 
 model CrmAccount {
+  archivedAt DateTime?
+  version Int @default(1)
   id             String   @id @default(cuid())
   organizationId String
   companyId      String
@@ -283,10 +289,13 @@ model CrmAccount {
 
   @@unique([companyId, name])
   @@index([organizationId, companyId])
+  @@index([organizationId, companyId, archivedAt])
   @@map("crm_accounts")
 }
 
 model CrmContact {
+  archivedAt DateTime?
+  version Int @default(1)
   id             String   @id @default(cuid())
   organizationId String
   companyId      String
@@ -304,6 +313,7 @@ model CrmContact {
 
   @@index([organizationId, companyId])
   @@index([accountId])
+  @@index([organizationId, companyId, archivedAt])
   @@map("crm_contacts")
 }
 
@@ -431,6 +441,16 @@ enum DqeStatus {
   ARCHIVED
 }
 
+/// Famille de coût utilisée pour analyser un chiffrage sans perdre le détail
+/// des lignes sources.
+enum DqeCostCategory {
+  MATERIAL
+  LABOR
+  EQUIPMENT
+  SUBCONTRACTING
+  OTHER
+}
+
 model EstimationStudy {
   id              String                @id @default(cuid())
   organizationId  String
@@ -441,6 +461,7 @@ model EstimationStudy {
   objective       String
   sourceReference String?
   status          EstimationStudyStatus @default(DRAFT)
+  version         Int                   @default(1)
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
@@ -482,19 +503,70 @@ model DqeDocument {
   title          String
   currency       String    @default("USD") @db.Char(3)
   status         DqeStatus @default(DRAFT)
+  /// Coefficients de chiffrage exprimés en pourcentage, bornés à 0..100.
+  overheadRate   Decimal   @default(0) @db.Decimal(9, 6)
+  marginRate     Decimal   @default(0) @db.Decimal(9, 6)
+  taxRate        Decimal   @default(0) @db.Decimal(9, 6)
   revision       Int       @default(1)
+  version        Int       @default(1)
   finalizedAt    DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  lines  DqeLine[]
-  source DqeStudySource?
+  lines    DqeLine[]
+  variants DqeVariant[]
+  source   DqeStudySource?
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
   @@index([organizationId, companyId, status, createdAt])
   @@index([opportunityId])
   @@map("dqe_documents")
+}
+
+/// Instantane immuable d'un DQE pour comparer des options de chiffrage.
+model DqeVariant {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  dqeId          String
+  code           String
+  title          String
+  currency       String   @db.Char(3)
+  revision       Int
+  overheadRate   Decimal  @db.Decimal(9, 6)
+  marginRate     Decimal  @db.Decimal(9, 6)
+  taxRate        Decimal  @db.Decimal(9, 6)
+  subtotal       Decimal  @db.Decimal(24, 6)
+  total          Decimal  @db.Decimal(24, 6)
+  snapshot       Json
+  createdAt      DateTime @default(now())
+
+  dqe DqeDocument @relation(fields: [dqeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([dqeId, code])
+  @@index([organizationId, companyId, dqeId, createdAt])
+  @@map("dqe_variants")
+}
+
+/// Catalogue d'ouvrages réutilisables par les études de l'entreprise.
+model DqeLibraryItem {
+  id             String          @id @default(cuid())
+  organizationId String
+  companyId      String
+  code           String
+  designation    String
+  unitCode       String
+  costCategory   DqeCostCategory @default(MATERIAL)
+  unitPrice      Decimal         @db.Decimal(24, 6)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([companyId, code])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, isActive, code])
+  @@map("dqe_library_items")
 }
 
 model DqeLine {
@@ -506,6 +578,7 @@ model DqeLine {
   reference      String?
   designation    String
   unitCode       String
+  costCategory   DqeCostCategory @default(MATERIAL)
   quantity       Decimal  @db.Decimal(24, 6)
   unitPrice      Decimal  @db.Decimal(24, 6)
   createdAt      DateTime @default(now())

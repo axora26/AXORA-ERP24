@@ -10,7 +10,7 @@ import { api } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import { Button, DataTable, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, SelectField, StatusChip, TextField } from "../../components/ui";
+import { DataUnavailable, Button, DataTable, Empty, Feedback, Form, Loading, Modal, PageHeader, Panel, SelectField, StatusChip, TextField } from "../../components/ui";
 import { InvitationReveal } from "../../components/invitation-reveal";
 
 export default function PortalAdminPage(): React.ReactElement {
@@ -27,6 +27,8 @@ export default function PortalAdminPage(): React.ReactElement {
         : Promise.resolve(null),
     [creating],
   );
+
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Portails client & fournisseur" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

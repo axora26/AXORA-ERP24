@@ -3,15 +3,16 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
-import type { InventoryItemView } from "@axora24/contracts";
-import { AlertTriangle, ArrowLeftRight, Boxes, ClipboardCheck, PackageMinus, Plus, QrCode, SlidersHorizontal, Warehouse } from "lucide-react";
+import type { InventoryItemView, StockReservationView } from "@axora24/contracts";
+import { AlertTriangle, ArrowLeftRight, Boxes, CalendarClock, ClipboardCheck, PackageCheck, PackageMinus, Plus, QrCode, SlidersHorizontal, Warehouse } from "lucide-react";
 import { MOVEMENT_LABEL, inventoryApi } from "../../lib/modules/inventory";
 import { newIdempotencyKey } from "../../lib/modules/procurement";
 import { projectsApi } from "../../lib/modules/projects";
 import { formatDateTime, formatMoney, formatQuantity, sumMoney } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import {
+import { BusinessPrintLink } from "../../components/business-print-link";
+import { DataUnavailable,
   Button,
   DataTable,
   DecimalField,
@@ -31,8 +32,8 @@ import {
   TextField,
 } from "../../components/ui";
 
-type TabId = "items" | "balances" | "ledger" | "warehouses" | "counts";
-type Dialog = "item" | "warehouse" | "issue" | "return" | "transfer" | "adjust" | "count" | { label: InventoryItemView };
+type TabId = "items" | "balances" | "reservations" | "ledger" | "warehouses" | "counts";
+type Dialog = "item" | "warehouse" | "issue" | "return" | "transfer" | "adjust" | "count" | "reservation" | { label: InventoryItemView } | { release: StockReservationView };
 
 export default function InventoryPage(): React.ReactElement {
   const session = useSession();
@@ -43,6 +44,7 @@ export default function InventoryPage(): React.ReactElement {
   const mutation = useMutation();
   const data = useResource(() => Promise.all([inventoryApi.items(), inventoryApi.warehouses(), inventoryApi.counts()]));
   const balances = useResource(() => inventoryApi.balances({ warehouseId: warehouseFilter || undefined }), [warehouseFilter]);
+  const reservations = useResource(() => inventoryApi.reservations({ warehouseId: warehouseFilter || undefined }), [warehouseFilter]);
   const ledger = useResource(() => inventoryApi.movements({ warehouseId: warehouseFilter || undefined }), [warehouseFilter]);
   const [items, warehouses, counts] = data.data ?? [[], [], []];
   const company = session.companies.find((candidate) => candidate.id === session.activeCompanyId) ?? session.companies[0];
@@ -53,7 +55,7 @@ export default function InventoryPage(): React.ReactElement {
     const result = await mutation.run(action, success);
     if (result !== undefined) {
       setDialog(null);
-      await Promise.all([data.reload(), balances.reload(), ledger.reload()]);
+      await Promise.all([data.reload(), balances.reload(), reservations.reload(), ledger.reload()]);
     }
   }
 
@@ -61,13 +63,15 @@ export default function InventoryPage(): React.ReactElement {
   const warehouseOptions = warehouses.filter((warehouse) => warehouse.isActive).map((warehouse) => ({ value: warehouse.id, label: `${warehouse.code} — ${warehouse.name}` }));
   const totalValue = sumMoney(warehouses.map((warehouse) => warehouse.totalValue));
 
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Stock & logistique" error={data.error} onRetry={() => void data.reload()}/>;
+
   return (
     <>
       <PageHeader
         breadcrumb="Supply chain / Stock"
         title="Stock & logistique"
         subtitle="Grand livre des mouvements immuable, soldes jamais négatifs, valorisation au coût moyen pondéré."
-        onRefresh={() => void Promise.all([data.reload(), balances.reload(), ledger.reload()])}
+        onRefresh={() => void Promise.all([data.reload(), balances.reload(), reservations.reload(), ledger.reload()])}
         actions={
           <>
             {canMove && (
@@ -123,6 +127,7 @@ export default function InventoryPage(): React.ReactElement {
             tabs={[
               { id: "items", label: "Articles", count: items.length },
               { id: "balances", label: "Soldes par magasin" },
+              { id: "reservations", label: "Réservations", count: reservations.data?.filter((reservation) => reservation.status === "ACTIVE").length },
               { id: "ledger", label: "Grand livre" },
               { id: "warehouses", label: "Magasins", count: warehouses.length },
               { id: "counts", label: "Inventaires", count: counts.length },
@@ -212,6 +217,29 @@ export default function InventoryPage(): React.ReactElement {
               </Panel>
             )}
 
+            {tab === "reservations" && (
+              <Panel
+                title="Réservations de stock"
+                subtitle="Les quantités réservées restent indisponibles pour les autres sorties jusqu'à leur consommation ou leur libération."
+                actions={session.can("inventory.reservation.manage") ? <Button onClick={() => setDialog("reservation")}><PackageCheck size={14} aria-hidden="true" /> Réserver du matériel</Button> : undefined}
+              >
+                <DataTable
+                  rows={reservations.data ?? []}
+                  empty={<Empty icon={<CalendarClock size={22} />} title="Aucune réservation" body="Réservez les articles nécessaires à un chantier pour sécuriser son approvisionnement." />}
+                  columns={[
+                    { key: "project", header: "Projet", render: (reservation) => <><strong>{reservation.projectCode}</strong><small>{reservation.reason}</small></> },
+                    { key: "item", header: "Article", render: (reservation) => `${reservation.itemCode} — ${reservation.itemName}` },
+                    { key: "warehouse", header: "Magasin", render: (reservation) => reservation.warehouseCode },
+                    { key: "quantity", header: "Réservée", align: "right", render: (reservation) => `${formatQuantity(reservation.quantity, 3)} ${reservation.unitCode}` },
+                    { key: "remaining", header: "Restante", align: "right", render: (reservation) => <strong>{formatQuantity(reservation.remainingQuantity, 3)} {reservation.unitCode}</strong> },
+                    { key: "neededAt", header: "Besoin le", render: (reservation) => reservation.neededAt ? formatDateTime(reservation.neededAt) : "—" },
+                    { key: "status", header: "État", render: (reservation) => <StatusChip status={reservation.status === "ACTIVE" ? "pending" : reservation.status === "FULFILLED" ? "done" : "closed"} label={reservation.status === "ACTIVE" ? "Active" : reservation.status === "FULFILLED" ? "Consommée" : "Libérée"} /> },
+                    { key: "actions", header: "", align: "right", render: (reservation) => reservation.status === "ACTIVE" && session.can("inventory.reservation.manage") ? <Button variant="ghost" onClick={() => setDialog({ release: reservation })}>Libérer</Button> : null },
+                  ]}
+                />
+              </Panel>
+            )}
+
             {tab === "ledger" && (
               <Panel title="Grand livre des mouvements" subtitle="Append-only : aucune écriture ne peut être modifiée ni supprimée (garanti en base de données)">
                 <DataTable
@@ -248,6 +276,7 @@ export default function InventoryPage(): React.ReactElement {
                     },
                     { key: "value", header: "Valeur", align: "right", render: (movement) => <span className="num">{formatMoney(movement.valueDelta)}</span> },
                     { key: "by", header: "Par", render: (movement) => movement.createdByName ?? "—" },
+                    { key: "document", header: "Bon", render: movement => ["ISSUE", "RETURN"].includes(movement.type) ? <BusinessPrintLink kind="stock-movements" id={movement.id} companyId={session.activeCompanyId ?? undefined}>Imprimer le bon</BusinessPrintLink> : "—" },
                   ]}
                 />
               </Panel>
@@ -375,7 +404,10 @@ function InventoryDialog({
   const projectOptions = (projects.data ?? []).map((project) => ({ value: project.id, label: `${project.code} — ${project.name}` }));
   const decimal = (field: string) => value(field).replace(",", ".");
 
-  if (typeof dialog === "object") return <QrLabel item={dialog.label} onClose={onClose} />;
+  if (typeof dialog === "object" && "label" in dialog) return <QrLabel item={dialog.label} onClose={onClose} />;
+  if (typeof dialog === "object" && "release" in dialog) {
+    return <ReleaseReservation reservation={dialog.release} saving={saving} error={error} onClose={onClose} onDone={onDone} />;
+  }
 
   let title = "";
   let body: React.ReactNode = null;
@@ -532,6 +564,39 @@ function InventoryDialog({
         </Form>
       );
       break;
+    case "reservation":
+      title = "Réserver du matériel";
+      body = (
+        <Form
+          submitLabel="Créer la réservation"
+          saving={saving}
+          onSubmit={() =>
+            onDone(
+              () =>
+                inventoryApi.createReservation({
+                  projectId: value("projectId"),
+                  itemId: value("itemId"),
+                  warehouseId: value("warehouseId"),
+                  wbsItemId: value("wbsItemId") || undefined,
+                  quantity: decimal("quantity"),
+                  neededAt: value("neededAt") || undefined,
+                  reason: value("reason"),
+                  idempotencyKey,
+                }),
+              "Réservation créée et quantité sécurisée.",
+            )
+          }
+        >
+          <SelectField label="Projet" value={value("projectId")} onChange={set("projectId")} options={projectOptions} required />
+          <SelectField label="Magasin de chantier" value={value("warehouseId")} onChange={set("warehouseId")} options={warehouseOptions} required />
+          <SelectField label="Article" value={value("itemId")} onChange={set("itemId")} options={itemOptions} required wide />
+          <DecimalField label="Quantité" value={value("quantity")} onChange={set("quantity")} required hint="La quantité libre est recalculée côté serveur." />
+          <TextField label="Date de besoin" type="date" value={value("neededAt")} onChange={set("neededAt")} />
+          <TextField label="Lot WBS (facultatif)" value={value("wbsItemId")} onChange={set("wbsItemId")} hint="Identifiant du lot feuille si l'imputation est connue." />
+          <TextAreaField label="Motif" value={value("reason")} onChange={set("reason")} required wide />
+        </Form>
+      );
+      break;
     case "count":
       title = "Ouvrir un inventaire";
       body = (
@@ -556,6 +621,20 @@ function InventoryDialog({
     <Modal title={title} onClose={onClose} wide={dialog !== "count"}>
       <Feedback error={error} />
       {body}
+    </Modal>
+  );
+}
+
+function ReleaseReservation({ reservation, saving, error, onClose, onDone }: { reservation: StockReservationView; saving: boolean; error: string; onClose: () => void; onDone: (action: () => Promise<unknown>, success: string) => Promise<void> }): React.ReactElement {
+  const [reason, setReason] = useState("");
+  const [idempotencyKey] = useState(() => newIdempotencyKey("release"));
+  return (
+    <Modal title="Libérer la réservation" onClose={onClose}>
+      <Feedback error={error} />
+      <p className="inline-note"><strong>{reservation.itemCode}</strong> · {formatQuantity(reservation.remainingQuantity, 3)} {reservation.unitCode} restant(s) pour {reservation.projectCode}.</p>
+      <Form submitLabel="Libérer la quantité" saving={saving} onSubmit={() => onDone(() => inventoryApi.releaseReservation(reservation.id, { reason, idempotencyKey }), "Réservation libérée.")}>
+        <TextAreaField label="Motif de libération" value={reason} onChange={setReason} required wide />
+      </Form>
     </Modal>
   );
 }

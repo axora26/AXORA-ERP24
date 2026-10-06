@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
-import { APP_FILTER } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD } from "@nestjs/core";
+import { OriginGuard } from "./auth/origin.guard.js";
+import { JsonBodyGuard } from "./auth/json-body.guard.js";
 import { FrenchMessagesFilter } from "./common/i18n/french-messages.filter.js";
 import { HealthModule } from "./health/health.module.js";
 import { CommonModule } from "./common/common.module.js";
@@ -36,6 +38,6 @@ import { IntegrationsModule } from "./integrations/integrations.module.js";
 @Module({
   imports: [CommonModule, HealthModule, AuthModule, CoreModule, CrmModule, EstimationModule, SalesModule, DashboardModule, AdminModule, ProjectsModule, ProcurementModule, InventoryModule, FinanceModule, HrModule, FilesModule, DocumentsModule, FieldModule, QhseModule, MepModule, CommissioningModule, BimModule, AssetsModule, SmartModule, EnergyModule, FleetModule, SubcontractingModule, PortalModule, WorkflowModule, CopilotModule, AnalyticsModule, IntegrationsModule],
   // Messages d'erreur en francais pour tous les clients (interface, portails, API publique).
-  providers: [{ provide: APP_FILTER, useClass: FrenchMessagesFilter }],
+  providers: [{ provide: APP_FILTER, useClass: FrenchMessagesFilter }, { provide: APP_GUARD, useClass: OriginGuard }, { provide: APP_GUARD, useClass: JsonBodyGuard }],
 })
 export class AppModule {}

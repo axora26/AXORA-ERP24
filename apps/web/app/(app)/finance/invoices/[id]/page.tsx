@@ -4,11 +4,12 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { CustomerInvoiceView } from "@axora24/contracts";
-import { Banknote, Printer, Send, XCircle } from "lucide-react";
+import { Banknote, Download, Printer, Send, ShieldCheck, XCircle } from "lucide-react";
 import { CUSTOMER_STATUS_LABEL, financeApi } from "../../../../lib/modules/finance";
 import { formatDate, formatMoney, formatQuantity } from "../../../../lib/format";
 import { useMutation, useResource } from "../../../../lib/hooks";
 import { useSession } from "../../../../lib/session";
+import { api } from "../../../../lib/api";
 import { PaymentModal, PaymentsTable } from "../../../../components/finance-payment";
 import {
   Button,
@@ -30,9 +31,12 @@ export default function CustomerInvoicePage(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const session = useSession();
   const resource = useResource(() => Promise.all([financeApi.invoice(id), financeApi.bankAccounts()]), [id]);
+  const signatures = useResource(() => financeApi.invoiceSignatures(id), [id]);
   const mutation = useMutation();
   const [override, setOverride] = useState<CustomerInvoiceView | null>(null);
-  const [dialog, setDialog] = useState<"issue" | "cancel" | "pay" | null>(null);
+  const [dialog, setDialog] = useState<"issue" | "cancel" | "pay" | "revoke" | null>(null);
+  const [signatureToRevoke, setSignatureToRevoke] = useState<string | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
   const invoice = override ?? resource.data?.[0];
   const accounts = resource.data?.[1] ?? [];
 
@@ -47,7 +51,9 @@ export default function CustomerInvoicePage(): React.ReactElement {
   if (resource.loading && !invoice) return <Loading label="Chargement de la facture…" />;
   if (!invoice) return <Feedback error={resource.error || "Facture introuvable."} />;
   const canManage = session.can("finance.invoice.manage");
+  const canSign = session.can("finance.invoice.sign") || session.can("finance.invoice.manage");
   const payable = invoice.status === "ISSUED" || invoice.status === "PARTIALLY_PAID";
+  const hasValidSignature = (signatures.data ?? []).some((signature) => signature.status === "VALID");
 
   return (
     <>
@@ -59,9 +65,14 @@ export default function CustomerInvoicePage(): React.ReactElement {
           <>
             <StatusChip status={invoice.overdue ? "overdue" : invoice.status} label={invoice.overdue ? "Échue" : CUSTOMER_STATUS_LABEL[invoice.status]} />
             {invoice.status !== "DRAFT" && invoice.status !== "CANCELLED" && (
-              <Link className="btn btn-secondary" href={`/print/invoices/${invoice.id}`} target="_blank">
-                <Printer size={14} aria-hidden="true" /> Imprimer / PDF
-              </Link>
+              <>
+                <Link className="btn btn-secondary" href={`/print/invoices/${invoice.id}${session.activeCompanyId ? `?companyId=${encodeURIComponent(session.activeCompanyId)}` : ""}`} target="_blank" rel="noopener noreferrer">
+                  <Printer size={14} aria-hidden="true" /> Imprimer
+                </Link>
+                <a className="btn btn-secondary" href={api.downloadUrl(`/finance/invoices/${invoice.id}/export.pdf`)} target="_blank" rel="noopener noreferrer">
+                  <Download size={14} aria-hidden="true" /> {hasValidSignature ? "Télécharger PDF signé" : "Télécharger PDF"}
+                </a>
+              </>
             )}
             {canManage && invoice.status === "DRAFT" && (
               <>
@@ -76,6 +87,11 @@ export default function CustomerInvoicePage(): React.ReactElement {
             {session.can("finance.payment.create") && payable && (
               <Button variant="primary" onClick={() => setDialog("pay")}>
                 <Banknote size={14} aria-hidden="true" /> Encaisser
+              </Button>
+            )}
+            {canSign && invoice.status !== "DRAFT" && invoice.status !== "CANCELLED" && !(signatures.data ?? []).some((signature) => signature.status === "VALID") && (
+              <Button variant="secondary" disabled={mutation.saving} onClick={() => void mutation.run(async () => { const result = await financeApi.signInvoice(invoice.id); await signatures.reload(); return result; }, "Facture signée et empreinte enregistrée.")}>
+                <ShieldCheck size={14} aria-hidden="true" /> Signer la facture
               </Button>
             )}
           </>
@@ -94,6 +110,16 @@ export default function CustomerInvoicePage(): React.ReactElement {
           ]}
         />
         {invoice.cancelReason && <p className="inline-warning">Annulée : {invoice.cancelReason}</p>}
+      </Panel>
+      <Panel title="Signature électronique interne" subtitle="Preuve cryptographique de l’empreinte du document. La qualification légale externe dépend d’un certificat et d’un prestataire configurés.">
+        {(signatures.data ?? []).length === 0 ? <p className="empty-state">Aucune signature enregistrée pour cette facture.</p> : (
+          <DataTable rows={signatures.data ?? []} empty={null} columns={[
+            { key: "status", header: "État", render: (signature) => <StatusChip status={signature.status === "VALID" ? "done" : "critical"} label={signature.status === "VALID" ? "Valide" : "Révoquée"} /> },
+            { key: "hash", header: "Empreinte SHA-256", render: (signature) => <code className="signature-hash">{signature.documentHash}</code> },
+            { key: "date", header: "Signée le", render: (signature) => formatDate(signature.signedAt) },
+            { key: "action", header: "Actions", render: (signature) => <div className="table-actions"><Button variant="ghost" onClick={() => void mutation.run(() => financeApi.verifyInvoiceSignature(invoice.id, signature.id), "Signature vérifiée.")}>Vérifier</Button>{canSign && signature.status === "VALID" && <Button variant="ghost" onClick={() => { setSignatureToRevoke(signature.id); setDialog("revoke"); }}>Révoquer</Button>}</div> },
+          ]} />
+        )}
       </Panel>
       <div className="stack">
         <Panel title="Lignes">
@@ -132,7 +158,7 @@ export default function CustomerInvoicePage(): React.ReactElement {
         </Panel>
       </div>
 
-      {dialog === "issue" && <IssueModal saving={mutation.saving} error={mutation.error} onClose={() => setDialog(null)} onSubmit={(input) => apply(() => financeApi.issueInvoice(invoice.id, input), "Facture émise : numéro légal attribué.")} />}
+      {dialog === "issue" && <IssueModal saving={mutation.saving} error={mutation.error} onClose={() => setDialog(null)} onSubmit={(input) => apply(async () => { const { autoSign, ...issueInput } = input; const issued = await financeApi.issueInvoice(invoice.id, issueInput); if (autoSign) { await financeApi.signInvoice(invoice.id); await signatures.reload(); } return issued; }, input.autoSign ? "Facture émise et signée électroniquement." : "Facture émise : numéro légal attribué.")} />}
       {dialog === "cancel" && (
         <Modal title="Annuler le brouillon" onClose={() => setDialog(null)}>
           <Feedback error={mutation.error} />
@@ -151,19 +177,32 @@ export default function CustomerInvoicePage(): React.ReactElement {
           onSubmit={(input) => apply(() => financeApi.pay<CustomerInvoiceView>({ invoiceType: "CUSTOMER", invoiceId: invoice.id, ...input }), "Encaissement enregistré.")}
         />
       )}
+      {dialog === "revoke" && signatureToRevoke && (
+        <Modal title="Révoquer la signature" onClose={() => { setDialog(null); setSignatureToRevoke(null); }}>
+          <Feedback error={mutation.error} />
+          <Form columns={1} submitLabel="Révoquer la signature" saving={mutation.saving} onSubmit={async () => {
+            const result = await mutation.run(() => financeApi.revokeInvoiceSignature(invoice.id, signatureToRevoke, revokeReason), "Signature révoquée.");
+            if (result !== undefined) { await signatures.reload(); setDialog(null); setSignatureToRevoke(null); }
+          }}>
+            <TextAreaField label="Motif de révocation" value={revokeReason} onChange={setRevokeReason} required hint="La révocation est définitive et sera inscrite dans le journal d'audit." />
+          </Form>
+        </Modal>
+      )}
     </>
   );
 }
 
-function IssueModal({ saving, error, onClose, onSubmit }: { saving: boolean; error: string; onClose: () => void; onSubmit: (input: { issueDate?: string; dueDays?: number }) => Promise<void> }): React.ReactElement {
+function IssueModal({ saving, error, onClose, onSubmit }: { saving: boolean; error: string; onClose: () => void; onSubmit: (input: { issueDate?: string; dueDays?: number; autoSign?: boolean }) => Promise<void> }): React.ReactElement {
   const [issueDate, setIssueDate] = useState("");
   const [dueDays, setDueDays] = useState("30");
+  const [autoSign, setAutoSign] = useState(true);
   return (
     <Modal title="Émettre la facture" onClose={onClose}>
       <Feedback error={error} />
-      <Form submitLabel="Émettre" saving={saving} onSubmit={() => onSubmit({ issueDate: issueDate || undefined, dueDays: Number(dueDays || "30") })}>
+      <Form submitLabel={autoSign ? "Émettre et signer" : "Émettre"} saving={saving} onSubmit={() => onSubmit({ issueDate: issueDate || undefined, dueDays: Number(dueDays || "30"), autoSign })}>
         <DateField label="Date d'émission" value={issueDate} onChange={setIssueDate} hint="Aujourd'hui par défaut ; jamais antérieure à la dernière facture émise." />
         <TextField label="Délai de paiement (jours)" inputMode="numeric" value={dueDays} onChange={setDueDays} />
+        <label className="checkbox-field"><input type="checkbox" checked={autoSign} onChange={(event) => setAutoSign(event.currentTarget.checked)} /> <span><strong>Signer automatiquement</strong><small>Empreinte interne HMAC-SHA256 ajoutée dès l'émission et visible sur le PDF.</small></span></label>
       </Form>
     </Modal>
   );

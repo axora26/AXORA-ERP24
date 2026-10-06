@@ -382,7 +382,8 @@ export class WorkflowService {
       const delivery = await tx.webhookDelivery.findFirst({ where: { ...scope, id } });
       if (!delivery) throw new NotFoundException("Livraison introuvable");
       if (delivery.status !== "FAILED") throw new ConflictException("Seule une livraison en échec peut être relancée");
-      await tx.webhookDelivery.update({ where: { id }, data: { status: "PENDING", nextAttemptAt: new Date() } });
+      const claimed = await tx.webhookDelivery.updateMany({ where: { ...scope, id, status: "FAILED", attempts: delivery.attempts }, data: { status: "PENDING", nextAttemptAt: new Date() } });
+      if (claimed.count !== 1) throw new ConflictException("Seule une livraison en échec peut être relancée");
       await writeAudit(tx, scope, userId, "workflow.webhook.retried", "WebhookDelivery", id, { attempts: delivery.attempts });
     });
     await this.automation.deliverDue(scope, new Date(), id);

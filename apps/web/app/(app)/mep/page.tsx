@@ -8,7 +8,7 @@ import { CALC_STATUS_CHIP, CALC_STATUS_LABEL, DISCIPLINE_LABEL, EQUIPMENT_STATUS
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
 import { ProjectPicker, useProjectChoice } from "../../components/project-picker";
-import { Button, DataTable, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextAreaField, TextField } from "../../components/ui";
+import { DataUnavailable, Button, DataTable, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, Tabs, TextAreaField, TextField } from "../../components/ui";
 
 type TabId = "equipment" | "systems" | "calculations" | "quantities" | "coverage";
 type Dialog = "system" | "equipment" | "calculation";
@@ -35,6 +35,9 @@ export default function MepPage(): React.ReactElement {
       else await data.reload();
     }
   }
+
+  if (projects.error && !projects.data && !projects.loading) return <DataUnavailable title="Ingénierie MEP" error={projects.error} onRetry={() => void projects.reload()}/>;
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Ingénierie MEP" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

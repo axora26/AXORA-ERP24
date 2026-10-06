@@ -21,7 +21,7 @@ export const DEMO_ACCOUNT = {
   organizationSlug: "axora-demo",
   companyName: "AXORA Démo Construction SARL",
   ownerEmail: "demo@axora-erp24.local",
-  ownerPassword: "Demo2026!",
+  ownerPassword: "Demo2026!Axora",
   ownerFullName: "Démo Administrateur",
 };
 
@@ -66,5 +66,5 @@ async function main() {
 
 main().catch((error) => {
   console.error(`Echec du seed DEMO : ${error.message}`);
-  process.exit(1);
+    process.exitCode = 1;
 });

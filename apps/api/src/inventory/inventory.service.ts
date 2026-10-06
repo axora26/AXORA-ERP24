@@ -6,6 +6,7 @@ import type {
   StockBalanceView,
   StockCountView,
   StockMovementView,
+  StockReservationView,
   WarehouseView,
 } from "@axora24/contracts";
 import { PrismaService } from "../core/prisma.service.js";
@@ -16,6 +17,7 @@ import { dec, money, qty, sumDecimals } from "../common/decimal.js";
 import {
   assertBody,
   optionalBoolean,
+  optionalDate,
   optionalDecimal,
   optionalEnum,
   optionalId,
@@ -25,7 +27,7 @@ import {
   requiredId,
   requiredText,
 } from "../common/validation.js";
-import { StockLedgerService } from "./stock-ledger.service.js";
+import { StockLedgerService, lockWarehouses } from "./stock-ledger.service.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -173,7 +175,15 @@ export class InventoryService {
       include: { item: true, warehouse: true },
       orderBy: [{ warehouse: { code: "asc" } }, { item: { code: "asc" } }],
     });
-    return balances.map((balance) => ({
+    const reserved = await this.prisma.stockReservation.groupBy({
+      by: ["itemId", "warehouseId"],
+      where: { ...scope, status: "ACTIVE" },
+      _sum: { remainingQuantity: true },
+    });
+    const reservedByBalance = new Map(reserved.map((row) => [`${row.itemId}:${row.warehouseId}`, dec(row._sum.remainingQuantity)]));
+    return balances.map((balance) => {
+      const reservedQuantity = reservedByBalance.get(`${balance.itemId}:${balance.warehouseId}`) ?? new Prisma.Decimal(0);
+      return {
       itemId: balance.itemId,
       itemCode: balance.item.code,
       itemName: balance.item.name,
@@ -183,7 +193,111 @@ export class InventoryService {
       quantity: qty(balance.quantity),
       value: money(balance.value),
       averageCost: dec(balance.quantity).isZero() ? null : dec(balance.value).div(balance.quantity).toFixed(4),
+      reservedQuantity: qty(reservedQuantity),
+      freeQuantity: qty(dec(balance.quantity).minus(reservedQuantity)),
+    };
+    });
+  }
+
+  async listReservations(scope: CompanyScope, query: Record<string, unknown>): Promise<StockReservationView[]> {
+    const projectId = optionalId(query.projectId, "projectId");
+    const itemId = optionalId(query.itemId, "itemId");
+    const warehouseId = optionalId(query.warehouseId, "warehouseId");
+    const status = optionalEnum(query.status, "status", ["ACTIVE", "FULFILLED", "RELEASED"] as const);
+    const rows = await this.prisma.stockReservation.findMany({
+      where: { ...scope, ...(projectId ? { projectId } : {}), ...(itemId ? { itemId } : {}), ...(warehouseId ? { warehouseId } : {}), ...(status ? { status } : {}) },
+      include: { project: { select: { code: true } }, item: true, warehouse: true },
+      orderBy: [{ status: "asc" }, { neededAt: "asc" }, { createdAt: "desc" }],
+    });
+    const names = await this.userNames(scope, rows.map((row) => row.createdByUserId));
+    return rows.map((row) => ({
+      id: row.id,
+      projectId: row.projectId,
+      projectCode: row.project.code,
+      wbsItemId: row.wbsItemId,
+      itemId: row.itemId,
+      itemCode: row.item.code,
+      itemName: row.item.name,
+      unitCode: row.item.unitCode,
+      warehouseId: row.warehouseId,
+      warehouseCode: row.warehouse.code,
+      quantity: qty(row.quantity),
+      remainingQuantity: qty(row.remainingQuantity),
+      status: row.status,
+      neededAt: row.neededAt?.toISOString() ?? null,
+      reason: row.reason,
+      createdByName: names.get(row.createdByUserId) ?? null,
+      createdAt: row.createdAt.toISOString(),
+      releasedAt: row.releasedAt?.toISOString() ?? null,
     }));
+  }
+
+  async createReservation(scope: CompanyScope, body: unknown, actorUserId: string): Promise<StockReservationView> {
+    const input = assertBody(body);
+    const projectId = requiredId(input.projectId, "projectId");
+    const itemId = requiredId(input.itemId, "itemId");
+    const warehouseId = requiredId(input.warehouseId, "warehouseId");
+    const wbsItemId = optionalId(input.wbsItemId, "wbsItemId");
+    const quantity = requiredDecimal(input.quantity, "quantity", { positive: true });
+    const reason = requiredText(input.reason, "reason", 500);
+    const neededAt = optionalDate(input.neededAt, "neededAt");
+    const operationKey = requiredText(input.idempotencyKey, "idempotencyKey", 120);
+    assertQuantityScale(quantity, "quantity");
+
+    const id = await this.prisma.$transaction(async (tx) => {
+      const replay = await tx.stockReservationEvent.findFirst({ where: { ...scope, operationKey }, select: { reservationId: true, type: true } });
+      if (replay) {
+        if (replay.type !== "RESERVE") throw new ConflictException("idempotencyKey already used for another reservation operation");
+        return replay.reservationId;
+      }
+      const project = await tx.project.findFirst({ where: { id: projectId, ...scope } });
+      if (!project) throw new NotFoundException("Project not found");
+      if (project.status === "COMPLETED" || project.status === "CANCELLED") throw new BadRequestException("A terminal project cannot receive a stock reservation");
+      const item = await tx.inventoryItem.findFirst({ where: { id: itemId, ...scope } });
+      if (!item) throw new NotFoundException("Inventory item not found");
+      if (!item.isActive) throw new BadRequestException("The inventory item is inactive");
+      const warehouse = await tx.warehouse.findFirst({ where: { id: warehouseId, ...scope } });
+      if (!warehouse) throw new NotFoundException("Warehouse not found");
+      if (!warehouse.isActive) throw new BadRequestException("The warehouse is inactive");
+      if (warehouse.kind !== "SITE" || warehouse.projectId !== projectId) throw new BadRequestException("Reservations must use the project's active site store");
+      if (wbsItemId) await this.requireLeafWbs(tx, scope, projectId, wbsItemId);
+      await lockWarehouses(tx, scope, [warehouseId]);
+      const openCount = await tx.stockCount.findFirst({ where: { warehouseId, status: "OPEN" }, select: { code: true } });
+      if (openCount) throw new BadRequestException(`Warehouse ${warehouse.code} is frozen by the open stock count ${openCount.code}`);
+      const balance = await this.lockBalance(tx, scope, itemId, warehouseId);
+      const reservedRows = await tx.stockReservation.findMany({ where: { ...scope, itemId, warehouseId, status: "ACTIVE" }, select: { remainingQuantity: true } });
+      const reservedQuantity = sumDecimals(reservedRows.map((row) => row.remainingQuantity));
+      if (reservedQuantity.plus(quantity).greaterThan(balance.quantity)) throw new BadRequestException(`Only ${qty(dec(balance.quantity).minus(reservedQuantity))} ${item.unitCode} is free to reserve`);
+      const reservation = await tx.stockReservation.create({ data: { ...scope, projectId, wbsItemId, itemId, warehouseId, quantity, remainingQuantity: quantity, reason, neededAt, createdByUserId: actorUserId } });
+      await tx.stockReservationEvent.create({ data: { ...scope, reservationId: reservation.id, type: "RESERVE", quantity, operationKey, reason, createdByUserId: actorUserId } });
+      await writeAudit(tx, scope, actorUserId, "inventory.reservation.created", "StockReservation", reservation.id, { projectId, itemId, warehouseId, quantity: qty(quantity) });
+      return reservation.id;
+    });
+    return (await this.listReservations(scope, { projectId })).find((row) => row.id === id)!;
+  }
+
+  async releaseReservation(scope: CompanyScope, reservationId: string, body: unknown, actorUserId: string): Promise<StockReservationView> {
+    const input = assertBody(body);
+    const reason = requiredText(input.reason, "reason", 500);
+    const operationKey = requiredText(input.idempotencyKey, "idempotencyKey", 120);
+    const projectId = await this.prisma.stockReservation.findFirst({ where: { id: reservationId, ...scope }, select: { projectId: true } });
+    if (!projectId) throw new NotFoundException("Stock reservation not found");
+    await this.prisma.$transaction(async (tx) => {
+      const replay = await tx.stockReservationEvent.findFirst({ where: { ...scope, operationKey }, select: { reservationId: true, type: true } });
+      if (replay) {
+        if (replay.reservationId !== reservationId || replay.type !== "RELEASE") throw new ConflictException("idempotencyKey already used for another reservation operation");
+        return;
+      }
+      const reservation = await tx.stockReservation.findFirst({ where: { id: reservationId, ...scope } });
+      if (!reservation) throw new NotFoundException("Stock reservation not found");
+      if (reservation.status !== "ACTIVE") throw new BadRequestException("Only an active reservation can be released");
+      await lockWarehouses(tx, scope, [reservation.warehouseId]);
+      await tx.$executeRaw`SELECT set_config('axora.stock_reservation_mutation', '1', true)`;
+      await tx.stockReservation.update({ where: { id: reservation.id }, data: { remainingQuantity: new Prisma.Decimal(0), status: "RELEASED", releasedByUserId: actorUserId, releasedAt: new Date(), version: { increment: 1 } } });
+      await tx.stockReservationEvent.create({ data: { ...scope, reservationId, type: "RELEASE", quantity: reservation.remainingQuantity, operationKey, reason, createdByUserId: actorUserId } });
+      await writeAudit(tx, scope, actorUserId, "inventory.reservation.released", "StockReservation", reservationId, { reason, quantity: qty(reservation.remainingQuantity) });
+    });
+    return (await this.listReservations(scope, { projectId: projectId.projectId })).find((row) => row.id === reservationId)!;
   }
 
   async movements(scope: CompanyScope, query: Record<string, unknown>): Promise<StockMovementView[]> {
@@ -202,6 +316,22 @@ export class InventoryService {
       orderBy: { createdAt: "desc" },
       take: limit,
     });
+    return this.movementViews(scope, movements);
+  }
+
+  async getMovement(scope: CompanyScope, id: string): Promise<StockMovementView> {
+    const movement = await this.prisma.stockMovement.findFirst({
+      where: { id, ...scope },
+      include: { item: true, warehouse: true },
+    });
+    if (!movement) throw new NotFoundException("Stock movement not found");
+    return (await this.movementViews(scope, [movement]))[0]!;
+  }
+
+  private async movementViews(
+    scope: CompanyScope,
+    movements: Prisma.StockMovementGetPayload<{ include: { item: true; warehouse: true } }>[],
+  ): Promise<StockMovementView[]> {
     const [projectCodes, userNames] = await Promise.all([
       this.projectCodes(scope, movements.map((movement) => movement.projectId)),
       this.userNames(scope, movements.map((movement) => movement.createdByUserId)),
@@ -263,6 +393,7 @@ export class InventoryService {
             quantity: line.quantity,
             projectId,
             wbsItemId,
+            reservationId: line.reservationId,
             reference,
             idempotencyKey,
             actorUserId,
@@ -289,6 +420,7 @@ export class InventoryService {
     const lines = parseLines(input.lines);
 
     return this.withIdempotency(scope, idempotencyKey, async (tx) => {
+      await lockWarehouses(tx, scope, [fromWarehouseId, toWarehouseId]);
       const transferGroupId = randomUUID();
       for (const line of lines) {
         const out = await this.ledger.post(tx, scope, {
@@ -396,6 +528,7 @@ export class InventoryService {
   async openCount(scope: CompanyScope, body: unknown, actorUserId: string) {
     const warehouseId = requiredId(assertBody(body).warehouseId, "warehouseId");
     const id = await this.prisma.$transaction(async (tx) => {
+      await lockWarehouses(tx, scope, [warehouseId]);
       const warehouse = await tx.warehouse.findFirst({ where: { id: warehouseId, ...scope } });
       if (!warehouse) throw new NotFoundException("Warehouse not found");
       const open = await tx.stockCount.findFirst({ where: { warehouseId, status: "OPEN" }, select: { code: true } });
@@ -418,22 +551,30 @@ export class InventoryService {
     const input = assertBody(body);
     const itemId = requiredId(input.itemId, "itemId");
     const countedQuantity = requiredDecimal(input.countedQuantity, "countedQuantity");
-    const count = await this.prisma.stockCount.findFirst({ where: { id: countId, ...scope } });
-    if (!count) throw new NotFoundException("Stock count not found");
-    if (count.status !== "OPEN") throw new BadRequestException("This stock count is closed");
-    const item = await this.prisma.inventoryItem.findFirst({ where: { id: itemId, ...scope } });
-    if (!item) throw new NotFoundException("Inventory item not found");
-    await this.prisma.stockCountLine.upsert({
-      where: { countId_itemId: { countId, itemId } },
-      create: { countId, itemId, systemQuantity: 0, countedQuantity },
-      update: { countedQuantity },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      const target = await tx.stockCount.findFirst({ where: { id: countId, ...scope }, select: { warehouseId: true } });
+      if (!target) throw new NotFoundException("Stock count not found");
+      await lockWarehouses(tx, scope, [target.warehouseId]);
+      const count = await tx.stockCount.findFirst({ where: { id: countId, ...scope } });
+      if (!count) throw new NotFoundException("Stock count not found");
+      if (count.status !== "OPEN") throw new BadRequestException("This stock count is closed");
+      const item = await tx.inventoryItem.findFirst({ where: { id: itemId, ...scope } });
+      if (!item) throw new NotFoundException("Inventory item not found");
+      await tx.stockCountLine.upsert({
+        where: { countId_itemId: { countId, itemId } },
+        create: { countId, itemId, systemQuantity: 0, countedQuantity },
+        update: { countedQuantity },
+      });
+      });
     return this.getCount(scope, countId);
   }
 
   /** Cloture : chaque ecart compte devient un ajustement trace ; toutes les lignes doivent etre comptees. */
   async closeCount(scope: CompanyScope, countId: string, actorUserId: string) {
     await this.prisma.$transaction(async (tx) => {
+      const target = await tx.stockCount.findFirst({ where: { id: countId, ...scope }, select: { warehouseId: true } });
+      if (!target) throw new NotFoundException("Stock count not found");
+      await lockWarehouses(tx, scope, [target.warehouseId]);
       const count = await tx.stockCount.findFirst({ where: { id: countId, ...scope }, include: { lines: true } });
       if (!count) throw new NotFoundException("Stock count not found");
       if (count.status !== "OPEN") throw new BadRequestException("This stock count is already closed");
@@ -471,6 +612,28 @@ export class InventoryService {
   // ---------------------------------------------------------------------
   // Internes
   // ---------------------------------------------------------------------
+
+  private async lockBalance(tx: Tx, scope: CompanyScope, itemId: string, warehouseId: string): Promise<{ id: string; quantity: Prisma.Decimal; value: Prisma.Decimal }> {
+    await tx.$executeRaw`
+      INSERT INTO "stock_balances" ("id", "organizationId", "companyId", "itemId", "warehouseId", "quantity", "value", "updatedAt")
+      VALUES (gen_random_uuid()::text, ${scope.organizationId}, ${scope.companyId}, ${itemId}, ${warehouseId}, 0, 0, now())
+      ON CONFLICT ("itemId", "warehouseId") DO NOTHING
+    `;
+    const rows = await tx.$queryRaw<Array<{ id: string; quantity: Prisma.Decimal; value: Prisma.Decimal }>>`
+      SELECT "id", "quantity", "value" FROM "stock_balances"
+      WHERE "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId}
+        AND "itemId" = ${itemId} AND "warehouseId" = ${warehouseId}
+      FOR UPDATE
+    `;
+    if (!rows[0]) throw new NotFoundException("Stock balance not found");
+    return rows[0];
+  }
+
+  private async requireLeafWbs(tx: Tx, scope: CompanyScope, projectId: string, wbsItemId: string): Promise<void> {
+    const item = await tx.projectWbsItem.findFirst({ where: { id: wbsItemId, projectId, ...scope }, include: { _count: { select: { children: true } } } });
+    if (!item) throw new NotFoundException("WBS item not found");
+    if (item._count.children > 0) throw new BadRequestException("wbsItemId must be a leaf WBS item of the project");
+  }
 
   /**
    * Execute une operation de mouvements une seule fois par cle d'idempotence :
@@ -517,7 +680,7 @@ export class InventoryService {
   }
 }
 
-function parseLines(value: unknown): Array<{ itemId: string; quantity: Prisma.Decimal }> {
+function parseLines(value: unknown): Array<{ itemId: string; quantity: Prisma.Decimal; reservationId: string | null }> {
   if (!Array.isArray(value) || value.length === 0) throw new BadRequestException("lines must contain at least one line");
   const seen = new Set<string>();
   return value.map((raw, index) => {
@@ -525,6 +688,12 @@ function parseLines(value: unknown): Array<{ itemId: string; quantity: Prisma.De
     const itemId = requiredId(line.itemId, `lines[${index}].itemId`);
     if (seen.has(itemId)) throw new BadRequestException("Each item may appear only once per movement");
     seen.add(itemId);
-    return { itemId, quantity: requiredDecimal(line.quantity, `lines[${index}].quantity`, { positive: true }) };
+    const quantity = requiredDecimal(line.quantity, `lines[${index}].quantity`, { positive: true });
+    assertQuantityScale(quantity, `lines[${index}].quantity`);
+    return { itemId, quantity, reservationId: optionalId(line.reservationId, `lines[${index}].reservationId`) };
   });
+}
+
+function assertQuantityScale(value: Prisma.Decimal, field: string): void {
+  if (value.decimalPlaces() > 3) throw new BadRequestException(`${field} must have at most 3 decimal places`);
 }

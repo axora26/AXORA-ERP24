@@ -31,6 +31,10 @@ export interface CrmAccountView {
   country: string | null;
   email: string | null;
   phone: string | null;
+  website: string | null;
+  archivedAt: string | null;
+  version: number;
+  updatedAt: string;
   createdAt: string;
 }
 
@@ -43,8 +47,67 @@ export interface CrmContactView {
   phone: string | null;
   jobTitle: string | null;
   isPrimary: boolean;
+  archivedAt: string | null;
+  version: number;
+  updatedAt: string;
   createdAt: string;
 }
+
+/** Explicit paged routes preserve the existing array list contracts. */
+export interface CrmPage<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface CrmPageQuery {
+  companyId?: string;
+  q?: string;
+  page?: number | string;
+  pageSize?: number | string;
+}
+
+export interface CrmDirectoryQuery extends CrmPageQuery {
+  archived?: "false" | "true" | "all";
+  accountId?: string;
+}
+
+export interface CrmActivityQuery extends CrmPageQuery {
+  relatedType?: CrmRelatedType;
+  relatedId?: string;
+  type?: CrmActivityType;
+}
+
+export interface CrmVersionInput {
+  companyId?: string;
+  expectedVersion: number;
+}
+
+export interface CrmAccountInput {
+  companyId?: string;
+  name: string;
+  industry?: string | null;
+  city?: string | null;
+  country?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  email?: string | null;
+}
+
+export interface CrmContactInput {
+  companyId?: string;
+  accountId?: string | null;
+  fullName: string;
+  email?: string | null;
+  phone?: string | null;
+  jobTitle?: string | null;
+  isPrimary?: boolean;
+}
+
+export type CrmAccountUpdateInput = Partial<CrmAccountInput> & CrmVersionInput;
+export type CrmContactUpdateInput = Partial<CrmContactInput> & CrmVersionInput;
 
 export interface CrmLeadView {
   id: string;
@@ -104,14 +167,31 @@ export interface CrmActivityView {
 /** Agregats calcules cote serveur a partir des donnees reelles du tenant. */
 export interface CrmDashboardView {
   companyId: string;
-  leads: { total: number; open: number; converted: number };
+  leads: { available: boolean; total: number | null; open: number | null; converted: number | null };
   opportunities: { total: number; open: number; won: number; lost: number };
   /** Somme decimale exacte, serialisee en chaine. */
+  pipelineValue: string | null;
+  wonValue: string | null;
+  /** Valeur ponderee par la probabilite de l'etape (arrondie au centime). */
+  weightedPipelineValue: string | null;
+  /** Financial totals are never summed across currencies. */
+  currencyBreakdown: CrmCurrencySummary[];
+  currency: string;
+  stages: Array<{
+    stageId: string;
+    stageName: string;
+    position: number;
+    probability: number;
+    opportunityCount: number;
+    value: string | null;
+  }>;
+}
+
+export interface CrmCurrencySummary {
+  currency: string;
   pipelineValue: string;
   wonValue: string;
-  /** Valeur ponderee par la probabilite de l'etape (arrondie au centime). */
   weightedPipelineValue: string;
-  currency: string;
   stages: Array<{
     stageId: string;
     stageName: string;

@@ -3,6 +3,8 @@ import {
   Building2,
   Calculator,
   FolderKanban,
+  ChartNoAxesCombined,
+  CalendarRange,
   KeyRound,
   LayoutDashboard,
   Receipt,
@@ -65,7 +67,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Commercial",
     items: [
-      { href: "/crm", label: "CRM & Pipeline", icon: UsersRound, permission: "crm.opportunity.read", keywords: "prospects leads opportunites clients" },
+      { href: "/crm", label: "CRM & Pipeline", icon: UsersRound, permission: ["crm.opportunity.read", "crm.lead.read", "crm.account.read", "crm.contact.read", "crm.activity.read"], keywords: "prospects leads opportunites clients comptes contacts activites" },
       { href: "/estimation", label: "Études & DQE", icon: Calculator, permission: "estimation.dqe.read", keywords: "bpu boq chiffrage estimation" },
       { href: "/sales", label: "Devis & Contrats", icon: Receipt, permission: "sales.quote.read", keywords: "offres contrats ventes" },
     ],
@@ -74,6 +76,8 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Projets & chantiers",
     items: [
       { href: "/projects", label: "Projets", icon: FolderKanban, permission: "projects.project.read", keywords: "wbs budget planning gantt avenants affaires" },
+      { href: "/projects/forecasts", label: "Prévisions EAC", icon: ChartNoAxesCombined, permission: "projects.forecast.read", keywords: "eac coût budget marge" },
+      { href: "/projects/resources", label: "Ressources projet", icon: CalendarRange, permission: "projects.resource.read", keywords: "équipes matériel capacité planning" },
       { href: "/field", label: "Chantier", icon: HardHat, permission: "field.site.read", keywords: "journal reserves photos terrain hors ligne punch list" },
       { href: "/qhse", label: "QHSE", icon: ShieldPlus, permission: "qhse.inspection.read", keywords: "securite qualite environnement ncr non-conformite incident accident permis feu inspection" },
       { href: "/documents", label: "Documents (GED)", icon: FileStack, permission: "documents.document.read", keywords: "ged plans visa revisions indices fichiers" },
@@ -102,18 +106,21 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/procurement", label: "Achats", icon: ShoppingCart, permission: "procurement.request.read", keywords: "demandes commandes fournisseurs receptions" },
       { href: "/inventory", label: "Stock & logistique", icon: Boxes, permission: "inventory.item.read", keywords: "articles magasins inventaire sorties transferts" },
+      { href: "/inventory/reservations", label: "Réservations de stock", icon: Boxes, permission: "inventory.item.read", keywords: "réservations allocations matériel chantier libre" },
     ],
   },
   {
     label: "Finance",
     items: [
-      { href: "/finance", label: "Finance & trésorerie", icon: Landmark, permission: "finance.invoice.read", keywords: "factures paiements banques encaissements creances dettes" },
+      { href: "/finance", label: "Finance & trésorerie", icon: Landmark, permission: ["finance.invoice.read", "finance.payable.read", "finance.credit.read"], keywords: "factures paiements banques encaissements creances dettes avoirs remboursements" },
     ],
   },
   {
     label: "Ressources humaines",
     items: [
       { href: "/hr", label: "RH & temps", icon: IdCard, permission: "hr.employee.read", keywords: "employes pointage presence feuilles de temps conges paie badge" },
+      { href: "/hr/advances", label: "Avances salariés", icon: Receipt, permission: ["hr.advance.read", "hr.advance.request"], keywords: "avance salaire acompte remboursement retenue paie" },
+      { href: "/hr/payroll-policy", label: "Règles de paie", icon: Calculator, permission: ["hr.payroll.read", "hr.payrollpolicy.manage"], keywords: "politique heures mensuelles majoration preparation calcul brut" },
     ],
   },
   {
@@ -139,5 +146,6 @@ export function visibleGroups(can: (permission: string) => boolean): NavGroup[] 
 
 export function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+  if (!(pathname === href || pathname.startsWith(`${href}/`))) return false;
+  return !NAV_GROUPS.some(group => group.items.some(item => item.href !== href && item.href.startsWith(`${href}/`) && (pathname === item.href || pathname.startsWith(`${item.href}/`))));
 }

@@ -1,17 +1,93 @@
 import { Body, Controller, Get, Param, Post, Query, Req } from "@nestjs/common";
 import type { Request } from "express";
 import { FINANCE_PERMISSIONS as F } from "@axora24/contracts";
-import { RequirePermission } from "../auth/require-permission.decorator.js";
+import { RequireAnyPermission, RequirePermission } from "../auth/require-permission.decorator.js";
 import { CurrentUser, Scope, ScopedController } from "../common/scope.guard.js";
 import type { CompanyScope } from "../common/company-scope.service.js";
 import type { AuthenticatedUser } from "../auth/session.guard.js";
 import { FinanceService } from "./finance.service.js";
+import { InvoiceSignatureService } from "./invoice-signature.service.js";
+import { TreasuryForecastService } from "./treasury-forecast.service.js";
+import { BankReconciliationService } from "./bank-reconciliation.service.js";
+import { AccountingService } from "./accounting.service.js";
 
 /** INC-08 — Finance. Les paiements sont append-only (aucune route de modification). */
 @Controller("finance")
 @ScopedController()
 export class FinanceController {
-  constructor(private readonly finance: FinanceService) {}
+  constructor(private readonly finance: FinanceService, private readonly signatures: InvoiceSignatureService, private readonly treasury: TreasuryForecastService, private readonly reconciliation: BankReconciliationService, private readonly accounting: AccountingService) {}
+
+  @Get("accounting/configuration")
+  @RequirePermission(F.ACCOUNTING_READ)
+  accountingConfiguration(@Scope() scope: CompanyScope) {
+    return this.accounting.configuration(scope);
+  }
+
+  @Post("accounting/bootstrap")
+  @RequirePermission(F.ACCOUNTING_MANAGE)
+  accountingBootstrap(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser) {
+    return this.accounting.bootstrap(scope, user.id);
+  }
+
+  @Get("accounting/accounts")
+  @RequirePermission(F.ACCOUNTING_READ)
+  accountingAccounts(@Scope() scope: CompanyScope) {
+    return this.accounting.listAccounts(scope);
+  }
+
+  @Post("accounting/accounts")
+  @RequirePermission(F.ACCOUNTING_MANAGE)
+  accountingAccountCreate(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    return this.accounting.createAccount(scope, body, user.id);
+  }
+
+  @Get("accounting/journals")
+  @RequirePermission(F.ACCOUNTING_READ)
+  accountingJournals(@Scope() scope: CompanyScope) {
+    return this.accounting.listJournals(scope);
+  }
+
+  @Post("accounting/journals")
+  @RequirePermission(F.ACCOUNTING_MANAGE)
+  accountingJournalCreate(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    return this.accounting.createJournal(scope, body, user.id);
+  }
+
+  @Get("accounting/entries")
+  @RequirePermission(F.ACCOUNTING_READ)
+  accountingEntries(@Scope() scope: CompanyScope, @Query() query: Record<string, unknown>) {
+    return this.accounting.listEntries(scope, query);
+  }
+
+  @Get("accounting/trial-balance")
+  @RequirePermission(F.ACCOUNTING_READ)
+  accountingTrialBalance(@Scope() scope: CompanyScope, @Query() query: Record<string, unknown>) {
+    return this.accounting.trialBalance(scope, query);
+  }
+
+  @Get("accounting/statements")
+  @RequirePermission(F.ACCOUNTING_READ)
+  accountingStatements(@Scope() scope: CompanyScope, @Query() query: Record<string, unknown>) {
+    return this.accounting.financialStatements(scope, query);
+  }
+
+  @Post("accounting/entries")
+  @RequirePermission(F.ACCOUNTING_POST)
+  accountingManualEntry(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    return this.accounting.createManualEntry(scope, body, user.id);
+  }
+
+  @Post("accounting/post/customer-invoice/:id")
+  @RequirePermission(F.ACCOUNTING_POST)
+  accountingPostCustomerInvoice(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.accounting.postCustomerInvoice(scope, id, user.id);
+  }
+
+  @Post("accounting/post/supplier-invoice/:id")
+  @RequirePermission(F.ACCOUNTING_POST)
+  accountingPostSupplierInvoice(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.accounting.postSupplierInvoice(scope, id, user.id);
+  }
 
   @Get("summary")
   @RequirePermission(F.INVOICE_READ)
@@ -32,7 +108,7 @@ export class FinanceController {
   }
 
   @Get("bank-accounts")
-  @RequirePermission(F.INVOICE_READ)
+  @RequireAnyPermission(F.INVOICE_READ, F.REFUND_MANAGE)
   bankAccounts(@Scope() scope: CompanyScope) {
     return this.finance.listBankAccounts(scope);
   }
@@ -71,6 +147,73 @@ export class FinanceController {
   @RequirePermission(F.INVOICE_MANAGE)
   cancelInvoice(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
     return this.finance.cancelCustomerInvoice(scope, id, body, user.id);
+  }
+
+  @Get("invoices/:id/signatures")
+  @RequirePermission(F.INVOICE_READ)
+  signaturesForInvoice(@Scope() scope: CompanyScope, @Param("id") id: string) {
+    return this.signatures.list(scope, id);
+  }
+
+  @Post("invoices/:id/sign")
+  @RequireAnyPermission(F.INVOICE_SIGN, F.INVOICE_MANAGE)
+  signInvoice(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.signatures.sign(scope, id, body, user.id);
+  }
+
+  @Post("invoices/:id/signatures/:signatureId/revoke")
+  @RequireAnyPermission(F.INVOICE_SIGN, F.INVOICE_MANAGE)
+  revokeInvoiceSignature(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Param("signatureId") signatureId: string, @Body() body: unknown) {
+    return this.signatures.revoke(scope, id, signatureId, body, user.id);
+  }
+
+  @Get("invoices/:id/signatures/:signatureId/verify")
+  @RequirePermission(F.INVOICE_READ)
+  verifyInvoiceSignature(@Scope() scope: CompanyScope, @Param("id") id: string, @Param("signatureId") signatureId: string) {
+    return this.signatures.verify(scope, id, signatureId);
+  }
+
+  @Get("collection-reminders")
+  @RequirePermission(F.INVOICE_READ)
+  collectionReminders(@Scope() scope: CompanyScope) {
+    return this.finance.listCollectionReminders(scope);
+  }
+
+  @Post("collection-reminders/generate")
+  @RequirePermission(F.INVOICE_MANAGE)
+  generateCollectionReminders(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser) {
+    return this.finance.generateCollectionReminders(scope, user.id);
+  }
+
+  @Post("collection-reminders/:id/mark-sent")
+  @RequirePermission(F.INVOICE_MANAGE)
+  markCollectionReminderSent(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.finance.markCollectionReminderSent(scope, id, user.id);
+  }
+
+  @Get("treasury-forecast")
+  @RequirePermission(F.INVOICE_READ)
+  treasuryForecast(@Scope() scope: CompanyScope, @Query("days") days?: string) {
+    return this.treasury.forecast(scope, days);
+  }
+
+  @Get("bank-statements")
+  @RequirePermission(F.INVOICE_READ)
+  bankStatements(@Scope() scope: CompanyScope, @Query("bankAccountId") bankAccountId?: string) {
+    return this.reconciliation.list(scope, bankAccountId);
+  }
+
+  @Post("bank-statements/import")
+  @RequirePermission(F.BANK_MANAGE)
+  importBankStatement(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    return this.reconciliation.importEntries(scope, body, user.id);
+  }
+
+  @Post("bank-statements/:id/match")
+  @RequirePermission(F.BANK_MANAGE)
+  matchBankStatement(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    const paymentId = body && typeof body === "object" && !Array.isArray(body) && "paymentId" in body && typeof body.paymentId === "string" ? body.paymentId : "";
+    return this.reconciliation.match(scope, id, paymentId, user.id);
   }
 
   @Get("payables")

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AlertTriangle, Building2, LogOut, Menu, Search, WifiOff, X } from "lucide-react";
@@ -11,6 +11,8 @@ import { Brand } from "./brand";
 import { NotificationBell } from "./notification-bell";
 import { purgeOfflinePages } from "./sw-register";
 import { purgeOfflineData, readContext, saveContext, setOfflineScope } from "../lib/offline-cache";
+import { useModalFocus } from "../lib/use-modal-focus";
+import { ThemeSelector, useTheme } from "./theme";
 
 const COMPANY_STORAGE_KEY = "axora.activeCompanyId";
 
@@ -47,6 +49,9 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
   const [mobileNav, setMobileNav] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [offline, setOffline] = useState(false);
+  const mobileNavRef = useModalFocus<HTMLElement>(mobileNav, () => setMobileNav(false));
+  const { loadPreference, error: themeError } = useTheme();
+  useEffect(() => { if (session?.user.id) void loadPreference(); }, [session?.user.id, loadPreference]);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,7 +171,8 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
   return (
     <SessionContext.Provider value={sessionApi}>
       <div className="app-shell">
-        <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
+        <a className="skip-link" href="#main-content">Aller au contenu principal</a>
+        <aside className={`sidebar ${mobileNav ? "open" : ""}`} ref={mobileNavRef} role={mobileNav ? "dialog" : undefined} aria-modal={mobileNav ? true : undefined} aria-label={mobileNav ? "Navigation principale" : undefined} tabIndex={mobileNav ? -1 : undefined}>
           <div className="sidebar-head">
             <Brand />
             <button className="close-nav" onClick={() => setMobileNav(false)} aria-label="Fermer le menu">
@@ -204,7 +210,7 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
 
         <main className="workspace">
           <header className="topbar">
-            <button className="menu-button" onClick={() => setMobileNav(true)} aria-label="Ouvrir le menu">
+            <button className="menu-button" onClick={() => setMobileNav(true)} aria-label="Ouvrir le menu" aria-expanded={mobileNav}>
               <Menu size={21} />
             </button>
             <button className="search-box" type="button" onClick={() => setPaletteOpen(true)}>
@@ -213,6 +219,7 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
               <kbd>Ctrl K</kbd>
             </button>
             <div className="top-actions">
+              <ThemeSelector/>
               {sessionApi.companies.length > 1 ? (
                 <label className="company-switch">
                   <Building2 size={15} aria-hidden="true" />
@@ -264,7 +271,7 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
             </div>
           )}
 
-          <div className="dashboard-content">{children}</div>
+          <div className="dashboard-content" id="main-content" tabIndex={-1}>{themeError && <div className="form-error" role="alert">{themeError}</div>}{children}</div>
         </main>
 
         {paletteOpen && (
@@ -302,8 +309,8 @@ function CommandPalette({
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => inputRef.current?.focus(), []);
+  const dialogRef = useModalFocus<HTMLDivElement>(true, onClose);
+  const resultsId = useId();
 
   const matches = items.filter((item) => {
     const needle = normalize(query.trim());
@@ -313,7 +320,7 @@ function CommandPalette({
 
   return (
     <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="palette" role="dialog" aria-modal="true" aria-label="Palette de commandes">
+      <div className="palette" role="dialog" aria-modal="true" aria-label="Palette de commandes" ref={dialogRef} tabIndex={-1}>
         <div className="palette-input">
           <Search size={18} aria-hidden="true" />
           <input
@@ -321,24 +328,30 @@ function CommandPalette({
             value={query}
             placeholder="Aller à…"
             aria-label="Rechercher un module"
+            role="combobox"
+            aria-expanded={true}
+            aria-controls={resultsId}
+            aria-autocomplete="list"
+            aria-activedescendant={matches[cursor] ? `${resultsId}-${cursor}` : undefined}
             onChange={(event) => {
               setQuery(event.currentTarget.value);
               setCursor(0);
             }}
             onKeyDown={(event) => {
-              if (event.key === "Escape") onClose();
-              if (event.key === "ArrowDown") setCursor((value) => Math.min(value + 1, matches.length - 1));
-              if (event.key === "ArrowUp") setCursor((value) => Math.max(value - 1, 0));
-              if (event.key === "Enter" && matches[cursor]) onNavigate(matches[cursor].href);
+              if (event.key === "ArrowDown") { event.preventDefault(); setCursor((value) => Math.max(0, Math.min(value + 1, matches.length - 1))); }
+              if (event.key === "ArrowUp") { event.preventDefault(); setCursor((value) => Math.max(value - 1, 0)); }
+              if (event.key === "Enter" && matches[cursor]) { event.preventDefault(); onNavigate(matches[cursor].href); }
             }}
           />
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Fermer la recherche"><X size={18} aria-hidden="true"/></button>
         </div>
-        <ul>
-          {matches.length === 0 && <li className="palette-empty">Aucun module ne correspond.</li>}
+        <ul id={resultsId} role="listbox" aria-label="Modules accessibles">
+          {matches.length === 0 && <li className="palette-empty" role="presentation">Aucun module ne correspond. Essayez un autre nom.</li>}
           {matches.map((item, index) => (
-            <li key={item.href}>
+            <li key={item.href} id={`${resultsId}-${index}`} role="option" aria-selected={index === cursor}>
               <button
                 type="button"
+                tabIndex={-1}
                 className={index === cursor ? "active" : ""}
                 onMouseEnter={() => setCursor(index)}
                 onClick={() => onNavigate(item.href)}

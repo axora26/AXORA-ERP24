@@ -4,6 +4,7 @@
 export class LoginDto {
   email!: string;
   password!: string;
+  organizationSlug?: string;
 }
 
 /**

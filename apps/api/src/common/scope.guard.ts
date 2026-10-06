@@ -1,7 +1,10 @@
 import {
   CanActivate,
+  BadRequestException,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
   UseGuards,
   applyDecorators,
@@ -23,7 +26,8 @@ declare module "express" {
  * uniquement (le `companyId` eventuel de la requete est revalide contre les
  * CompanyMembership de l'utilisateur — voir CompanyScopeService).
  *
- * Doit s'executer apres SessionGuard et PermissionGuard.
+ * Doit s'executer apres SessionGuard et avant PermissionGuard pour que les
+ * droits soient evalues dans l'entreprise effectivement demandee.
  */
 @Injectable()
 export class CompanyScopeGuard implements CanActivate {
@@ -35,10 +39,58 @@ export class CompanyScopeGuard implements CanActivate {
     if (!user) throw new UnauthorizedException("SessionGuard must run before CompanyScopeGuard");
 
     const fromQuery = typeof request.query.companyId === "string" ? request.query.companyId : undefined;
-    const body = request.body as { companyId?: unknown } | undefined;
+    const body = request.body as { companyId?: unknown; projectId?: unknown } | undefined;
     const fromBody = typeof body?.companyId === "string" ? body.companyId : undefined;
 
-    request.axoraScope = await this.companyScope.resolve(user, fromQuery ?? fromBody);
+    // Legacy handlers may read the body while @Scope handlers use the query.
+    // A request must never authorize one company and operate on another.
+    if (fromQuery !== undefined && fromBody !== undefined && fromQuery !== fromBody) throw new BadRequestException("Conflicting companyId values");
+
+    const projectFromQuery = typeof request.query.projectId === "string" ? request.query.projectId : undefined;
+    const projectFromBody = typeof body?.projectId === "string" ? body.projectId : undefined;
+    const projectFromParam = typeof request.params?.projectId === "string" ? request.params.projectId : undefined;
+    // Les routes /projects/:id/... portent naturellement l'identifiant du
+    // chantier dans `id`. Les autres ressources ne déduisent jamais un projet
+    // depuis un identifiant générique afin d'éviter un mauvais périmètre.
+    const projectFromProjectRoute = /\/projects\/[^/]+/.test(request.path) && typeof request.params?.id === "string"
+      ? request.params.id
+      : undefined;
+    const projectIds = [projectFromQuery, projectFromBody, projectFromParam, projectFromProjectRoute].filter(
+      (value): value is string => value !== undefined && value !== "",
+    );
+    const requestedProjectId = projectIds[0];
+    if (projectIds.some((value) => value !== requestedProjectId)) {
+      throw new BadRequestException("Conflicting projectId values");
+    }
+
+    try {
+      request.axoraScope = await this.companyScope.resolve(user, fromQuery ?? fromBody, requestedProjectId);
+    } catch (error) {
+      // Les ressources métier qui portent un projectId dans le corps doivent
+      // conserver leur sémantique d'isolation (404 hors périmètre). Les
+      // routes /projects/:id gardent le refus 403 explicite du garde RBAC.
+      if (requestedProjectId && !projectFromProjectRoute && error instanceof ForbiddenException) {
+        // Les listes filtrées par projectId doivent rester des listes vides
+        // pour un projet hors périmètre, comme avant l'ajout du contexte RBAC.
+        if (request.method === "GET" && projectFromQuery) {
+          request.axoraScope = await this.companyScope.resolve(user, fromQuery ?? fromBody);
+          return true;
+        }
+        throw new NotFoundException("Project not found");
+      }
+      if (requestedProjectId && projectFromProjectRoute && request.method === "GET" && error instanceof ForbiddenException) {
+        if (fromQuery) {
+          // Une entreprise explicitement sélectionnée mais sans ce projet
+          // reste un refus de périmètre (403) pour ses membres. La résolution
+          // de l'entreprise seule laisse ensuite PermissionGuard appliquer
+          // les droits disponibles dans ce périmètre.
+          request.axoraScope = await this.companyScope.resolve(user, fromQuery);
+          return true;
+        }
+        throw new NotFoundException("Project not found");
+      }
+      throw error;
+    }
     return true;
   }
 }
@@ -47,7 +99,7 @@ export class CompanyScopeGuard implements CanActivate {
  * Controleur metier securise : session obligatoire, permission explicite
  * par route (deny-by-default), perimetre entreprise resolu cote serveur.
  */
-export const ScopedController = () => applyDecorators(UseGuards(SessionGuard, PermissionGuard, CompanyScopeGuard));
+export const ScopedController = () => applyDecorators(UseGuards(SessionGuard, CompanyScopeGuard, PermissionGuard));
 
 /** Perimetre entreprise resolu par CompanyScopeGuard. */
 export const Scope = createParamDecorator((_data: unknown, context: ExecutionContext): CompanyScope => {

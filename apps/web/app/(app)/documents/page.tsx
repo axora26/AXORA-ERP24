@@ -9,7 +9,7 @@ import { projectsApi } from "../../lib/modules/projects";
 import { formatDateTime } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import { Button, DataTable, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, TextField } from "../../components/ui";
+import { DataUnavailable, Button, DataTable, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, TextField } from "../../components/ui";
 
 export default function DocumentsPage(): React.ReactElement {
   const session = useSession();
@@ -27,6 +27,9 @@ export default function DocumentsPage(): React.ReactElement {
   const all = useResource(() => documentsApi.list());
   const list = documents.data ?? [];
   const summary = all.data ?? [];
+
+  if (documents.error && !documents.data && !documents.loading) return <DataUnavailable title="Documents" error={documents.error} onRetry={() => void documents.reload()}/>;
+  if (all.error && !all.data && !all.loading) return <DataUnavailable title="Documents" error={all.error} onRetry={() => void all.reload()}/>;
 
   return (
     <>

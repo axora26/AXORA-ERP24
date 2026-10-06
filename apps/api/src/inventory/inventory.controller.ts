@@ -54,6 +54,30 @@ export class InventoryController {
     return this.inventory.movements(scope, query);
   }
 
+  @Get("movements/:id")
+  @RequirePermission(P.ITEM_READ)
+  movement(@Scope() scope: CompanyScope, @Param("id") id: string) {
+    return this.inventory.getMovement(scope, id);
+  }
+
+  @Get("reservations")
+  @RequirePermission(P.ITEM_READ)
+  reservations(@Scope() scope: CompanyScope, @Query() query: Record<string, unknown>) {
+    return this.inventory.listReservations(scope, query);
+  }
+
+  @Post("reservations")
+  @RequirePermission(P.RESERVATION_MANAGE)
+  createReservation(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    return this.inventory.createReservation(scope, body, user.id);
+  }
+
+  @Post("reservations/:id/release")
+  @RequirePermission(P.RESERVATION_MANAGE)
+  releaseReservation(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.inventory.releaseReservation(scope, id, body, user.id);
+  }
+
   @Post("issues")
   @RequirePermission(P.MOVEMENT_CREATE)
   issue(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {

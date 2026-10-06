@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@axora24/database";
 import type { CompanyScope } from "../common/company-scope.service.js";
-import { dec, qty } from "../common/decimal.js";
+import { dec, qty, sumDecimals } from "../common/decimal.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -22,11 +22,13 @@ export interface PostMovementInput {
   projectId?: string | null;
   wbsItemId?: string | null;
   goodsReceiptLineId?: string | null;
+  supplierReturnLineId?: string | null;
   transferGroupId?: string | null;
   countId?: string | null;
   reference?: string | null;
   reason?: string | null;
   idempotencyKey?: string | null;
+  reservationId?: string | null;
   actorUserId: string;
 }
 
@@ -53,6 +55,8 @@ export interface PostedMovement {
 export class StockLedgerService {
   async post(tx: Tx, scope: CompanyScope, input: PostMovementInput): Promise<PostedMovement> {
     if (!input.quantity.greaterThan(0)) throw new BadRequestException("Movement quantity must be greater than zero");
+
+    await lockWarehouses(tx, scope, [input.warehouseId]);
 
     const [item, warehouse] = await Promise.all([
       tx.inventoryItem.findFirst({ where: { id: input.itemId, ...scope } }),
@@ -86,6 +90,61 @@ export class StockLedgerService {
     const onHand = dec(balance.quantity);
     const onHandValue = dec(balance.value);
     const averageCost = onHand.isZero() ? null : onHandValue.div(onHand);
+
+    const outbound = !ENTRY_TYPES.has(input.type);
+    let reservation: { id: string; projectId: string; itemId: string; warehouseId: string; remainingQuantity: Prisma.Decimal } | null = null;
+    let reservedQuantity = new Prisma.Decimal(0);
+    if (outbound) {
+      const reservedRows = await tx.$queryRaw<Array<{ id: string; projectId: string; itemId: string; warehouseId: string; remainingQuantity: Prisma.Decimal }>>`
+        SELECT "id", "projectId", "itemId", "warehouseId", "remainingQuantity"
+        FROM "stock_reservations"
+        WHERE "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId}
+          AND "itemId" = ${item.id} AND "warehouseId" = ${warehouse.id} AND "status" = 'ACTIVE'
+        ORDER BY "id" FOR UPDATE
+      `;
+      reservedQuantity = sumDecimals(reservedRows.map((row) => row.remainingQuantity));
+      if (input.reservationId) {
+        reservation = reservedRows.find((row) => row.id === input.reservationId) ?? null;
+        if (!reservation) throw new NotFoundException("Active stock reservation not found");
+        if (input.projectId && reservation.projectId !== input.projectId) {
+          throw new BadRequestException("The reservation belongs to another project");
+        }
+        if (input.type !== "ISSUE") throw new BadRequestException("Only a project issue can consume a reservation");
+        if (input.quantity.greaterThan(reservation.remainingQuantity)) {
+          throw new BadRequestException("The requested quantity exceeds the remaining reservation");
+        }
+      } else if (input.quantity.greaterThan(onHand.minus(reservedQuantity))) {
+        throw new BadRequestException(
+          `Insufficient free stock for ${item.code} in ${warehouse.code}: free ${qty(onHand.minus(reservedQuantity))} ${item.unitCode}, requested ${qty(input.quantity)}`,
+        );
+      }
+      if (reservation) {
+        const remaining = reservation.remainingQuantity.minus(input.quantity);
+        await tx.$executeRaw`SELECT set_config('axora.stock_reservation_mutation', '1', true)`;
+        await tx.stockReservation.update({
+          where: { id: reservation.id },
+          data: {
+            remainingQuantity: remaining,
+            status: remaining.isZero() ? "FULFILLED" : "ACTIVE",
+            version: { increment: 1 },
+          },
+        });
+        await tx.stockReservationEvent.create({
+          data: {
+            organizationId: scope.organizationId,
+            companyId: scope.companyId,
+            reservationId: reservation.id,
+            type: "ISSUE",
+            quantity: input.quantity,
+            operationKey: `issue:${input.idempotencyKey ?? movementKey(input)}:${item.id}`,
+            reason: input.reference ?? null,
+            createdByUserId: input.actorUserId,
+          },
+        });
+      }
+    } else if (input.reservationId) {
+      throw new BadRequestException("A stock entry cannot consume a reservation");
+    }
 
     let quantityDelta: Prisma.Decimal;
     let valueDelta: Prisma.Decimal;
@@ -127,14 +186,32 @@ export class StockLedgerService {
         projectId: input.projectId ?? null,
         wbsItemId: input.wbsItemId ?? null,
         goodsReceiptLineId: input.goodsReceiptLineId ?? null,
+        supplierReturnLineId: input.supplierReturnLineId ?? null,
         transferGroupId: input.transferGroupId ?? null,
         countId: input.countId ?? null,
         reference: input.reference ?? null,
         reason: input.reason ?? null,
         idempotencyKey: input.idempotencyKey ?? null,
+        reservationId: reservation?.id ?? null,
         createdByUserId: input.actorUserId,
       },
     });
     return { id: movement.id, quantityDelta, valueDelta, unitCost };
   }
+}
+
+/** Serialize movements with physical-count snapshots; sorted locking also prevents reverse-transfer deadlocks. */
+export async function lockWarehouses(tx: Tx, scope: CompanyScope, warehouseIds: string[]): Promise<void> {
+  const ids = [...new Set(warehouseIds)].sort();
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT "id" FROM "warehouses"
+    WHERE "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId}
+      AND "id" IN (${Prisma.join(ids)})
+    ORDER BY "id" FOR UPDATE
+  `);
+  if (rows.length !== ids.length) throw new NotFoundException("Warehouse not found");
+}
+
+function movementKey(input: Pick<PostMovementInput, "type" | "itemId" | "warehouseId" | "projectId">): string {
+  return `${input.type}:${input.itemId}:${input.warehouseId}:${input.projectId ?? ""}`;
 }

@@ -1,0 +1,24 @@
+# Contexte de build Docker : uniquement les sources necessaires a l'image.
+**/node_modules
+**/.next
+**/.next-*
+**/dist
+**/coverage
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!.env.example
+.git
+.github
+.hermes
+.data
+.vscode
+.idea
+docs
+design-system
+apps/web/e2e/.auth
+*.log
+nul
+NUL

@@ -174,3 +174,76 @@ Format : chaque decision porte un identifiant, une date, un contexte, la decisio
 - **Dependances** : `pnpm.overrides` releve `multer`, `postcss` et `deepmerge-ts` vers des versions corrigees ; `pnpm audit --prod` ne signale aucune vulnerabilite connue.
 **Consequences** : une CSP sans `'unsafe-inline'` demandera des nonces par requete (rendu dynamique) ; toute nouvelle page utilisable hors ligne doit passer par le cache par utilisateur et la purge a la deconnexion ; tout nouveau message d'erreur doit entrer au catalogue (le test l'impose).
 **Reversible** : oui (version du cache incrementee pour invalider les clients ; catalogue et en-tetes centralises).
+
+## ADR-0016 — Operations projet issues des faits existants
+
+**Date** : 2026-10-03
+**Statut** : Acceptee
+**Contexte** : la gestion de chantier doit reunir personnel, stock, parc et budget sans creer de fausses affectations ni compter deux fois une reception stockee.
+**Decision** :
+- `GET /projects/:id/operations` exige `projects.project.read` et borne les dates calendaires UTC a 1–31 jours inclusifs. Une lecture RepeatableRead assemble les sources autorisees.
+- La presence associe les faits IN/OUT, conserve le projet du IN, charge les bornes hors periode et decoupe les nuits. Une entree ouverte est visible avec anomalie, sans duree inventee.
+- Les materiaux proviennent des mouvements ISSUE/RETURN du projet. Les soldes des magasins SITE sont les soldes actuels avec date de lecture, independants du filtre historique. Une reception d'article stocke devient un cout chantier seulement a la sortie ; les receptions directes hors stock sont comptees separement. Les receptions fractionnees utilisent des deltas d'arrondi cumulatifs par ligne.
+- Les affectations temporaires proviennent de FleetAssignment. `Asset.projectId` indique une origine de mise en service, affichee comme telle ; il ne cree aucune reservation ni affectation temporaire.
+- Les sous-sections privees sont indisponibles sans leurs permissions sources. Les couts individuels et agreges de RH exigent `hr.payroll.read`. Un cout complet est indisponible si une source manque, n'est pas valorisee ou utilise une autre devise. Les mutations de projet et les exports appliquent la meme politique.
+**Consequences** : reutilisation du grand livre et du parc ; aucune reservation future de materiel livree par cette tranche. Le budget de base reste visible aux lecteurs du projet.
+**Reversible** : oui, par des modeles de reservation planifiee distincts des faits de consommation si une evolution les exige.
+
+## ADR-0017 — Carte QR revocable et preparation de paie explicite
+
+**Date** : 2026-10-03
+**Statut** : Acceptee
+**Contexte** : un QR ne doit pas etre un identifiant permanent forgeable ni transformer directement une presence en paie validee.
+**Decision** :
+- La carte de service porte un jeton propre aleatoire, empreinte pour l'identification et copie chiffree pour la reimpression autorisee. Les journaux n'enregistrent pas le secret. La reemission revoque les anciennes cartes ; expiration, revocation et employe inactif sont verifies au pointage, sous le meme verrou employe.
+- Le scan QR exige une session habilitee au pointage, une cle d'idempotence et l'heure serveur. La carte personnelle n'est pas une session de connexion ni une approbation d'heures.
+- L'import des paires fermees produit une feuille DRAFT avec provenance IN/OUT ; les intervalles ouverts/incoherents bloquent l'import et un remplacement de lignes deja saisies exige une action explicite. Soumission puis validation par un tiers restent obligatoires.
+- Le mode MONTHLY_BASE reprend le salaire de base et signale les absences d'heures validees. VALIDATED_HOURS exige des heures validees pour chaque employe inclus et des heures mensuelles de reference/coefficient supplementaire explicites. Taux = salaire de reference / heures de reference ; remuneration = heures normales x taux + heures supplementaires x taux x coefficient, puis elements variables saisis.
+- La preparation conserve les parametres et sources de son calcul ; la cloture fige aussi le calcul en base. Une modification ulterieure des parametres s'applique aux nouvelles preparations.
+- Les préparations pré-migration sans photographie de paramètres ne sont pas recalculées avec une politique actuelle. Les nouveaux détails horaires sont omis et affichés « Non disponible (historique) » ; les données historiques déjà enregistrées restent disponibles. La configuration des politiques utilise `hr.payrollpolicy.manage` et possède une page distincte, sans imposer la lecture des employés ou des préparations.
+- Les cotisations/impots ne sont pas presumes : `statutoryDeductions: NOT_CONFIGURED`, `netAmount: null`. La fiche PDF expose cette limite, y compris lorsqu'elle s'intitule « Fiche de paie ».
+**Consequences** : une preparation de remuneration brute est disponible ; le bulletin legal complet et le net exigent le parametrage applicable. Le cout horaire charge impute au projet et la remuneration basee sur le salaire sont deux bases distinctes.
+**Reversible** : oui, par politiques versionnees et adaptateurs materiels explicites.
+
+## ADR-0018 — Documents avec identite officielle et droits de leur source
+
+**Date** : 2026-10-03
+**Statut** : Acceptee
+**Contexte** : les documents metier doivent etre lisibles, identifiables et imprimables sans exposer des donnees d'une autre entreprise ou contourner les droits.
+**Decision** :
+- `AXORA_BRAND` centralise logo et coordonnees publics releves sur `https://axora.cd/` : AXORA GROUP, infos@axora.cd, +243 810 364 612, 945 Boulevard du 30 Juin, Gombe, Kinshasa. L'entreprise emettrice du document reste explicitement affichee ; aucune identite juridique supplementaire n'est inventee. Les pieces DEMO gardent leur mention.
+- Les vrais exports serveur couvrent DQE PDF/XLSX, avoirs, operations projet, carte QR recto/verso et fiche de paie employe. Ils recontrolent les permissions et l'entreprise et servent les fichiers avec une politique privee sans cache.
+- Les neuf genres de `/print/:kind/:id` sont `quotes`, `contracts`, `purchase-requests`, `purchase-orders`, `goods-receipts`, `daily-logs`, `commissioning`, `timesheets`, `stock-movements`. L'action ouvre l'impression du navigateur, qui permet aussi l'enregistrement PDF. Ce parcours est distinct d'un export PDF serveur.
+- Pour une reception, l'identifiant de route est celui de la commande et `receiptId` selectionne la reception exacte ; une reference absente n'est pas remplacee par une autre. Un mouvement ancien est lu par son getter individuel, sans dependre du plafond de la liste.
+- Les titres refletent l'etat : un commissioning non accepte produit un compte rendu, un accepte/remis un proces-verbal de reception. Une feuille de temps imprimee n'expose aucun cout salarial protege.
+**Consequences** : pas de signature electronique ou certification juridique implicite. L'impression camera/QR et les PDF doivent conserver leurs preuves de qualification propre, distinctes du succes du build.
+**Reversible** : oui, presentation partagee et identite centralisee.
+
+## ADR-0019 — Avoirs et remboursements comme faits comptables distincts
+
+**Date** : 2026-10-03
+**Statut** : Acceptee
+**Decision** : les lignes et montants de la facture source restent intacts. L'avoir copie prix/taxe/designation et alloue chaque fraction par difference entre les totaux cumulatifs arrondis. Emission, paiement et remboursement partagent le verrou de la facture source. Les remboursements sont append-only, idempotents et bornes par le trop-percu global et le solde de l'avoir ; ils sortent de la banque cote client et entrent cote fournisseur. Les lectures derivent le total net, l'encaisse net, le reste du et le remboursement du. Les couts projets et analytics utilisent ces faits nets, sans mouvement de stock ni change implicite.
+**Consequences** : les trop-percus restent des dettes de remboursement explicites ; un retour physique fournisseur reste une operation distincte. Les permissions de lecture de facture, avoir, emission et remboursement restent separees.
+**Reversible** : oui, extension du journal sans reecriture des pieces emises.
+
+## ADR-0020 — Un agregat conserve la permission de chaque source
+
+**Date** : 2026-10-03
+**Statut** : Acceptee
+**Decision** : la vue d'ensemble et le copilote utilisent des sections distinctes pour factures clients/fournisseurs, commandes/demandes d'achat et contrats/devis. Le droit d'une section ne donne pas le compteur d'une source voisine. Le dashboard CRM conserve les opportunites autorisees mais retourne `leads.available: false` et des compteurs null sans `crm.lead.read`, sans interroger cette source. Les montants financiers sont regroupes par devise ; ils ne sont jamais additionnes sous un libelle unique de devise.
+**Consequences** : une valeur indisponible n'est pas presentee comme zero reel. La provenance du copilote distingue commandes et demandes ; la preuve historique n'est pas reecrite.
+**Reversible** : oui, ajout de sections ou sources avec permission explicite.
+
+## ADR-0021 — Qualification actuelle distincte des archives et de la CI distante
+
+**Date** : 2026-10-04
+**Statut** : Acceptee
+**Contexte** : les résultats du 25 septembre ne prouvent pas les modifications d'octobre ; les réexécutions ciblées et les défauts trouvés pendant le navigateur global doivent rester identifiables.
+**Decision** : conserver les preuves de septembre sous une archive datée et consigner séparément l'arbre courant, les commandes, les résultats et la révision finale de code. Une réexécution ne crée pas de nouveaux cas à additionner ; un contrôle navigateur ciblé après correction ne remplace pas une suite globale. Une valeur horaire pré-migration inconnue n'est pas présentée comme zéro réel. La fermeture d'un gate exige son résultat réel ; aucun statut global `VERIFIED` n'est déduit des seuls contrôles locaux.
+**CI** : l'annotation du run historique `36157192308` confirme un compte bloqué pour facturation avant attribution d'un runner. Le workflow de ce commit excluait la base de PR `claude/funny-meitner-l317n1` ; le workflow courant l'inclut explicitement et génère des clés de carte de service éphémères dans les jobs API/navigateur. Ces corrections de configuration ne prouvent pas une résolution de facturation ni un succès de run actuel.
+**Preuve CI finale** : le code poussé `b1a6cb1a27575c4c96484c393a0099eabe99baa8`, PR brouillon #2, déclenche les runs push `37161782565` et PR `37161799570`. Les deux échouent avant exécution ; le run PR confirme deux jobs sans runner ni étapes et les mêmes annotations de facturation. Aucun statut `VERIFIED`, action de facturation ou relance manuelle n'en découle.
+**Consequences** : chaque reconstruction API/web et vérification n'est qualifiée qu'après obtention de sa sortie ; le rapport décrit le résultat global initial et les reprises ciblées séparément.
+**Résultat local final** : 200 unitaires, 351 cas API uniques, reprise RH/exports 15/15 et nouvelle globale navigateur 163/163 réussissent sur `b1a6cb1` ; les 10 PDF / 11 pages sont inspectés après correction. Le produit global reste `IN_PROGRESS` pour ses lacunes ; les preuves locales ne ferment pas la CI distante.
+**Tests d'inscription** : le job navigateur utilise `REGISTRATION_LIMIT: "100"` uniquement pour sa base CI éphémère et ses créations de tenants. Le service conserve 5 par défaut ; les reprises locales attendent la fenêtre du quota sans remise à zéro des données.
+**Reversible** : oui, nouveaux résultats et nouvelles révisions sont ajoutés sans réécrire leur historique de preuve.

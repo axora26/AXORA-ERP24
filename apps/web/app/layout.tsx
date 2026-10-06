@@ -8,7 +8,9 @@ import "@fontsource/montserrat/600.css";
 import "@fontsource/montserrat/700.css";
 import "@fontsource/montserrat/800.css";
 import "./globals.css";
+import "./theme.css";
 import { ServiceWorkerRegister } from "./components/sw-register";
+import { ThemeProvider } from "./components/theme";
 
 export const metadata: Metadata = {
   title: "AXORA-ERP24",
@@ -30,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

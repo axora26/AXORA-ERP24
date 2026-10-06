@@ -1,9 +1,16 @@
-import type { ProjectDetailView, ProjectSummaryView } from "@axora24/contracts";
+import type { ProjectDetailView, ProjectSummaryView, ProjectOperationsQuery, ProjectOperationsView, ProjectForecastRevisionView, ProjectResourcePlanView } from "@axora24/contracts";
 import { api } from "../api";
 
 export const projectsApi = {
   list: () => api.get<ProjectSummaryView[]>("/projects"),
   detail: (id: string) => api.get<ProjectDetailView>(`/projects/${id}`),
+  operations: (id: string, query: ProjectOperationsQuery = {}) => {
+    const parameters = new URLSearchParams();
+    if (query.from) parameters.set("from", query.from);
+    if (query.to) parameters.set("to", query.to);
+    if (query.companyId) parameters.set("companyId", query.companyId);
+    return api.get<ProjectOperationsView>(`/projects/${id}/operations${parameters.size ? `?${parameters}` : ""}`);
+  },
   create: (input: {
     name: string;
     contractId?: string;
@@ -43,6 +50,18 @@ export const projectsApi = {
     api.post<ProjectDetailView>(`/projects/${id}/risks`, input),
   updateRisk: (id: string, riskId: string, input: { status?: string; mitigation?: string }) =>
     api.patch<ProjectDetailView>(`/projects/${id}/risks/${riskId}`, input),
+  forecasts: (id: string) => api.get<ProjectForecastRevisionView[]>(`/projects/${id}/forecasts`),
+  createForecast: (id: string, input: { justification: string; revisedBudget: string; lines: Array<{ category: string; description: string; remainingAmount: string; wbsItemId?: string }> }) =>
+    api.post<ProjectForecastRevisionView>(`/projects/${id}/forecasts`, input),
+  approveForecast: (id: string, revisionId: string, note?: string) =>
+    api.post<ProjectForecastRevisionView>(`/projects/${id}/forecasts/${revisionId}/approve`, { note }),
+  rejectForecast: (id: string, revisionId: string, note: string) =>
+    api.post<ProjectForecastRevisionView>(`/projects/${id}/forecasts/${revisionId}/reject`, { note }),
+  resources: (id: string) => api.get<ProjectResourcePlanView[]>(`/projects/${id}/resources`),
+  createResource: (id: string, input: { kind: string; resourceId: string; wbsItemId?: string; plannedQuantity: string; plannedRate?: string; startAt: string; endAt?: string; notes?: string }) =>
+    api.post<ProjectResourcePlanView>(`/projects/${id}/resources`, input),
+  releaseResource: (id: string, planId: string) =>
+    api.post<ProjectResourcePlanView>(`/projects/${id}/resources/${planId}/release`),
 };
 
 export const PROJECT_STATUS_LABEL: Record<string, string> = {

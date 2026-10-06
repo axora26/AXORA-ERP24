@@ -1,0 +1,30 @@
+.axora-print-document { box-sizing:border-box; color:#111827; background:#fff; max-width:210mm; margin:24px auto; padding:14mm; border:1px solid #BFC3C9; font-family:Inter,Arial,sans-serif; font-size:10pt; line-height:1.5; }
+.axora-print-header { display:flex; align-items:center; gap:24px; padding-bottom:16px; border-bottom:3px solid #1E3A8A; margin-bottom:20px; break-inside:avoid; }
+.axora-print-header img { object-fit:contain; flex:none; }
+.axora-print-header > div { min-width:0; overflow-wrap:anywhere; }
+.axora-print-header h1 { color:#1E3A8A; font-family:Montserrat,Inter,Arial,sans-serif; font-size:22pt; line-height:1.2; margin:4px 0 8px; }
+.axora-print-header p { margin:2px 0; }
+.axora-print-kicker { font-size:9pt; font-weight:700; letter-spacing:.1em; color:#2563EB; }
+.axora-print-reference { font-weight:600; }
+.axora-print-content table { border-collapse:collapse; width:100%; min-width:0; table-layout:fixed; font-size:9pt; }
+.axora-print-content th { color:#fff; background:#1E3A8A; text-align:left; padding:8px; overflow-wrap:anywhere; }
+.axora-print-content td { color:#111827; background:#fff; padding:8px; vertical-align:top; border-bottom:1px solid #BFC3C9; overflow-wrap:anywhere; }
+.axora-print-content td:first-child { display:table-cell; }
+.axora-print-content tr { break-inside:avoid; }
+.axora-print-content h2,.axora-print-content h3 { color:#1E3A8A; break-after:avoid; }
+.axora-print-demo { color:#92400E; border:1px solid #92400E; padding:8px 12px; font-weight:700; }
+.axora-print-footer { margin-top:28px; padding-top:12px; text-align:center; border-top:1px solid #BFC3C9; color:#4B5563; font-size:8pt; }
+.axora-print-footer p { margin:2px 0; }
+@media screen and (max-width:700px) { .axora-print-document { padding:20px; margin:12px 0; } .axora-print-header { gap:12px; } .axora-print-header h1 { font-size:18pt; } }
+@page { size:A4; margin:15mm 14mm 24mm; }
+@media print {
+  html,body { min-height:0!important; color:#111827!important; background:#fff!important; }
+  .business-print-page,.invoice-print-page { min-height:0; }
+  .no-print { display:none!important; }
+  .axora-print-document { max-width:none; margin:0; border:0; padding:0; color:#111827!important; background:#fff!important; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  .axora-print-content thead { display:table-header-group; }
+  .axora-print-content tfoot { display:table-footer-group; }
+  .axora-print-footer { position:static; break-inside:avoid; background:#fff; }
+  .axora-print-document[data-print-margin-boxes="supported"] .axora-print-footer { display:none; }
+  .axora-print-header img { visibility:visible!important; }
+}

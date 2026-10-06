@@ -57,6 +57,11 @@ export const SALES_PERMISSIONS = {
 export const PROJECT_PERMISSIONS = {
   PROJECT_READ: "projects.project.read",
   PROJECT_MANAGE: "projects.project.manage",
+  RESOURCE_READ: "projects.resource.read",
+  RESOURCE_MANAGE: "projects.resource.manage",
+  FORECAST_READ: "projects.forecast.read",
+  FORECAST_MANAGE: "projects.forecast.manage",
+  FORECAST_APPROVE: "projects.forecast.approve",
   BUDGET_MANAGE: "projects.budget.manage",
   CHANGE_ORDER_APPROVE: "projects.changeorder.approve",
   TASK_MANAGE: "projects.task.manage",
@@ -72,6 +77,8 @@ export const PROCUREMENT_PERMISSIONS = {
   ORDER_READ: "procurement.order.read",
   ORDER_MANAGE: "procurement.order.manage",
   RECEIPT_CREATE: "procurement.receipt.create",
+  /** Retour physique au fournisseur : sort du stock et reduit le recu net. */
+  RETURN_CREATE: "procurement.return.create",
 } as const;
 
 /** INC-07 — Stock & Logistique. Les ajustements (hors flux) sont une permission distincte. */
@@ -81,23 +88,33 @@ export const INVENTORY_PERMISSIONS = {
   MOVEMENT_CREATE: "inventory.movement.create",
   ADJUSTMENT_CREATE: "inventory.adjustment.create",
   COUNT_MANAGE: "inventory.count.manage",
+  RESERVATION_MANAGE: "inventory.reservation.manage",
 } as const;
 
 /** INC-08 — Finance. Saisie, approbation et paiement des factures fournisseurs sont separes. */
 export const FINANCE_PERMISSIONS = {
   INVOICE_READ: "finance.invoice.read",
   INVOICE_MANAGE: "finance.invoice.manage",
+  INVOICE_SIGN: "finance.invoice.sign",
   PAYABLE_READ: "finance.payable.read",
   PAYABLE_MANAGE: "finance.payable.manage",
   PAYABLE_APPROVE: "finance.payable.approve",
   PAYMENT_CREATE: "finance.payment.create",
   BANK_MANAGE: "finance.bank.manage",
   SETTINGS_MANAGE: "finance.settings.manage",
+  CREDIT_READ: "finance.credit.read",
+  CREDIT_MANAGE: "finance.credit.manage",
+  CREDIT_ISSUE: "finance.credit.issue",
+  REFUND_MANAGE: "finance.refund.manage",
+  ACCOUNTING_READ: "finance.accounting.read",
+  ACCOUNTING_MANAGE: "finance.accounting.manage",
+  ACCOUNTING_POST: "finance.accounting.post",
 } as const;
 
 /** INC-09 — RH. Donnees salariales et paie derriere une permission distincte. */
 export const HR_PERMISSIONS = {
   EMPLOYEE_READ: "hr.employee.read",
+  CARD_MANAGE: "hr.card.manage",
   EMPLOYEE_MANAGE: "hr.employee.manage",
   ATTENDANCE_CREATE: "hr.attendance.create",
   TIMESHEET_MANAGE: "hr.timesheet.manage",
@@ -106,6 +123,11 @@ export const HR_PERMISSIONS = {
   LEAVE_APPROVE: "hr.leave.approve",
   PAYROLL_READ: "hr.payroll.read",
   PAYROLL_MANAGE: "hr.payroll.manage",
+  POLICY_MANAGE: "hr.payrollpolicy.manage",
+  ADVANCE_READ: "hr.advance.read",
+  ADVANCE_REQUEST: "hr.advance.request",
+  ADVANCE_APPROVE: "hr.advance.approve",
+  ADVANCE_REPAY: "hr.advance.repay",
 } as const;
 
 /** INC-10 — GED : documents versionnes, approbation par un tiers, fichiers immuables. */

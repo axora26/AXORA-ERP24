@@ -6,6 +6,7 @@
  * @type {import('next').NextConfig}
  */
 const apiInternalUrl = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
+const path = require("node:path");
 const production = process.env.NODE_ENV === "production";
 
 /**
@@ -29,6 +30,9 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig = {
+  outputFileTracingRoot: path.resolve(__dirname, "../.."),
+  // Image Docker de production : serveur autonome (node apps/web/server.js), sans node_modules complet.
+  ...(process.env.NEXT_STANDALONE === "1" ? { output: "standalone" } : {}),
   reactStrictMode: true,
   // Aucun en-tete revelant le framework.
   poweredByHeader: false,

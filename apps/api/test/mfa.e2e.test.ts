@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { totpCode } from "@axora24/security";
+import { loginThrottleKey, totpCode } from "@axora24/security";
 import { as, createHarness, registerTenant, type Harness, type Tenant } from "./support/harness.js";
 
 /** INC-01 — MFA TOTP : enrolement, defi de connexion, anti-rejeu, desactivation. */
@@ -25,11 +25,11 @@ describe("MFA TOTP (e2e)", () => {
 
   it("etat initial : MFA disponible mais non activee", async () => {
     const response = await as(harness, tenant).get("/auth/mfa");
-    expect(response.body).toEqual({ enabled: false, pendingSetup: false, available: true });
+    expect(response.body).toEqual({ enabled: false, pendingSetup: false, available: true, recoveryCodesRemaining: 0 });
   });
 
   it("enrolement : secret affiche une fois, stocke chiffre, active par un premier code valide", async () => {
-    const setup = await as(harness, tenant).post("/auth/mfa/setup");
+    const setup = await as(harness, tenant).post("/auth/mfa/setup", { password: tenant.password });
     expect(setup.status).toBe(201);
     secret = setup.body.secret;
     expect(setup.body.otpauthUri).toContain(`secret=${secret}`);
@@ -38,9 +38,9 @@ describe("MFA TOTP (e2e)", () => {
     expect(stored.mfaPendingSecretEnc).toMatch(/^aes-256-gcm-v1\$/);
     expect(stored.mfaPendingSecretEnc).not.toContain(secret);
 
-    const wrong = await as(harness, tenant).post("/auth/mfa/enable", { code: "000000" });
+    const wrong = await as(harness, tenant).post("/auth/mfa/enable", { password: tenant.password, code: "000000" });
     expect(wrong.status).toBe(400);
-    const enabled = await as(harness, tenant).post("/auth/mfa/enable", { code: totpCode(secret) });
+    const enabled = await as(harness, tenant).post("/auth/mfa/enable", { password: tenant.password, code: totpCode(secret) });
     expect(enabled.status).toBe(201);
     expect(enabled.body.enabled).toBe(true);
   });
@@ -90,6 +90,11 @@ describe("MFA TOTP (e2e)", () => {
   });
 
   it("desactivation : exige mot de passe ET code valide", async () => {
+    // This ordered suite deliberately exhausted the preceding login budget.
+    // A management operation must share it, then restore a clean fixture.
+    expect((await as(harness, tenant).post("/auth/mfa/disable", { password: tenant.password, code: "000000" })).status).toBe(429);
+    await harness.prisma.loginThrottle.deleteMany({ where: { keyHash: loginThrottleKey(`mfa:${tenant.userId}`, "::ffff:127.0.0.1") } });
+    await harness.prisma.loginThrottle.deleteMany({ where: { keyHash: loginThrottleKey(`mfa:${tenant.userId}`, "127.0.0.1") } });
     const noPassword = await as(harness, tenant).post("/auth/mfa/disable", { password: "wrong-pass", code: "000000" });
     expect(noPassword.status).toBe(401);
     const disabled = await as(harness, tenant).post("/auth/mfa/disable", {

@@ -56,7 +56,7 @@ export function setActiveCompanyId(companyId: string | null): void {
 }
 
 function withCompany(path: string): string {
-  if (!activeCompanyId || /[?&]companyId=/.test(path)) return path;
+  if (!isCompanyScoped(path) || !activeCompanyId || /[?&]companyId=/.test(path)) return path;
   return `${path}${path.includes("?") ? "&" : "?"}companyId=${encodeURIComponent(activeCompanyId)}`;
 }
 
@@ -66,8 +66,12 @@ export function assetUrl(url: string): string {
   return `${url}${url.includes("?") ? "&" : "?"}companyId=${encodeURIComponent(activeCompanyId)}`;
 }
 
-function bodyWithCompany(body: unknown): unknown {
-  if (!activeCompanyId || body === null || typeof body !== "object" || Array.isArray(body)) return body;
+function isCompanyScoped(path: string): boolean {
+  return !path.startsWith("/auth/") && !path.startsWith("/admin/");
+}
+
+function bodyWithCompany(path: string, body: unknown): unknown {
+  if (!isCompanyScoped(path) || !activeCompanyId || body === null || typeof body !== "object" || Array.isArray(body)) return body;
   return "companyId" in body ? body : { ...body, companyId: activeCompanyId };
 }
 
@@ -100,14 +104,29 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  downloadUrl: (path: string) => `${API_URL}${withCompany(path)}`,
+  download: async (path: string): Promise<{ blob: Blob; filename: string | null }> => {
+    let response: Response;
+    try { response = await fetch(`${API_URL}${withCompany(path)}`, { credentials: "include" }); }
+    catch { throw new ApiError(0, "Le téléchargement est momentanément indisponible. Réessayez."); }
+    if (!response.ok) {
+      const body = await response.json().catch(() => null) as { message?: string | string[] } | null;
+      throw new ApiError(response.status, Array.isArray(body?.message) ? body.message.join(" · ") : body?.message ?? "Le téléchargement a échoué.");
+    }
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+    let filename = /filename="?([^";]+)"?/i.exec(disposition)?.[1]?.trim() ?? null;
+    if (encoded) { try { filename = decodeURIComponent(encoded); } catch { /* conserver le nom simple */ } }
+    return { blob: await response.blob(), filename: filename ? Array.from(filename, character => character === "/" || character === "\\" || character.charCodeAt(0) < 32 ? "_" : character).join("") : null };
+  },
   get: <T>(path: string) => call<T>(path),
   post: <T>(path: string, body: unknown = {}) =>
-    call<T>(path, { method: "POST", body: JSON.stringify(bodyWithCompany(body)) }),
+    call<T>(path, { method: "POST", body: JSON.stringify(bodyWithCompany(path, body)) }),
   patch: <T>(path: string, body: unknown = {}) =>
-    call<T>(path, { method: "PATCH", body: JSON.stringify(bodyWithCompany(body)) }),
+    call<T>(path, { method: "PATCH", body: JSON.stringify(bodyWithCompany(path, body)) }),
   put: <T>(path: string, body: unknown = {}) =>
-    call<T>(path, { method: "PUT", body: JSON.stringify(bodyWithCompany(body)) }),
-  delete: <T>(path: string) => call<T>(path, { method: "DELETE" }),
+    call<T>(path, { method: "PUT", body: JSON.stringify(bodyWithCompany(path, body)) }),
+  delete: <T>(path: string, body?: unknown) => call<T>(path, { method: "DELETE", ...(body !== undefined ? { body: JSON.stringify(bodyWithCompany(path, body)) } : {}) }),
   upload: <T>(path: string, file: Blob, filename: string) => {
     const form = new FormData();
     form.append("file", file, filename);
@@ -151,10 +170,11 @@ export const estimationApi = {
       category: string;
       statement: string;
       sourceReference?: string;
+      expectedVersion?: number;
     },
   ) => api.post<EstimationRequirementView>(`/estimation/studies/${studyId}/requirements`, input),
-  markStudyReady: (studyId: string) =>
-    api.post<EstimationStudyView>(`/estimation/studies/${studyId}/ready`, {}),
+  markStudyReady: (studyId: string, expectedVersion?: number) =>
+    api.post<EstimationStudyView>(`/estimation/studies/${studyId}/ready`, { expectedVersion }),
   dqes: () => api.get<DqeSummaryView[]>("/estimation/dqes"),
   dqe: (dqeId: string) => api.get<DqeView>(`/estimation/dqes/${dqeId}`),
   createDqe: (input: { studyId: string; code: string; title: string; currency: string }) =>
@@ -166,11 +186,19 @@ export const estimationApi = {
       reference?: string;
       designation: string;
       unitCode: string;
+      costCategory?: string;
       quantity: string;
       unitPrice: string;
+      expectedVersion?: number;
     },
   ) => api.post<DqeLineView>(`/estimation/dqes/${dqeId}/lines`, input),
-  finalizeDqe: (dqeId: string) => api.post<DqeView>(`/estimation/dqes/${dqeId}/finalize`, {}),
+  updateDqePricing: (dqeId: string, input: { expectedVersion: number; overheadRate?: string; marginRate?: string; taxRate?: string }) =>
+    api.patch<DqeView>(`/estimation/dqes/${dqeId}/pricing`, input),
+  dqeVariants: (dqeId: string) => api.get<import("@axora24/contracts").DqeVariantView[]>(`/estimation/dqes/${dqeId}/variants`),
+  createDqeVariant: (dqeId: string, input: { code: string; title: string }) =>
+    api.post<import("@axora24/contracts").DqeVariantView>(`/estimation/dqes/${dqeId}/variants`, input),
+  dqeLibrary: () => api.get<import("@axora24/contracts").DqeLibraryItemView[]>("/estimation/library"),
+  finalizeDqe: (dqeId: string, expectedVersion?: number) => api.post<DqeView>(`/estimation/dqes/${dqeId}/finalize`, { expectedVersion }),
 };
 
 export const salesApi = {

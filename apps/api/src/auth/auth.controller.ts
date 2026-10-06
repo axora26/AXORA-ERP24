@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpException, Patch, Post, Req, Res, UseGuards } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { AuthService } from "./auth.service.js";
 import type { LoginDto, RegisterOrganizationDto } from "./auth.dto.js";
@@ -15,12 +15,28 @@ export class AuthController {
     private readonly account: AccountService,
   ) {}
 
+  /** Politique d'inscription publique : l'interface masque la creation d'espace si elle est fermee. */
+  @Get("registration")
+  registration() {
+    return this.authService.registrationStatus();
+  }
+
   @Post("register-organization")
   async registerOrganization(
     @Body() body: RegisterOrganizationDto,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const result = await this.authService.registerOrganization(body);
+    let result;
+    try {
+      result = await this.authService.registerOrganization(body, { ipAddress: request.ip ?? request.socket.remoteAddress ?? "unknown", userAgent: request.get("user-agent") ?? "unknown" });
+    } catch (error) {
+      if (error instanceof HttpException && error.getStatus() === 429) {
+        const details = error.getResponse() as { retryAfterSeconds?: number };
+        response.setHeader("Retry-After", String(details.retryAfterSeconds ?? 900));
+      }
+      throw error;
+    }
     setSessionCookie(response, result.plainToken, result.expiresAt);
     return { user: result.user };
   }
@@ -73,20 +89,29 @@ export class AuthController {
 
   @Post("mfa/setup")
   @UseGuards(SessionGuard)
-  async startMfaSetup(@Req() request: Request) {
-    return this.account.startMfaSetup(request.axoraUser!);
+  async startMfaSetup(@Req() request: Request, @Body() body: unknown) {
+    return this.account.startMfaSetup(request.axoraUser!, body, requestMetadata(request));
   }
 
   @Post("mfa/enable")
   @UseGuards(SessionGuard)
   async enableMfa(@Req() request: Request, @Body() body: unknown) {
-    return this.account.enableMfa(request.axoraUser!, body);
+    const token = readSessionToken(request);
+    return this.account.enableMfa(request.axoraUser!, body, requestMetadata(request), token ? hashSessionToken(token) : null);
   }
 
   @Post("mfa/disable")
   @UseGuards(SessionGuard)
   async disableMfa(@Req() request: Request, @Body() body: unknown) {
-    return this.account.disableMfa(request.axoraUser!, body);
+    const token = readSessionToken(request);
+    return this.account.disableMfa(request.axoraUser!, body, requestMetadata(request), token ? hashSessionToken(token) : null);
+  }
+
+  @Post("mfa/recovery-codes")
+  @UseGuards(SessionGuard)
+  async regenerateRecoveryCodes(@Req() request: Request, @Body() body: unknown) {
+    const token = readSessionToken(request);
+    return this.account.regenerateRecoveryCodes(request.axoraUser!, body, requestMetadata(request), token ? hashSessionToken(token) : null);
   }
 
   @Post("logout")
@@ -122,13 +147,20 @@ export class AuthController {
   async context(@Req() request: Request) {
     return this.authService.context(request.axoraUser!);
   }
+  @Get("preferences")
+  @UseGuards(SessionGuard)
+  preferences(@Req() request: Request) { return this.account.preferences(request.axoraUser!); }
+
+  @Patch("preferences")
+  @UseGuards(SessionGuard)
+  updatePreferences(@Req() request: Request, @Body() body: unknown) { return this.account.updatePreferences(request.axoraUser!, body); }
 }
 
 function setSessionCookie(response: Response, plainToken: string, expiresAt: Date): void {
   response.cookie(COOKIE_NAME, plainToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     expires: expiresAt,
     path: "/",
   });
@@ -141,4 +173,8 @@ function readSessionToken(request: Request): string | undefined {
     .map((item) => item.trim())
     .find((item) => item.startsWith(`${COOKIE_NAME}=`));
   return part ? decodeURIComponent(part.slice(COOKIE_NAME.length + 1)) : undefined;
+}
+
+function requestMetadata(request: Request) {
+  return { ipAddress: request.ip ?? request.socket.remoteAddress ?? "unknown", userAgent: request.get("user-agent") ?? "unknown" };
 }

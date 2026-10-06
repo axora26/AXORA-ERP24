@@ -6,6 +6,7 @@ import type {
   CrmOpportunityView,
   DqeSummaryView,
   DqeView,
+  DqeVariantView,
   EstimationStudySummaryView,
   EstimationStudyView,
 } from "@axora24/contracts";
@@ -20,6 +21,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ApiError, crmApi, estimationApi } from "../lib/api";
+import { useSession } from "../lib/session";
+import { EstimationDraftEditor, type EstimationDraftSelection } from "./estimation-draft-editor";
+import { FileDownloadButton } from "./file-download-button";
 
 interface EstimationData {
   opportunities: CrmOpportunityView[];
@@ -53,15 +57,21 @@ const EMPTY_LINE_FORM = {
   reference: "",
   designation: "",
   unitCode: "",
+  costCategory: "MATERIAL",
   quantity: "",
   unitPrice: "",
 };
+
+const EMPTY_PRICING_FORM = { overheadRate: "0", marginRate: "0", taxRate: "0" };
+const EMPTY_VARIANT_FORM = { code: "", title: "" };
 
 /**
  * Espace Etudes & DQE (INC-03).
  * Les listes et compteurs proviennent exclusivement de l'API du tenant.
  */
 export function EstimationWorkspace(): React.ReactElement {
+  const { can } = useSession();
+  const [draftEditor, setDraftEditor] = useState<{ selection: EstimationDraftSelection; deleting: boolean } | null>(null);
   const [data, setData] = useState<EstimationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -73,6 +83,10 @@ export function EstimationWorkspace(): React.ReactElement {
   const [selectedDqe, setSelectedDqe] = useState<DqeView | null>(null);
   const [dqeForm, setDqeForm] = useState(EMPTY_DQE_FORM);
   const [lineForm, setLineForm] = useState(EMPTY_LINE_FORM);
+  const [pricingForm, setPricingForm] = useState(EMPTY_PRICING_FORM);
+  const [variants, setVariants] = useState<DqeVariantView[]>([]);
+  const [libraryItems, setLibraryItems] = useState<import("@axora24/contracts").DqeLibraryItemView[]>([]);
+  const [variantForm, setVariantForm] = useState(EMPTY_VARIANT_FORM);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -139,6 +153,7 @@ export function EstimationWorkspace(): React.ReactElement {
     try {
       await estimationApi.addRequirement(selectedStudy.id, {
         position: Number(requirementForm.position),
+        expectedVersion: selectedStudy.version,
         category: requirementForm.category,
         statement: requirementForm.statement,
         ...(requirementForm.sourceReference.trim()
@@ -147,7 +162,7 @@ export function EstimationWorkspace(): React.ReactElement {
       });
       setRequirementForm({
         ...EMPTY_REQUIREMENT_FORM,
-        position: String(selectedStudy.requirements.length + 2),
+        position: String(Math.max(0, ...selectedStudy.requirements.map(row => row.position), Number(requirementForm.position)) + 1),
       });
       setSelectedStudy(await estimationApi.study(selectedStudy.id));
       setNotice("Exigence ajoutée à l'étude.");
@@ -165,7 +180,7 @@ export function EstimationWorkspace(): React.ReactElement {
     setError("");
     setNotice("");
     try {
-      setSelectedStudy(await estimationApi.markStudyReady(selectedStudy.id));
+      setSelectedStudy(await estimationApi.markStudyReady(selectedStudy.id, selectedStudy.version));
       setNotice("Étude validée. Ses exigences sont désormais figées.");
       await load();
     } catch (caught) {
@@ -187,6 +202,9 @@ export function EstimationWorkspace(): React.ReactElement {
         ...dqeForm,
       });
       setSelectedDqe(created);
+      setVariants([]);
+      setLibraryItems([]);
+      setVariantForm(EMPTY_VARIANT_FORM);
       setDqeForm(EMPTY_DQE_FORM);
       setNotice("DQE créé avec sa source d'étude figée.");
       await load();
@@ -200,7 +218,13 @@ export function EstimationWorkspace(): React.ReactElement {
   async function openDqe(dqeId: string): Promise<void> {
     setError("");
     try {
-      setSelectedDqe(await estimationApi.dqe(dqeId));
+      const dqe = await estimationApi.dqe(dqeId);
+      setSelectedDqe(dqe);
+      setPricingForm({ overheadRate: dqe.overheadRate ?? "0", marginRate: dqe.marginRate ?? "0", taxRate: dqe.taxRate ?? "0" });
+      setVariants((await estimationApi.dqeVariants(dqeId)) ?? []);
+      if (can("estimation.library.read")) {
+        try { setLibraryItems((await estimationApi.dqeLibrary()) ?? []); } catch { setLibraryItems([]); }
+      }
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Ouverture du DQE impossible.");
     }
@@ -215,18 +239,64 @@ export function EstimationWorkspace(): React.ReactElement {
     try {
       await estimationApi.addDqeLine(selectedDqe.id, {
         position: Number(lineForm.position),
+        expectedVersion: selectedDqe.version,
         ...(lineForm.reference.trim() ? { reference: lineForm.reference.trim() } : {}),
         designation: lineForm.designation,
         unitCode: lineForm.unitCode,
+        ...(lineForm.costCategory !== "MATERIAL" ? { costCategory: lineForm.costCategory } : {}),
         quantity: lineForm.quantity,
         unitPrice: lineForm.unitPrice,
       });
-      setLineForm({ ...EMPTY_LINE_FORM, position: String(selectedDqe.lines.length + 2) });
+      setLineForm({ ...EMPTY_LINE_FORM, position: String(Math.max(0, ...selectedDqe.lines.map(row => row.position), Number(lineForm.position)) + 1) });
       setSelectedDqe(await estimationApi.dqe(selectedDqe.id));
       setNotice("Ligne ajoutée au DQE.");
       await load();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Ajout de la ligne impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateDqePricing(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!selectedDqe || selectedDqe.status !== "DRAFT") return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const updated = await estimationApi.updateDqePricing(selectedDqe.id, { expectedVersion: selectedDqe.version, ...pricingForm });
+      setSelectedDqe(updated);
+      setPricingForm({ overheadRate: updated.overheadRate ?? "0", marginRate: updated.marginRate ?? "0", taxRate: updated.taxRate ?? "0" });
+      setVariants((await estimationApi.dqeVariants(updated.id)) ?? []);
+      setNotice("Coefficients du DQE enregistrés.");
+      await load();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Enregistrement des coefficients impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function applyLibraryItem(code: string): void {
+    const item = libraryItems.find((candidate) => candidate.code === code);
+    if (!item) return;
+    setLineForm({ ...lineForm, reference: item.code, designation: item.designation, unitCode: item.unitCode, costCategory: item.costCategory, unitPrice: item.unitPrice });
+  }
+
+  async function createDqeVariant(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!selectedDqe || !variantForm.code.trim() || !variantForm.title.trim()) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await estimationApi.createDqeVariant(selectedDqe.id, { code: variantForm.code.trim(), title: variantForm.title.trim() });
+      setVariantForm(EMPTY_VARIANT_FORM);
+      setVariants((await estimationApi.dqeVariants(selectedDqe.id)) ?? []);
+      setNotice("Variante enregistrée pour comparaison.");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Création de la variante impossible.");
     } finally {
       setSaving(false);
     }
@@ -238,7 +308,7 @@ export function EstimationWorkspace(): React.ReactElement {
     setError("");
     setNotice("");
     try {
-      setSelectedDqe(await estimationApi.finalizeDqe(selectedDqe.id));
+      setSelectedDqe(await estimationApi.finalizeDqe(selectedDqe.id, selectedDqe.version));
       setNotice("DQE finalisé. Les lignes et montants sont désormais figés.");
       await load();
     } catch (caught) {
@@ -463,10 +533,11 @@ export function EstimationWorkspace(): React.ReactElement {
               <table>
                 <thead>
                   <tr>
-                    <th>Position</th>
-                    <th>Catégorie</th>
-                    <th>Énoncé</th>
-                    <th>Source</th>
+                    <th scope="col">Position</th>
+                    <th scope="col">Catégorie</th>
+                    <th scope="col">Énoncé</th>
+                    <th scope="col">Source</th>
+                    {selectedStudy.status === "DRAFT" && can("estimation.study.manage") && <th scope="col">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -476,6 +547,7 @@ export function EstimationWorkspace(): React.ReactElement {
                       <td>{requirement.category}</td>
                       <td>{requirement.statement}</td>
                       <td>{requirement.sourceReference ?? "—"}</td>
+                      {selectedStudy.status === "DRAFT" && can("estimation.study.manage") && <td><div className="crm-row-actions"><button type="button" className="link-button" aria-label={`Modifier l’exigence ${requirement.position}`} onClick={() => setDraftEditor({ selection: { kind: "requirement", parent: selectedStudy, row: requirement }, deleting: false })}>Modifier</button><button type="button" className="link-button" aria-label={`Supprimer l’exigence ${requirement.position}`} onClick={() => setDraftEditor({ selection: { kind: "requirement", parent: selectedStudy, row: requirement }, deleting: true })}>Supprimer</button></div></td>}
                     </tr>
                   ))}
                 </tbody>
@@ -626,11 +698,11 @@ export function EstimationWorkspace(): React.ReactElement {
             <table>
               <thead>
                 <tr>
-                  <th>Document</th>
-                  <th>Statut</th>
-                  <th>Lignes</th>
-                  <th>Total</th>
-                  <th>Action</th>
+                  <th scope="col">Document</th>
+                  <th scope="col">Statut</th>
+                  <th scope="col">Lignes</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -682,8 +754,42 @@ export function EstimationWorkspace(): React.ReactElement {
                 {selectedDqe.status === "FINALIZED" ? "Finalisé" : "Brouillon"}
               </span>
               <strong>{selectedDqe.subtotal} {selectedDqe.currency}</strong>
+              {can("estimation.dqe.read") && <div className="crm-row-actions"><FileDownloadButton path={`/estimation/dqes/${selectedDqe.id}/export.xlsx`} filename={`${selectedDqe.code}.xlsx`} onError={setError}>Exporter Excel</FileDownloadButton><FileDownloadButton path={`/estimation/dqes/${selectedDqe.id}/export.pdf`} filename={`${selectedDqe.code}.pdf`} onError={setError}>Exporter PDF</FileDownloadButton></div>}
             </div>
           </div>
+
+          <div className="dqe-financial-summary" aria-label="Synthèse financière du DQE">
+            <div><span>Total direct</span><strong>{selectedDqe.subtotal} {selectedDqe.currency}</strong></div>
+            <div><span>Frais généraux</span><strong>{selectedDqe.overheadAmount} {selectedDqe.currency}</strong></div>
+            <div><span>Marge</span><strong>{selectedDqe.marginAmount} {selectedDqe.currency}</strong></div>
+            <div><span>Taxes</span><strong>{selectedDqe.taxAmount} {selectedDqe.currency}</strong></div>
+            <div className="dqe-financial-total"><span>Total TTC</span><strong>{selectedDqe.total} {selectedDqe.currency}</strong></div>
+          </div>
+
+          {selectedDqe.status === "DRAFT" && can("estimation.pricing.manage") && (
+            <form className="dqe-pricing-form" onSubmit={updateDqePricing}>
+              <div className="dqe-pricing-copy"><strong>Coefficients de chiffrage</strong><small>Les taux sont enregistrés avec la version du brouillon.</small></div>
+              <label htmlFor="dqe-overhead">Frais généraux (%)<input id="dqe-overhead" inputMode="decimal" value={pricingForm.overheadRate} onChange={(event) => setPricingForm({ ...pricingForm, overheadRate: event.currentTarget.value })} /></label>
+              <label htmlFor="dqe-margin">Marge (%)<input id="dqe-margin" inputMode="decimal" value={pricingForm.marginRate} onChange={(event) => setPricingForm({ ...pricingForm, marginRate: event.currentTarget.value })} /></label>
+              <label htmlFor="dqe-tax">Taxe (%)<input id="dqe-tax" inputMode="decimal" value={pricingForm.taxRate} onChange={(event) => setPricingForm({ ...pricingForm, taxRate: event.currentTarget.value })} /></label>
+              <button className="secondary-button" type="submit" disabled={saving}>Enregistrer les taux</button>
+            </form>
+          )}
+
+          <section className="dqe-variants" aria-labelledby="dqe-variants-title">
+            <div className="dqe-variants-head">
+              <div><h3 id="dqe-variants-title">Variantes comparées</h3><p>Capturez un instantané immuable avant de modifier le scénario de chiffrage.</p></div>
+              {selectedDqe.status !== "ARCHIVED" && can("estimation.dqe.manage") && (
+                <form className="dqe-variant-form" onSubmit={createDqeVariant}>
+                  <label htmlFor="variant-code">Code<input id="variant-code" value={variantForm.code} onChange={(event) => setVariantForm({ ...variantForm, code: event.currentTarget.value })} placeholder="OPT-A" required /></label>
+                  <label htmlFor="variant-title">Intitulé<input id="variant-title" value={variantForm.title} onChange={(event) => setVariantForm({ ...variantForm, title: event.currentTarget.value })} placeholder="Solution optimisée" required /></label>
+                  <button className="secondary-button" type="submit" disabled={saving}>Capturer</button>
+                </form>
+              )}
+            </div>
+            {variants.length > 0 && <div className="table-wrap"><table><thead><tr><th>Variante</th><th>Révision</th><th>Total capturé</th><th>Écart actuel</th><th>Créée le</th></tr></thead><tbody>{variants.map((variant) => <tr key={variant.id}><td><strong>{variant.title}</strong><small>{variant.code}</small></td><td>R{variant.revision}</td><td className="numeric-cell">{variant.total} {variant.currency}</td><td className="numeric-cell">{variant.deltaTotal} {variant.currency}</td><td>{new Date(variant.createdAt).toLocaleDateString("fr-FR")}</td></tr>)}</tbody></table></div>}
+            {variants.length === 0 && <p className="dqe-variants-empty">Aucune variante capturée pour ce DQE.</p>}
+          </section>
 
           {selectedDqe.lines.length === 0 ? (
             <EmptyState title="Aucune ligne" body="Ajoutez la première ligne du bordereau." />
@@ -692,13 +798,15 @@ export function EstimationWorkspace(): React.ReactElement {
               <table>
                 <thead>
                   <tr>
-                    <th>Pos.</th>
-                    <th>Référence</th>
-                    <th>Désignation</th>
-                    <th>Unité</th>
-                    <th>Quantité</th>
-                    <th>Prix unitaire</th>
-                    <th>Total ligne</th>
+                    <th scope="col">Pos.</th>
+                    <th scope="col">Référence</th>
+                    <th scope="col">Désignation</th>
+                    <th scope="col">Famille</th>
+                    <th scope="col">Unité</th>
+                    <th scope="col">Quantité</th>
+                    <th scope="col">Prix unitaire</th>
+                    <th scope="col">Total ligne</th>
+                    {selectedDqe.status === "DRAFT" && can("estimation.dqe.manage") && <th scope="col">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -707,10 +815,12 @@ export function EstimationWorkspace(): React.ReactElement {
                       <td>{line.position}</td>
                       <td><strong>{line.reference ?? "—"}</strong></td>
                       <td>{line.designation}</td>
+                      <td>{line.costCategory === "MATERIAL" ? "Matériaux" : line.costCategory === "LABOR" ? "Main-d’œuvre" : line.costCategory === "EQUIPMENT" ? "Matériel" : line.costCategory === "SUBCONTRACTING" ? "Sous-traitance" : "Autres"}</td>
                       <td>{line.unitCode}</td>
                       <td className="numeric-cell">{line.quantity}</td>
                       <td className="numeric-cell">{line.unitPrice}</td>
                       <td className="numeric-cell">{line.lineTotal}</td>
+                      {selectedDqe.status === "DRAFT" && can("estimation.dqe.manage") && <td><div className="crm-row-actions"><button type="button" className="link-button" aria-label={`Modifier la ligne ${line.position}`} onClick={() => setDraftEditor({ selection: { kind: "line", parent: selectedDqe, row: line }, deleting: false })}>Modifier</button><button type="button" className="link-button" aria-label={`Supprimer la ligne ${line.position}`} onClick={() => setDraftEditor({ selection: { kind: "line", parent: selectedDqe, row: line }, deleting: true })}>Supprimer</button></div></td>}
                     </tr>
                   ))}
                 </tbody>
@@ -720,6 +830,7 @@ export function EstimationWorkspace(): React.ReactElement {
 
           {selectedDqe.status === "DRAFT" && (
             <form className="line-form" onSubmit={addDqeLine}>
+              {libraryItems.length > 0 && <div className="line-library-field"><label htmlFor="line-library">Depuis la bibliothèque</label><select id="line-library" defaultValue="" onChange={(event) => applyLibraryItem(event.currentTarget.value)}><option value="">Choisir un ouvrage…</option>{libraryItems.filter((item) => item.isActive).map((item) => <option key={item.id} value={item.code}>{item.code} — {item.designation}</option>)}</select></div>}
               <div>
                 <label htmlFor="line-position">Position de ligne</label>
                 <input
@@ -760,6 +871,20 @@ export function EstimationWorkspace(): React.ReactElement {
                   placeholder="m3"
                   required
                 />
+              </div>
+              <div>
+                <label htmlFor="line-category">Famille de coût</label>
+                <select
+                  id="line-category"
+                  value={lineForm.costCategory}
+                  onChange={(event) => setLineForm({ ...lineForm, costCategory: event.currentTarget.value })}
+                >
+                  <option value="MATERIAL">Matériaux</option>
+                  <option value="LABOR">Main-d’œuvre</option>
+                  <option value="EQUIPMENT">Matériel</option>
+                  <option value="SUBCONTRACTING">Sous-traitance</option>
+                  <option value="OTHER">Autres</option>
+                </select>
               </div>
               <div>
                 <label htmlFor="line-quantity">Quantité</label>
@@ -805,6 +930,7 @@ export function EstimationWorkspace(): React.ReactElement {
           )}
         </section>
       )}
+      {draftEditor && <EstimationDraftEditor selection={draftEditor.selection} deleting={draftEditor.deleting} onClose={() => setDraftEditor(null)} onSaved={async result => { if ("requirements" in result) setSelectedStudy(result); else setSelectedDqe(result); setDraftEditor(null); setNotice("Brouillon actualisé."); await load(); }} />}
     </>
   );
 }

@@ -50,7 +50,7 @@ export class PermissionGuard implements CanActivate {
     }
 
     const assignments = await this.prisma.roleAssignment.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, role: { organizationId: user.organizationId } },
       include: { role: { include: { permissions: { include: { permission: true } } } } },
     });
 
@@ -63,12 +63,19 @@ export class PermissionGuard implements CanActivate {
       })),
     );
 
-    request.axoraPermissions = new Set(
-      grants.filter((grant) => grant.organizationId === user.organizationId).map((grant) => grant.permissionKey),
-    );
+    const scope = {
+      organizationId: user.organizationId,
+      ...(request.axoraScope
+        ? {
+            companyId: request.axoraScope.companyId,
+            ...(request.axoraScope.projectId ? { projectId: request.axoraScope.projectId } : {}),
+          }
+        : {}),
+    };
+    request.axoraPermissions = new Set(grants.filter((grant) => isAuthorized({ key: grant.permissionKey, ...scope }, [grant])).map((grant) => grant.permissionKey));
 
     const authorized = requiredPermissions.some((key) =>
-      isAuthorized({ key, organizationId: user.organizationId }, grants),
+      isAuthorized({ key, ...scope }, grants),
     );
 
     if (!authorized) {

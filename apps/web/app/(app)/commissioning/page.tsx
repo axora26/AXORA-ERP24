@@ -9,7 +9,7 @@ import { formatDateTime } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
 import { ProjectPicker, useProjectChoice } from "../../components/project-picker";
-import { Button, DataTable, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, TextAreaField } from "../../components/ui";
+import { DataUnavailable, Button, DataTable, Empty, Feedback, Form, Loading, Metric, Metrics, Modal, PageHeader, Panel, SelectField, StatusChip, TextAreaField } from "../../components/ui";
 
 export default function CommissioningPage(): React.ReactElement {
   const session = useSession();
@@ -23,6 +23,9 @@ export default function CommissioningPage(): React.ReactElement {
   );
   const [activities, equipment] = data.data ?? [[], []];
   const candidates = equipment.filter((item) => item.status === "INSTALLED" && !activities.some((activity) => activity.equipmentId === item.id));
+
+  if (projects.error && !projects.data && !projects.loading) return <DataUnavailable title="Mise en service" error={projects.error} onRetry={() => void projects.reload()}/>;
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="Mise en service" error={data.error} onRetry={() => void data.reload()}/>;
 
   return (
     <>

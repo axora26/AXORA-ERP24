@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { hashPassword, verifyPassword, createSessionToken, parseEncryptionKey } from "@axora24/security";
 import { AccountService } from "./account.service.js";
 import { ALL_PERMISSIONS } from "@axora24/contracts";
@@ -7,8 +7,11 @@ import { PrismaService } from "../core/prisma.service.js";
 import type { LoginDto, RegisterOrganizationDto } from "./auth.dto.js";
 import type { AuthenticatedUser } from "./session.guard.js";
 import { LoginThrottleService } from "./login-throttle.service.js";
+import { parseLogin, parseRegistration } from "./credentials.js";
+import { SESSION_MAX_AGE_MS, SESSION_IDLE_MS } from "./session-policy.js";
+import { registrationAllowed, registrationMode, type RegistrationMode } from "./registration-policy.js";
 
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 jours
+const SESSION_TTL_MS = SESSION_MAX_AGE_MS;
 
 export interface SessionResult {
   plainToken: string;
@@ -34,12 +37,28 @@ export class AuthService {
     private readonly account: AccountService,
   ) {}
 
+  /** Politique publique d'inscription : le mode configure et son effet actuel. */
+  async registrationStatus(): Promise<{ mode: RegistrationMode; open: boolean }> {
+    const mode = registrationMode();
+    if (mode !== "first-organization") return { mode, open: mode === "open" };
+    return { mode, open: registrationAllowed(mode, await this.prisma.organization.count()) };
+  }
+
   /**
    * Bootstrap d'un nouveau tenant : Organization + Company + role OWNER
    * (toutes les permissions Core) + premier utilisateur + session ouverte.
    * Operation transactionnelle — invariant docs/foundation/01-architecture.md §5.1.
    */
-  async registerOrganization(input: RegisterOrganizationDto): Promise<SessionResult> {
+  async registerOrganization(body: RegisterOrganizationDto, metadata: RequestMetadata): Promise<SessionResult> {
+    // Avant toute consommation du budget anti-abus : une instance fermee ne doit rien enregistrer.
+    if (!(await this.registrationStatus()).open) {
+      throw new ForbiddenException("Organization registration is closed on this instance");
+    }
+    const configuredLimit = Number(process.env.REGISTRATION_LIMIT ?? 5);
+    const maxAttempts = Number.isInteger(configuredLimit) && configuredLimit >= 1 && configuredLimit <= 1000 ? configuredLimit : 5;
+    const budget = await this.loginThrottle.reserveAttempt("register-organization", metadata.ipAddress, maxAttempts);
+    if (!budget.allowed) throw new HttpException({ message: "Too many registration attempts. Try again later.", retryAfterSeconds: budget.retryAfterSeconds }, HttpStatus.TOO_MANY_REQUESTS);
+    const input = parseRegistration(body);
     const existing = await this.prisma.organization.findUnique({
       where: { slug: input.organizationSlug },
     });
@@ -50,6 +69,13 @@ export class AuthService {
     const passwordHash = await hashPassword(input.ownerPassword);
 
     const result = await this.prisma.$transaction(async (tx) => {
+      if (registrationMode() === "first-organization") {
+        // Deux inscriptions simultanees sur une instance vide : une seule devient la premiere organisation.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended('axora:first-organization', 0))`;
+        if ((await tx.organization.count()) > 0) {
+          throw new ForbiddenException("Organization registration is closed on this instance");
+        }
+      }
       const organization = await tx.organization.create({
         data: { name: input.organizationName, slug: input.organizationSlug },
       });
@@ -127,6 +153,7 @@ export class AuthService {
           action: "organization.bootstrap",
           resourceType: "Organization",
           resourceId: organization.id,
+          metadata: { ipAddress: metadata.ipAddress },
         },
       });
 
@@ -146,24 +173,19 @@ export class AuthService {
     };
   }
 
-  async login(input: LoginDto, metadata: RequestMetadata): Promise<SessionResult | MfaChallengeResult> {
+  async login(body: LoginDto, metadata: RequestMetadata): Promise<SessionResult | MfaChallengeResult> {
+    const input = parseLogin(body);
     const normalizedEmail = input.email.trim().toLowerCase();
     await this.loginThrottle.enforce(normalizedEmail, metadata.ipAddress);
 
-    // NOTE : email n'est pas garanti unique globalement (unique par organizationId),
-    // donc on prend le premier utilisateur actif correspondant. Une evolution
-    // multi-organisation par email necessitera un ecran de selection d'organisation.
-    const user = await this.prisma.user.findFirst({
-      where: { email: input.email, isActive: true },
+    // Email is unique per tenant. Never silently pick a tenant when two
+    // organisations contain the same email; the optional slug disambiguates.
+    const candidates = await this.prisma.user.findMany({
+      where: { email: normalizedEmail, ...(input.organizationSlug ? { organization: { slug: input.organizationSlug } } : {}) }, take: 2,
     });
-
-    if (!user) {
-      await this.loginThrottle.recordFailure(normalizedEmail, metadata.ipAddress);
-      throw new UnauthorizedException("Invalid credentials");
-    }
-
-    const validPassword = await verifyPassword(input.password, user.passwordHash);
-    if (!validPassword) {
+    const user = candidates.length === 1 ? candidates[0] : undefined;
+    const validPassword = await verifyPassword(input.password, user?.passwordHash ?? `${"0".repeat(32)}:${"0".repeat(128)}`);
+    if (!user || !user.isActive || !validPassword) {
       await this.loginThrottle.recordFailure(normalizedEmail, metadata.ipAddress);
       throw new UnauthorizedException("Invalid credentials");
     }
@@ -173,7 +195,7 @@ export class AuthService {
     if (user.mfaEnabled) {
       // Mot de passe valide mais second facteur requis : aucun cookie de
       // session n'est emis avant la verification du code TOTP.
-      if (!parseEncryptionKey(process.env.MFA_ENCRYPTION_KEY)) {
+      if (!parseEncryptionKey(process.env.MFA_ENCRYPTION_KEY) && user.mfaRecoveryCodeHashes.length === 0) {
         throw new ServiceUnavailableException("MFA is required for this account but not configured on this server");
       }
       return { mfaRequired: true, challengeToken: await this.account.issueChallenge(user.id, metadata) };
@@ -260,7 +282,7 @@ export class AuthService {
     const { plainToken, tokenHash } = createSessionToken();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     await this.prisma.session.create({
-      data: { userId, tokenHash, expiresAt },
+      data: { userId, tokenHash, expiresAt: new Date(Date.now() + SESSION_IDLE_MS) },
     });
     return { plainToken, expiresAt };
   }
@@ -277,7 +299,7 @@ export class AuthService {
         data: {
           userId: user.id,
           tokenHash,
-          expiresAt,
+          expiresAt: new Date(Date.now() + SESSION_IDLE_MS),
           ipAddress: metadata.ipAddress,
           userAgent: metadata.userAgent,
         },

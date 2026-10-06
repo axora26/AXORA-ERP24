@@ -36,6 +36,8 @@ const MODULE_LABELS: Record<string, string> = {
 };
 
 const RESOURCE_LABELS: Record<string, string> = {
+  credit: "Avoirs",
+  refund: "Remboursements",
   organization: "l'organisation",
   company: "les entreprises",
   user: "les utilisateurs",
@@ -58,10 +60,13 @@ const RESOURCE_LABELS: Record<string, string> = {
   budget: "les budgets",
   changeorder: "les avenants",
   task: "les tâches",
+  resource: "les ressources planifiées",
+  forecast: "les prévisions de coût",
   supplier: "les fournisseurs",
   request: "les demandes d'achat",
   order: "les commandes",
   receipt: "les réceptions",
+  return: "les retours fournisseur",
   item: "les articles et magasins",
   movement: "les mouvements de stock",
   adjustment: "les ajustements de stock",
@@ -71,6 +76,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   payment: "les paiements",
   bank: "les banques et caisses",
   settings: "les paramètres",
+  accounting: "la comptabilité générale",
   employee: "les employés",
   attendance: "les pointages",
   timesheet: "les feuilles de temps",
@@ -120,6 +126,16 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
+  "projects.resource.read": "Consulter les ressources futures du projet",
+  "projects.resource.manage": "Planifier les ressources futures du projet",
+  "projects.forecast.read": "Consulter les prévisions de coût du projet",
+  "projects.forecast.manage": "Préparer les prévisions de coût du projet",
+  "projects.forecast.approve": "Approuver les prévisions de coût du projet",
+  "inventory.reservation.manage": "Réserver et libérer du stock",
+  "hr.advance.read": "Consulter les avances salariés",
+  "hr.advance.request": "Demander une avance salarié",
+  "hr.advance.approve": "Approuver ou rejeter une avance",
+  "hr.advance.repay": "Enregistrer un remboursement d’avance",
   "commissioning.activity.read": "Consulter les mises en service",
   "commissioning.activity.manage": "Conduire les essais de mise en service",
   "commissioning.activity.accept": "Réceptionner et remettre les installations",

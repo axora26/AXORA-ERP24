@@ -8,7 +8,8 @@ export type StockMovementType =
   | "TRANSFER_IN"
   | "ADJUSTMENT_IN"
   | "ADJUSTMENT_OUT"
-  | "MAINTENANCE_ISSUE";
+  | "MAINTENANCE_ISSUE"
+  | "SUPPLIER_RETURN";
 
 export interface InventoryItemView {
   id: string;
@@ -50,6 +51,32 @@ export interface StockBalanceView {
   quantity: string;
   value: string;
   averageCost: string | null;
+  reservedQuantity: string;
+  freeQuantity: string;
+}
+
+export type StockReservationStatus = "ACTIVE" | "FULFILLED" | "RELEASED";
+export type StockReservationEventType = "RESERVE" | "ISSUE" | "RELEASE";
+
+export interface StockReservationView {
+  id: string;
+  projectId: string;
+  projectCode: string;
+  wbsItemId: string | null;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  unitCode: string;
+  warehouseId: string;
+  warehouseCode: string;
+  quantity: string;
+  remainingQuantity: string;
+  status: StockReservationStatus;
+  neededAt: string | null;
+  reason: string;
+  createdByName: string | null;
+  createdAt: string;
+  releasedAt: string | null;
 }
 
 export interface StockMovementView {

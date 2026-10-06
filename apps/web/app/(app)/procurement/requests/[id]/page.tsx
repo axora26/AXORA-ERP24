@@ -9,6 +9,7 @@ import { REQUEST_STATUS_LABEL, procurementApi } from "../../../../lib/modules/pr
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from "../../../../lib/format";
 import { useMutation, useResource } from "../../../../lib/hooks";
 import { useSession } from "../../../../lib/session";
+import { BusinessPrintLink } from "../../../../components/business-print-link";
 import {
   ActionBar,
   Button,
@@ -75,7 +76,7 @@ export default function PurchaseRequestPage(): React.ReactElement {
           setOverride(null);
           void resource.reload();
         }}
-        actions={<StatusChip status={request.status === "SUBMITTED" ? "pending" : request.status} label={REQUEST_STATUS_LABEL[request.status]} />}
+        actions={<><BusinessPrintLink kind="purchase-requests" id={request.id} companyId={session.activeCompanyId ?? undefined} /><StatusChip status={request.status === "SUBMITTED" ? "pending" : request.status} label={REQUEST_STATUS_LABEL[request.status]} /></>}
       />
       <Feedback error={mutation.error} notice={mutation.notice} />
 

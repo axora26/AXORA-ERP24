@@ -10,6 +10,9 @@
 //    quantite commandee (verrou pessimiste sur la commande) ; une reception
 //    rejouee avec la meme cle d'idempotence ne cree rien de plus.
 // 4. Une commande ne peut etre annulee qu'avant toute reception.
+// 5. Retour fournisseur : la quantite retournee d'une ligne ne depasse jamais
+//    son recu net ; receivedQuantity est le recu NET (recu - retourne) et
+//    returnedQuantity le cumul des retours (CHECK en base).
 // ---------------------------------------------------------------------------
 
 enum PurchaseRequestStatus {
@@ -177,6 +180,7 @@ model PurchaseOrder {
   request            PurchaseRequest?    @relation(fields: [requestId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
   lines              PurchaseOrderLine[]
   receipts           GoodsReceipt[]
+  returns            SupplierReturn[]
   subcontractPackage SubcontractPackage?
 
   @@unique([companyId, code])
@@ -197,7 +201,10 @@ model PurchaseOrderLine {
   quantity         Decimal  @db.Decimal(18, 3)
   unitPrice        Decimal  @db.Decimal(18, 2)
   lineTotal        Decimal  @db.Decimal(18, 2)
+  /// Recu NET : receptions moins retours fournisseur.
   receivedQuantity Decimal  @default(0) @db.Decimal(18, 3)
+  /// Cumul des quantites retournees au fournisseur.
+  returnedQuantity Decimal  @default(0) @db.Decimal(18, 3)
   projectId        String?
   wbsItemId        String?
   inventoryItemId  String?
@@ -205,6 +212,7 @@ model PurchaseOrderLine {
 
   order        PurchaseOrder      @relation(fields: [orderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
   receiptLines GoodsReceiptLine[]
+  returnLines  SupplierReturnLine[]
 
   @@unique([orderId, position])
   @@index([organizationId, companyId, orderId])
@@ -245,6 +253,69 @@ model GoodsReceiptLine {
 
   @@index([orderLineId])
   @@map("goods_receipt_lines")
+}
+
+/// Retour physique de marchandise au fournisseur (non-conformite, surplus).
+/// Immuable une fois cree (trigger) ; le stock sort du depot de reception.
+model SupplierReturn {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  code             String
+  orderId          String
+  idempotencyKey   String
+  reason           String
+  /// Depot de sortie pour les lignes d'articles stockes.
+  warehouseId      String?
+  returnedByUserId String
+  returnedAt       DateTime @default(now())
+
+  order PurchaseOrder        @relation(fields: [orderId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  lines SupplierReturnLine[]
+  creditLinks SupplierReturnCreditNote[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, idempotencyKey])
+  @@unique([id, organizationId, companyId])
+  @@index([organizationId, companyId, orderId])
+  @@map("supplier_returns")
+}
+
+model SupplierReturnLine {
+  id          String  @id @default(cuid())
+  returnId    String
+  orderLineId String
+  quantity    Decimal @db.Decimal(18, 3)
+  /// Valeur au prix de commande (quantite x PU), figee a la creation.
+  value       Decimal @db.Decimal(18, 2)
+
+  supplierReturn SupplierReturn    @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  orderLine      PurchaseOrderLine @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+
+  @@unique([returnId, orderLineId])
+  @@index([orderLineId])
+  @@map("supplier_return_lines")
+}
+
+/// Avoir fournisseur prepare depuis un retour (historique immuable, trigger).
+/// Un avoir n'est lie qu'a un seul retour ; un retour garde au plus un avoir
+/// non annule (verrou du retour dans le service Finance, le statut etant
+/// porte par l'avoir).
+model SupplierReturnCreditNote {
+  id               String   @id @default(cuid())
+  organizationId   String
+  companyId        String
+  supplierReturnId String
+  creditNoteId     String
+  createdByUserId  String
+  createdAt        DateTime @default(now())
+
+  supplierReturn SupplierReturn     @relation(fields: [supplierReturnId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  creditNote     SupplierCreditNote @relation(fields: [creditNoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+
+  @@unique([creditNoteId, organizationId, companyId])
+  @@index([organizationId, companyId, supplierReturnId])
+  @@map("supplier_return_credit_notes")
 }
 
 /// Evaluation fournisseur (1 a 5) sur la qualite, le respect des delais et le prix.

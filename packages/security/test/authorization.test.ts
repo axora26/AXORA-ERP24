@@ -41,4 +41,11 @@ describe("authorization (deny-by-default)", () => {
       /FORBIDDEN/,
     );
   });
+  it("does not promote a company or project grant to an organisation grant", () => {
+    expect(isAuthorized({ key: "core.user.manage", organizationId: ORG_A }, [{ permissionKey: "core.user.manage", organizationId: ORG_A, companyId: "company-1" }])).toBe(false);
+    expect(isAuthorized({ key: "project.read", organizationId: ORG_A, companyId: "company-1" }, [{ permissionKey: "project.read", organizationId: ORG_A, companyId: "company-1", projectId: "project-1" }])).toBe(false);
+  });
+  it("explicit organisation grants cover member company and project scopes", () => {
+    expect(isAuthorized({ key: "project.read", organizationId: ORG_A, companyId: "company-1", projectId: "project-1" }, [{ permissionKey: "project.read", organizationId: ORG_A }])).toBe(true);
+  });
 });

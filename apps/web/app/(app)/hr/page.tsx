@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import QRCode from "qrcode";
+import Link from "next/link";
+import { QrCameraScanner } from "../../components/qr-camera-scanner";
+import { EmployeeServiceCard } from "../../components/employee-service-card";
+import { PayrollPolicy } from "../../components/payroll-policy";
 import type { EmployeeView, LeaveRequestView } from "@axora24/contracts";
 import { CalendarDays, CalendarOff, Clock, IdCard, LogIn, LogOut, Plus, QrCode, UserPlus, Users, Wallet } from "lucide-react";
 import {
@@ -19,7 +22,7 @@ import { projectsApi } from "../../lib/modules/projects";
 import { formatDate, formatMoney } from "../../lib/format";
 import { useMutation, useResource } from "../../lib/hooks";
 import { useSession } from "../../lib/session";
-import {
+import { DataUnavailable,
   Button,
   DataTable,
   DateField,
@@ -85,6 +88,8 @@ export default function HrPage(): React.ReactElement {
     }
   }
 
+  if (data.error && !data.data && !data.loading) return <DataUnavailable title="RH & temps" error={data.error} onRetry={() => void data.reload()}/>;
+
   return (
     <>
       <PageHeader
@@ -94,6 +99,7 @@ export default function HrPage(): React.ReactElement {
         onRefresh={() => void data.reload()}
         actions={
           <>
+            {(canPayroll || session.can("hr.payrollpolicy.manage")) && <Link className="btn btn-secondary" href="/hr/payroll-policy">Règles de paie</Link>}
             {session.can("hr.leave.request") && (
               <Button onClick={() => setDialog("leave")}>
                 <CalendarOff size={15} aria-hidden="true" /> Congé
@@ -190,14 +196,14 @@ export default function HrPage(): React.ReactElement {
                     { key: "cost", header: "Coût horaire", align: "right", render: (employee) => (employee.hourlyCost === null ? "•••" : formatMoney(employee.hourlyCost, employee.currency)) },
                     {
                       key: "badge",
-                      header: "Badge",
+                      header: "Carte / Badge",
                       render: (employee) =>
-                        employee.badgeCode ? (
-                          <Button variant="ghost" onClick={() => setBadgeFor(employee)} title="Afficher le QR de pointage">
-                            <QrCode size={14} aria-hidden="true" /> {employee.badgeCode}
+                        session.can("hr.card.manage") || employee.serviceCard ? (
+                          <Button variant="ghost" onClick={() => setBadgeFor(employee)} title="Carte de service">
+                            <QrCode size={14} aria-hidden="true" /> Carte de service
                           </Button>
                         ) : (
-                          "—"
+                          employee.badgeCode ? "Badge configuré" : "—"
                         ),
                     },
                     { key: "status", header: "Statut", render: (employee) => <StatusChip status={employee.status === "ACTIVE" ? "active" : employee.status === "SUSPENDED" ? "on_hold" : "closed"} label={EMPLOYEE_STATUS_LABEL[employee.status]} /> },
@@ -299,9 +305,11 @@ export default function HrPage(): React.ReactElement {
             )}
 
             {tab === "payroll" && (
+              <>
+              <PayrollPolicy />
               <Panel
                 title="Préparation de paie"
-                subtitle="Salaire de base + éléments variables saisis. Aucune retenue légale n'est calculée tant qu'aucun paramétrage pays n'existe."
+                subtitle="Calcul brut selon les règles configurées, avec les éléments variables saisis explicitement."
                 actions={
                   session.can("hr.payroll.manage") && (
                     <Button onClick={() => setDialog("payroll")}>
@@ -322,6 +330,7 @@ export default function HrPage(): React.ReactElement {
                   ]}
                 />
               </Panel>
+              </>
             )}
           </div>
         </>
@@ -354,71 +363,42 @@ export default function HrPage(): React.ReactElement {
           />
         </Modal>
       )}
-      {badgeFor && <BadgeModal employee={badgeFor} onClose={() => setBadgeFor(null)} />}
+      {badgeFor && <EmployeeServiceCard employee={badgeFor} onClose={() => setBadgeFor(null)} onUpdated={() => void data.reload()} />}
     </>
   );
 }
 
 /** Borne de pointage : identification par badge / QR / PIN puis evenement de presence. */
 function BadgeTerminal({ onDone }: { onDone: () => void }): React.ReactElement {
+  const session = useSession();
   const [badge, setBadge] = useState("");
   const [source, setSource] = useState("BADGE");
+  const [projectId, setProjectId] = useState("");
+  const [camera, setCamera] = useState(false);
+  const [scanNotice, setScanNotice] = useState("");
+  const retry = useRef<{ fingerprint: string; key: string } | null>(null);
   const mutation = useMutation();
-
+  const projects = useResource(() => session.can("projects.project.read") ? projectsApi.list() : Promise.resolve([]));
   async function clock(type: "IN" | "OUT"): Promise<void> {
-    if (!badge.trim()) return;
-    const event = await mutation.run(() => hrApi.scan({ badgeCode: badge.trim(), type, source }), type === "IN" ? "Entrée enregistrée." : "Sortie enregistrée.");
-    if (event) {
-      setBadge("");
-      onDone();
-    }
+    const value = badge.trim();
+    if (!value || mutation.saving) return;
+    if (source === "QR" && !/^AXORA-CARD:v1:[A-Za-z0-9_-]{43}$/.test(value)) { mutation.setError("Ce code ne correspond pas à une carte de service AXORA. Scannez la carte actuelle ou demandez son renouvellement."); return; }
+    const fingerprint = `${value}|${type}|${projectId}`;
+    if (retry.current?.fingerprint !== fingerprint) retry.current = { fingerprint, key: crypto.randomUUID() };
+    const event = await mutation.run(() => hrApi.scan(source === "QR" ? { cardToken: value, type, idempotencyKey: retry.current!.key, ...(projectId ? { projectId } : {}) } : { badgeCode: value, type, source, ...(projectId ? { projectId } : {}) }));
+    if (event) { setScanNotice(`${type === "IN" ? "Entrée" : "Sortie"} enregistrée pour ${event.employeeName}.`); setBadge(""); retry.current = null; onDone(); }
   }
-
-  return (
-    <Panel title="Borne de pointage" subtitle="Scannez un badge, un QR code ou saisissez un code PIN">
-      <div className="terminal">
-        <Feedback error={mutation.error} notice={mutation.notice} />
-        <SelectField
-          label="Mode d'identification"
-          value={source}
-          onChange={setSource}
-          options={[
-            { value: "BADGE", label: "Badge" },
-            { value: "QR", label: "QR code" },
-            { value: "PIN", label: "Code PIN" },
-          ]}
-        />
-        <TextField label="Identifiant" value={badge} onChange={setBadge} placeholder="Ex. BADGE-001" />
-        <div className="terminal-actions">
-          <Button variant="primary" onClick={() => void clock("IN")} disabled={mutation.saving || !badge.trim()}>
-            <LogIn size={15} aria-hidden="true" /> Entrée
-          </Button>
-          <Button onClick={() => void clock("OUT")} disabled={mutation.saving || !badge.trim()}>
-            <LogOut size={15} aria-hidden="true" /> Sortie
-          </Button>
-        </div>
-      </div>
-    </Panel>
-  );
+  return <Panel title="Borne de pointage" subtitle="Carte de service QR, lecteur USB ou code PIN">
+    <div className="terminal"><Feedback error={mutation.error || projects.error} notice={scanNotice} />
+      <SelectField label="Mode d’identification" value={source} onChange={value => { setSource(value || "BADGE"); setBadge(""); setScanNotice(""); retry.current = null; }} options={[{ value: "BADGE", label: "Lecteur de badge" }, { value: "QR", label: "Carte de service QR" }, { value: "PIN", label: "Code PIN" }]} />
+      <TextField label={source === "QR" ? "Code protégé de la carte" : "Identifiant"} type={source === "BADGE" ? "text" : "password"} value={badge} onChange={value => { setBadge(value); setScanNotice(""); }} placeholder={source === "QR" ? "Scannez votre carte" : "Identifiant du badge ou PIN"} autoComplete="off" maxLength={128} hint={source === "QR" ? "Le QR d’une carte révoquée ou expirée ne peut plus pointer." : "Un lecteur USB peut renseigner ce champ."} />
+      {session.can("projects.project.read") && <SelectField label="Projet de pointage" value={projectId} onChange={setProjectId} emptyLabel="Sans projet" options={(projects.data ?? []).filter(project => !["COMPLETED", "CANCELLED"].includes(project.status)).map(project => ({ value: project.id, label: `${project.code} · ${project.name}` }))} />}
+      <div className="terminal-actions"><Button onClick={() => setCamera(true)} disabled={mutation.saving}><QrCode size={15} aria-hidden="true" />Activer le scanner caméra</Button><Button variant="primary" onClick={() => void clock("IN")} disabled={mutation.saving || !badge.trim()}><LogIn size={15} aria-hidden="true" />Entrée</Button><Button onClick={() => void clock("OUT")} disabled={mutation.saving || !badge.trim()}><LogOut size={15} aria-hidden="true" />Sortie</Button></div>
+    </div>
+    {camera && <QrCameraScanner onClose={() => setCamera(false)} onResult={value => { setCamera(false); setSource("QR"); setBadge(value); setScanNotice("Carte lue. Choisissez Entrée ou Sortie pour confirmer le pointage."); mutation.setError(""); }} />}
+  </Panel>;
 }
 
-function BadgeModal({ employee, onClose }: { employee: EmployeeView; onClose: () => void }): React.ReactElement {
-  const [src, setSrc] = useState("");
-  useEffect(() => {
-    if (employee.badgeCode) void QRCode.toDataURL(employee.badgeCode, { margin: 1, width: 200 }).then(setSrc);
-  }, [employee.badgeCode]);
-  return (
-    <Modal title={`Badge de pointage — ${employee.fullName}`} onClose={onClose}>
-      <div className="badge-card">
-        {src ? <img src={src} alt={`QR code du badge ${employee.badgeCode}`} width={200} height={200} /> : <Loading label="Génération du QR…" />}
-        <strong>{employee.fullName}</strong>
-        <span>
-          {employee.code} · {employee.badgeCode}
-        </span>
-      </div>
-    </Modal>
-  );
-}
 
 function LeaveDecision({ leave, approve, saving, onSubmit }: { leave: LeaveRequestView; approve: boolean; saving: boolean; onSubmit: (note: string) => Promise<void> }): React.ReactElement {
   const [note, setNote] = useState("");
@@ -503,7 +483,7 @@ function HrDialog({
           <DateField label="Date d'entrée" value={value("hireDate")} onChange={set("hireDate")} required />
           <TextField label="E-mail" value={value("email")} onChange={set("email")} />
           <TextField label="Téléphone" value={value("phone")} onChange={set("phone")} />
-          <TextField label="Code badge / QR / PIN" value={value("badgeCode")} onChange={set("badgeCode")} hint="Identifiant unique utilisé par la borne de pointage." />
+          <TextField label="Identifiant du badge ou PIN" value={value("badgeCode")} onChange={set("badgeCode")} hint="Identifiant unique du lecteur de badge ou du PIN. Les cartes QR utilisent un code protégé distinct." />
           {session.can("hr.payroll.manage") && (
             <>
               <DecimalField label="Coût horaire chargé" value={value("hourlyCost")} onChange={set("hourlyCost")} hint="Valorise les heures validées imputées aux projets." />
