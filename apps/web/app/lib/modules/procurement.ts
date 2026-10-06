@@ -32,6 +32,11 @@ export const procurementApi = {
   cancelOrder: (id: string, reason: string) => api.post<PurchaseOrderView>(`/procurement/orders/${id}/cancel`, { reason }),
   receive: (id: string, input: { idempotencyKey: string; note?: string; lines: Array<{ orderLineId: string; quantity: string }> }) =>
     api.post<PurchaseOrderView>(`/procurement/orders/${id}/receipts`, input),
+  /** Retour physique au fournisseur : reduit le recu net et sort le stock du depot de reception. */
+  returnToSupplier: (
+    id: string,
+    input: { idempotencyKey: string; reason: string; warehouseId?: string; lines: Array<{ orderLineId: string; quantity: string }> },
+  ) => api.post<PurchaseOrderView>(`/procurement/orders/${id}/returns`, input),
 };
 
 export const REQUEST_STATUS_LABEL: Record<string, string> = {

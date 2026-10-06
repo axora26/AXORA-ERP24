@@ -66,6 +66,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   request: "les demandes d'achat",
   order: "les commandes",
   receipt: "les réceptions",
+  return: "les retours fournisseur",
   item: "les articles et magasins",
   movement: "les mouvements de stock",
   adjustment: "les ajustements de stock",

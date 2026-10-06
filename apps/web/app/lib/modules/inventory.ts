@@ -50,4 +50,5 @@ export const MOVEMENT_LABEL: Record<string, string> = {
   ADJUSTMENT_IN: "Ajustement +",
   ADJUSTMENT_OUT: "Ajustement −",
   MAINTENANCE_ISSUE: "Sortie maintenance (OT)",
+  SUPPLIER_RETURN: "Retour fournisseur",
 };

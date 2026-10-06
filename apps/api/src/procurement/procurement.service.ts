@@ -45,6 +45,7 @@ const ORDER_INCLUDE = {
   supplier: { select: { name: true } },
   request: { select: { code: true } },
   receipts: { include: { lines: true }, orderBy: { receivedAt: "asc" } },
+  returns: { include: { lines: true }, orderBy: { returnedAt: "asc" } },
 } satisfies Prisma.PurchaseOrderInclude;
 
 /**
@@ -380,7 +381,10 @@ export class ProcurementService {
     const context = await this.referenceNames(
       scope,
       orders.map((order) => order.projectId),
-      orders.flatMap((order) => order.receipts.map((receipt) => receipt.receivedByUserId)),
+      orders.flatMap((order) => [
+        ...order.receipts.map((receipt) => receipt.receivedByUserId),
+        ...order.returns.map((entry) => entry.returnedByUserId),
+      ]),
     );
     return orders.map((order) => toOrderView(order, context));
   }
@@ -388,7 +392,10 @@ export class ProcurementService {
   async getOrder(scope: CompanyScope, orderId: string): Promise<PurchaseOrderView> {
     const order = await this.prisma.purchaseOrder.findFirst({ where: { id: orderId, ...scope }, include: ORDER_INCLUDE });
     if (!order) throw new NotFoundException("Purchase order not found");
-    const context = await this.referenceNames(scope, [order.projectId], order.receipts.map((receipt) => receipt.receivedByUserId));
+    const context = await this.referenceNames(scope, [order.projectId], [
+      ...order.receipts.map((receipt) => receipt.receivedByUserId),
+      ...order.returns.map((entry) => entry.returnedByUserId),
+    ]);
     return toOrderView(order, context);
   }
 
@@ -488,7 +495,9 @@ export class ProcurementService {
     const reason = requiredText(assertBody(body).reason, "reason", 500);
     await this.prisma.$transaction(async (tx) => {
       const order = await this.lockOrder(tx, scope, orderId);
-      if (order.status !== "DRAFT" && order.status !== "ISSUED") {
+      // Une commande entierement retournee redevient ISSUED mais garde son historique de reception.
+      const received = await tx.goodsReceipt.count({ where: { orderId: order.id } });
+      if ((order.status !== "DRAFT" && order.status !== "ISSUED") || received > 0) {
         throw new BadRequestException("An order with receipts (or already cancelled) cannot be cancelled");
       }
       const backing = await tx.subcontractPackage.findFirst({ where: { purchaseOrderId: order.id }, select: { code: true } });
@@ -598,7 +607,7 @@ export class ProcurementService {
         }
       }
       const refreshed = await tx.purchaseOrderLine.findMany({ where: { orderId: order.id } });
-      const complete = refreshed.every((line) => dec(line.receivedQuantity).greaterThanOrEqualTo(line.quantity));
+      const complete = receptionStatus(refreshed) === "RECEIVED";
       await tx.purchaseOrder.update({
         where: { id: order.id },
         data: { status: complete ? "RECEIVED" : "PARTIALLY_RECEIVED" },
@@ -608,6 +617,125 @@ export class ProcurementService {
         orderId: order.id,
         lines: requested.map((item) => ({ orderLineId: item.orderLineId, quantity: qty(item.quantity) })),
         orderStatus: complete ? "RECEIVED" : "PARTIALLY_RECEIVED",
+      });
+    });
+    return this.getOrder(scope, orderId);
+  }
+
+  /**
+   * Retour physique au fournisseur (non-conformite, surplus, erreur de livraison).
+   *
+   * - Idempotent : une meme cle renvoie la commande sans rien recreer.
+   * - Verrou pessimiste sur la commande : deux retours concurrents ne peuvent
+   *   jamais depasser le recu net d'une ligne (garanti aussi par CHECK en base).
+   * - Article stocke : sortie SUPPLIER_RETURN du depot de reception au cout
+   *   moyen, limitee au stock libre (les reservations restent protegees).
+   * - Le recu net diminue : la commande est rouverte (PARTIALLY_RECEIVED, ou
+   *   ISSUED si tout est retourne) et le reste redevient receptionnable ; le
+   *   consomme projet des lignes non stockees baisse d'autant.
+   */
+  async returnToSupplier(scope: CompanyScope, orderId: string, body: unknown, actorUserId: string) {
+    const input = assertBody(body);
+    const idempotencyKey = requiredText(input.idempotencyKey, "idempotencyKey", 120);
+    const reason = requiredText(input.reason, "reason", 1000);
+    const requestedWarehouseId = optionalId(input.warehouseId, "warehouseId");
+    if (!Array.isArray(input.lines) || input.lines.length === 0) {
+      throw new BadRequestException("lines must contain at least one returned line");
+    }
+    const requested = (input.lines as unknown[]).map((raw, index) => {
+      const line = assertBody(raw);
+      return {
+        orderLineId: requiredId(line.orderLineId, `lines[${index}].orderLineId`),
+        quantity: requiredDecimal(line.quantity, `lines[${index}].quantity`, { positive: true }),
+      };
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      const order = await this.lockOrder(tx, scope, orderId);
+      const replay = await tx.supplierReturn.findFirst({ where: { companyId: scope.companyId, idempotencyKey } });
+      if (replay) {
+        if (replay.orderId !== order.id) throw new ConflictException("idempotencyKey already used for another order");
+        return;
+      }
+      if (order.status !== "ISSUED" && order.status !== "PARTIALLY_RECEIVED" && order.status !== "RECEIVED") {
+        throw new BadRequestException("Only an issued order with receipts can be returned to the supplier");
+      }
+      const backing = await tx.subcontractPackage.findFirst({ where: { purchaseOrderId: order.id }, select: { code: true } });
+      if (backing) throw new BadRequestException(`This order backs the subcontract package ${backing.code}: progress is certified through statements`);
+
+      const lines = await tx.purchaseOrderLine.findMany({ where: { orderId: order.id } });
+      const byId = new Map(lines.map((line) => [line.id, line]));
+      const seen = new Set<string>();
+      for (const item of requested) {
+        const line = byId.get(item.orderLineId);
+        if (!line) throw new BadRequestException("A returned line does not belong to this order");
+        if (seen.has(item.orderLineId)) throw new BadRequestException("Each order line may appear only once per return");
+        seen.add(item.orderLineId);
+        if (item.quantity.greaterThan(line.receivedQuantity)) {
+          throw new BadRequestException(
+            `Line ${line.position}: returned ${qty(item.quantity)} exceeds net received ${qty(line.receivedQuantity)}`,
+          );
+        }
+      }
+
+      // Depot de sortie des articles stockes : celui fourni, sinon le dernier depot de reception de la commande.
+      const stocked = requested.some((item) => byId.get(item.orderLineId)?.inventoryItemId);
+      let warehouseId: string | null = null;
+      if (stocked) {
+        const receiptWarehouses = await tx.goodsReceipt.findMany({
+          where: { orderId: order.id, warehouseId: { not: null } },
+          select: { warehouseId: true },
+          orderBy: { receivedAt: "desc" },
+        });
+        const known = new Set(receiptWarehouses.map((row) => row.warehouseId!));
+        warehouseId = requestedWarehouseId ?? receiptWarehouses[0]?.warehouseId ?? null;
+        if (!warehouseId || !known.has(warehouseId)) {
+          throw new BadRequestException("Stocked items must leave from a warehouse where this order was received");
+        }
+      }
+
+      const code = await this.numbering.next(tx, scope, "RF");
+      const created = await tx.supplierReturn.create({
+        data: { ...scope, code, orderId: order.id, idempotencyKey, reason, warehouseId, returnedByUserId: actorUserId },
+      });
+      let total = new Prisma.Decimal(0);
+      for (const item of requested) {
+        const orderLine = byId.get(item.orderLineId)!;
+        const value = item.quantity.mul(orderLine.unitPrice).toDecimalPlaces(2);
+        total = total.plus(value);
+        const returnLine = await tx.supplierReturnLine.create({
+          data: { returnId: created.id, orderLineId: orderLine.id, quantity: item.quantity, value },
+        });
+        await tx.purchaseOrderLine.update({
+          where: { id: orderLine.id },
+          data: { receivedQuantity: { decrement: item.quantity }, returnedQuantity: { increment: item.quantity } },
+        });
+        if (orderLine.inventoryItemId) {
+          await this.ledger.post(tx, scope, {
+            itemId: orderLine.inventoryItemId,
+            warehouseId: warehouseId!,
+            type: "SUPPLIER_RETURN",
+            quantity: item.quantity,
+            projectId: orderLine.projectId,
+            wbsItemId: orderLine.wbsItemId,
+            supplierReturnLineId: returnLine.id,
+            reference: code,
+            reason,
+            actorUserId,
+          });
+        }
+      }
+      const refreshed = await tx.purchaseOrderLine.findMany({ where: { orderId: order.id } });
+      const status = receptionStatus(refreshed);
+      await tx.purchaseOrder.update({ where: { id: order.id }, data: { status } });
+      await writeAudit(tx, scope, actorUserId, "procurement.return.created", "SupplierReturn", created.id, {
+        code,
+        orderId: order.id,
+        reason,
+        warehouseId,
+        value: money(total),
+        lines: requested.map((item) => ({ orderLineId: item.orderLineId, quantity: qty(item.quantity) })),
+        orderStatus: status,
       });
     });
     return this.getOrder(scope, orderId);
@@ -648,6 +776,13 @@ export class ProcurementService {
 type Names = { projectCodes: Map<string, string>; userNames: Map<string, string> };
 type RequestWithRelations = Prisma.PurchaseRequestGetPayload<{ include: typeof REQUEST_INCLUDE }>;
 type OrderWithRelations = Prisma.PurchaseOrderGetPayload<{ include: typeof ORDER_INCLUDE }>;
+
+/** Statut de reception d'une commande emise, deduit du recu NET de ses lignes. */
+function receptionStatus(lines: Array<{ quantity: Prisma.Decimal; receivedQuantity: Prisma.Decimal }>): "ISSUED" | "PARTIALLY_RECEIVED" | "RECEIVED" {
+  if (lines.every((line) => dec(line.receivedQuantity).greaterThanOrEqualTo(line.quantity))) return "RECEIVED";
+  if (lines.every((line) => dec(line.receivedQuantity).isZero())) return "ISSUED";
+  return "PARTIALLY_RECEIVED";
+}
 
 function startOfToday(): Date {
   const today = new Date();
@@ -735,6 +870,7 @@ function toOrderView(order: OrderWithRelations, names: Names): PurchaseOrderView
       unitPrice: money(line.unitPrice),
       lineTotal: money(line.lineTotal),
       receivedQuantity: qty(line.receivedQuantity),
+      returnedQuantity: qty(line.returnedQuantity),
       remainingQuantity: qty(dec(line.quantity).minus(line.receivedQuantity)),
       projectId: line.projectId,
       wbsItemId: line.wbsItemId,
@@ -747,6 +883,16 @@ function toOrderView(order: OrderWithRelations, names: Names): PurchaseOrderView
       receivedByName: names.userNames.get(receipt.receivedByUserId) ?? null,
       note: receipt.note,
       lines: receipt.lines.map((line) => ({ orderLineId: line.orderLineId, quantity: qty(line.quantity) })),
+    })),
+    returns: order.returns.map((entry) => ({
+      id: entry.id,
+      code: entry.code,
+      returnedAt: entry.returnedAt.toISOString(),
+      returnedByName: names.userNames.get(entry.returnedByUserId) ?? null,
+      reason: entry.reason,
+      warehouseId: entry.warehouseId,
+      value: money(sumDecimals(entry.lines.map((line) => dec(line.value)))),
+      lines: entry.lines.map((line) => ({ orderLineId: line.orderLineId, quantity: qty(line.quantity), value: money(line.value) })),
     })),
   };
 }

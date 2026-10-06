@@ -4,12 +4,13 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { PurchaseOrderView } from "@axora24/contracts";
-import { PackageCheck, Send, XCircle } from "lucide-react";
+import { PackageCheck, Send, Undo2, XCircle } from "lucide-react";
 import { ORDER_STATUS_LABEL, newIdempotencyKey, procurementApi } from "../../../../lib/modules/procurement";
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from "../../../../lib/format";
 import { useMutation, useResource } from "../../../../lib/hooks";
 import { useSession } from "../../../../lib/session";
 import { BusinessPrintLink } from "../../../../components/business-print-link";
+import { SupplierReturnModal } from "../../../../components/supplier-return-modal";
 import {
   Button,
   DataTable,
@@ -32,7 +33,7 @@ export default function PurchaseOrderPage(): React.ReactElement {
   const resource = useResource(() => procurementApi.order(id), [id]);
   const mutation = useMutation();
   const [override, setOverride] = useState<PurchaseOrderView | null>(null);
-  const [dialog, setDialog] = useState<"receive" | "cancel" | null>(null);
+  const [dialog, setDialog] = useState<"receive" | "return" | "cancel" | null>(null);
   const order = override ?? resource.data;
 
   async function apply(action: () => Promise<PurchaseOrderView>, success: string): Promise<void> {
@@ -48,7 +49,9 @@ export default function PurchaseOrderPage(): React.ReactElement {
 
   const canManage = session.can("procurement.order.manage");
   const canReceive = session.can("procurement.receipt.create");
+  const canReturn = session.can("procurement.return.create");
   const receivable = order.status === "ISSUED" || order.status === "PARTIALLY_RECEIVED";
+  const returnable = order.status !== "DRAFT" && order.status !== "CANCELLED" && order.lines.some((line) => Number(line.receivedQuantity) > 0);
   const receivedRatio = Number(order.total) > 0 ? (Number(order.receivedValue) / Number(order.total)) * 100 : 0;
 
   return (
@@ -75,7 +78,12 @@ export default function PurchaseOrderPage(): React.ReactElement {
                 <PackageCheck size={14} aria-hidden="true" /> Réceptionner
               </Button>
             )}
-            {canManage && (order.status === "DRAFT" || order.status === "ISSUED") && (
+            {canReturn && returnable && (
+              <Button onClick={() => setDialog("return")}>
+                <Undo2 size={14} aria-hidden="true" /> Retour fournisseur
+              </Button>
+            )}
+            {canManage && (order.status === "DRAFT" || (order.status === "ISSUED" && order.receipts.length === 0)) && (
               <Button variant="danger" onClick={() => setDialog("cancel")}>
                 <XCircle size={14} aria-hidden="true" /> Annuler
               </Button>
@@ -114,7 +122,13 @@ export default function PurchaseOrderPage(): React.ReactElement {
             columns={[
               { key: "line", header: "Désignation", render: (line) => <strong>{line.description}</strong> },
               { key: "ordered", header: "Commandé", align: "right", render: (line) => `${formatQuantity(line.quantity, 3)} ${line.unitCode}` },
-              { key: "received", header: "Reçu", align: "right", render: (line) => formatQuantity(line.receivedQuantity, 3) },
+              { key: "received", header: "Reçu net", align: "right", render: (line) => formatQuantity(line.receivedQuantity, 3) },
+              {
+                key: "returned",
+                header: "Retourné",
+                align: "right",
+                render: (line) => (Number(line.returnedQuantity) > 0 ? <span className="num">{formatQuantity(line.returnedQuantity, 3)}</span> : "—"),
+              },
               {
                 key: "remaining",
                 header: "Reste",
@@ -150,8 +164,41 @@ export default function PurchaseOrderPage(): React.ReactElement {
             ]}
           />
         </Panel>
+        <Panel title="Retours fournisseur" subtitle="Marchandises renvoyées : le reçu net et le stock du dépôt sont diminués">
+          <DataTable
+            rows={order.returns}
+            empty={<Empty title="Aucun retour" />}
+            columns={[
+              { key: "code", header: "Retour", render: (entry) => <strong>{entry.code}</strong> },
+              { key: "date", header: "Le", render: (entry) => formatDateTime(entry.returnedAt) },
+              { key: "by", header: "Par", render: (entry) => entry.returnedByName ?? "—" },
+              {
+                key: "lines",
+                header: "Contenu",
+                render: (entry) =>
+                  entry.lines
+                    .map((line) => {
+                      const orderLine = order.lines.find((candidate) => candidate.id === line.orderLineId);
+                      return `${formatQuantity(line.quantity, 3)} ${orderLine?.unitCode ?? ""} ${orderLine?.description ?? ""}`;
+                    })
+                    .join(" · "),
+              },
+              { key: "reason", header: "Motif", render: (entry) => entry.reason },
+              { key: "value", header: "Valeur", align: "right", render: (entry) => <span className="num">{formatMoney(entry.value, order.currency)}</span> },
+            ]}
+          />
+        </Panel>
       </div>
 
+      {dialog === "return" && (
+        <SupplierReturnModal
+          order={order}
+          saving={mutation.saving}
+          error={mutation.error}
+          onClose={() => setDialog(null)}
+          onSubmit={(input) => apply(() => procurementApi.returnToSupplier(order.id, input), "Retour fournisseur enregistré : la commande est rouverte pour le reste à recevoir.")}
+        />
+      )}
       {dialog === "receive" && (
         <ReceiveModal
           order={order}

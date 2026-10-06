@@ -113,4 +113,10 @@ export class ProcurementController {
   receive(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
     return this.procurement.receive(scope, id, body, user.id);
   }
+
+  @Post("orders/:id/returns")
+  @RequirePermission(P.RETURN_CREATE)
+  returnToSupplier(@Scope() scope: CompanyScope, @CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.procurement.returnToSupplier(scope, id, body, user.id);
+  }
 }

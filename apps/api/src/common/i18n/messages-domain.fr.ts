@@ -189,6 +189,12 @@ export const DOMAIN_MESSAGES: Record<string, string> = {
   "lines[{x}].inventoryItemId is not an active item": "lines[{1}] : article inactif ou inconnu",
   "lines[{x}].wbsItemId must be a leaf WBS item of the project": "lines[{1}] : l'élément WBS doit être une feuille du projet",
   "warehouseId is required to receive stocked items": "Un dépôt est obligatoire pour réceptionner des articles stockés",
+  "lines must contain at least one returned line": "Le retour doit contenir au moins une ligne",
+  "Only an issued order with receipts can be returned to the supplier": "Seule une commande émise et réceptionnée peut faire l'objet d'un retour fournisseur",
+  "A returned line does not belong to this order": "Une ligne retournée n'appartient pas à cette commande",
+  "Each order line may appear only once per return": "Chaque ligne de commande n'apparaît qu'une fois par retour",
+  "Line {x}: returned {x} exceeds net received {x}": "Ligne {1} : quantité retournée {2} supérieure au reçu net {3}",
+  "Stocked items must leave from a warehouse where this order was received": "Les articles stockés doivent sortir d'un dépôt où cette commande a été réceptionnée",
 
   // --- Projets ------------------------------------------------------------
   "A note is required to reject a change order": "Un motif est obligatoire pour refuser un avenant",

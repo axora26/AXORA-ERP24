@@ -80,7 +80,10 @@ export interface PurchaseOrderLineView {
   quantity: string;
   unitPrice: string;
   lineTotal: string;
+  /** Recu NET : receptions moins retours fournisseur. */
   receivedQuantity: string;
+  /** Cumul des quantites retournees au fournisseur. */
+  returnedQuantity: string;
   remainingQuantity: string;
   projectId: string | null;
   wbsItemId: string | null;
@@ -94,6 +97,18 @@ export interface GoodsReceiptView {
   receivedByName: string | null;
   note: string | null;
   lines: Array<{ orderLineId: string; quantity: string }>;
+}
+
+export interface SupplierReturnView {
+  id: string;
+  code: string;
+  returnedAt: string;
+  returnedByName: string | null;
+  reason: string;
+  warehouseId: string | null;
+  /** Valeur au prix de commande. */
+  value: string;
+  lines: Array<{ orderLineId: string; quantity: string; value: string }>;
 }
 
 export interface PurchaseOrderView {
@@ -117,4 +132,5 @@ export interface PurchaseOrderView {
   createdAt: string;
   lines: PurchaseOrderLineView[];
   receipts: GoodsReceiptView[];
+  returns: SupplierReturnView[];
 }

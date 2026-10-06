@@ -77,6 +77,8 @@ export const PROCUREMENT_PERMISSIONS = {
   ORDER_READ: "procurement.order.read",
   ORDER_MANAGE: "procurement.order.manage",
   RECEIPT_CREATE: "procurement.receipt.create",
+  /** Retour physique au fournisseur : sort du stock et reduit le recu net. */
+  RETURN_CREATE: "procurement.return.create",
 } as const;
 
 /** INC-07 — Stock & Logistique. Les ajustements (hors flux) sont une permission distincte. */

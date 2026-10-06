@@ -22,6 +22,7 @@ export interface PostMovementInput {
   projectId?: string | null;
   wbsItemId?: string | null;
   goodsReceiptLineId?: string | null;
+  supplierReturnLineId?: string | null;
   transferGroupId?: string | null;
   countId?: string | null;
   reference?: string | null;
@@ -185,6 +186,7 @@ export class StockLedgerService {
         projectId: input.projectId ?? null,
         wbsItemId: input.wbsItemId ?? null,
         goodsReceiptLineId: input.goodsReceiptLineId ?? null,
+        supplierReturnLineId: input.supplierReturnLineId ?? null,
         transferGroupId: input.transferGroupId ?? null,
         countId: input.countId ?? null,
         reference: input.reference ?? null,

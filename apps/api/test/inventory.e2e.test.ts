@@ -79,7 +79,8 @@ describe("Stock & Logistique (e2e)", () => {
       lines: [{ itemId: cement, quantity: "15.001" }],
     });
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain("Stock insuffisant");
+    // Depuis les reservations, le controle porte d'abord sur le stock LIBRE (physique - reserve).
+    expect(response.body.message).toMatch(/Stock (libre )?insuffisant/);
     // La base elle-meme refuse un solde negatif (contrainte CHECK).
     await expect(
       harness.prisma.stockBalance.updateMany({ where: { itemId: cement, warehouseId: central }, data: { quantity: -1 } }),
