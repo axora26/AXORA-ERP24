@@ -27,12 +27,13 @@ SHA="$(git rev-parse --short HEAD)"
 ARCHIVE="erp24-$SHA.tgz"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
-
-git archive --format=tar.gz -o "$TMP_DIR/$ARCHIVE" HEAD
 LOCAL_ARCHIVE="$TMP_DIR/$ARCHIVE"
+# Poste Windows (MSYS) : git et scp sont des programmes natifs, qui attendent un chemin Windows.
 if command -v cygpath >/dev/null 2>&1; then
   LOCAL_ARCHIVE="$(cygpath -w "$LOCAL_ARCHIVE")"
 fi
+
+git archive --format=tar.gz -o "$LOCAL_ARCHIVE" HEAD
 
 echo "Envoi de $SHA vers $HOST"
 "$SCP_BIN" -o BatchMode=yes "$LOCAL_ARCHIVE" "$HOST:/tmp/$ARCHIVE"
