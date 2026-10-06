@@ -4,6 +4,9 @@ import { expect, test } from "@playwright/test";
 import { SCREENS, openScreen } from "./support";
 
 test("le thème sombre est enregistré sur le compte, conservé au rechargement et lisible dans les modules", async ({ page }, testInfo) => {
+  // Audit axe-core de chaque écran (SCREENS) : le budget suit le nombre d'écrans, y compris
+  // contre le serveur de développement (compilation à la demande), cible par défaut de `pnpm local`.
+  test.setTimeout(Math.max(60_000, SCREENS.length * 8_000));
   await openScreen(page, "/");
   const selector = page.getByRole("combobox", { name: "Thème d’affichage" });
   const current = await page.request.get("/api/v1/auth/preferences");

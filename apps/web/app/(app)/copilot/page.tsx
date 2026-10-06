@@ -26,7 +26,12 @@ export default function CopilotPage(): React.ReactElement {
   const audit = useResource(() => (tab === "audit" && canAudit ? copilotApi.evidence() : Promise.resolve([])), [tab]);
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [exchanges.length]);
+  // Corps en bloc : un effet ne doit rien renvoyer d'autre qu'une fonction de nettoyage
+  // (scrollIntoView peut renvoyer une Promise dans les navigateurs recents, ce que React
+  // tente d'appeler au demontage -> « destroy is not a function »).
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [exchanges.length]);
 
   async function send(text: string): Promise<void> {
     const trimmed = text.trim();

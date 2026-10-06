@@ -100,7 +100,7 @@ test.describe("Cartes, pointages et paie automatique", () => {
     await expect(page).toHaveURL(/\/hr\/payroll\//);
     const line = page.getByRole("row").filter({ has: page.getByText("Benoît Paie", { exact: true }) });
     await expect(line).toContainText("80,00");
-    await expect(page.getByText(/aucun net à payer n’est calculé/)).toBeVisible();
+    await expect(page.getByText(/aucun net à payer n[’']est calculé/)).toBeVisible();
     const payslipDownload = page.waitForEvent("download");
     await line.getByRole("button", { name: "Fiche de préparation / PDF" }).click();
     expect((await payslipDownload).suggestedFilename()).toMatch(/\.pdf$/);

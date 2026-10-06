@@ -35,10 +35,18 @@ test.describe("Navigation et formulaires au clavier", () => {
     await page.keyboard.press("Control+k");
     const search = page.getByRole("combobox", { name: "Rechercher un module" });
     await search.fill("projet");
+    // Plusieurs modules correspondent (« Projets », « Ressources projet »…) : les flèches
+    // déplacent réellement l'option active, signalée par aria-activedescendant.
+    const selected = page.getByRole("listbox", { name: "Modules accessibles" }).getByRole("option", { selected: true });
+    await expect(selected).toHaveText("Projets");
+    const first = await search.getAttribute("aria-activedescendant");
+    expect(first).toBeTruthy();
     await page.keyboard.press("ArrowDown");
-    const optionId = await search.getAttribute("aria-activedescendant");
-    expect(optionId).toBeTruthy();
-    await expect(page.getByRole("listbox", { name: "Modules accessibles" }).getByRole("option", { selected: true })).toContainText("Projets");
+    await expect(search).not.toHaveAttribute("aria-activedescendant", first!);
+    await expect(selected).not.toHaveText("Projets");
+    await page.keyboard.press("ArrowUp");
+    await expect(search).toHaveAttribute("aria-activedescendant", first!);
+    await expect(selected).toHaveText("Projets");
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/projects$/);
     await expect(page.getByRole("dialog", { name: "Palette de commandes" })).toHaveCount(0);

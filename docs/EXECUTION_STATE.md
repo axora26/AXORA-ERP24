@@ -123,3 +123,25 @@ Poursuivre le backlog concret ci-dessous ; les preuves locales finales sont enre
 ## Mise à jour du 4 octobre 2026 — réservations de stock
 
 L’interface inventaire inclut les réservations de stock avec quantité libre, idempotence, libération motivée et états lisibles. Validation ciblée : API E2E 1/1, navigateur 2/2 et responsive 390/768 px. Le code reste à qualifier par les builds et la suite globale avant toute promotion de statut.
+
+## Incrément du 5 octobre 2026 — retours fournisseur (INC-06)
+
+- **Métier** : `POST /procurement/orders/:id/returns` (permission dédiée `procurement.return.create`). Un retour diminue le reçu **net** de la ligne, jamais au-delà ; la commande redevient `PARTIALLY_RECEIVED` (ou `ISSUED` si tout est retourné) et le reste redevient réceptionnable. Une commande ayant déjà eu une réception ne peut plus être annulée, même entièrement retournée.
+- **Stock** : les articles stockés sortent par un mouvement `SUPPLIER_RETURN` au coût moyen, depuis un dépôt où la commande a été réceptionnée, dans la limite du stock **libre** (les réservations restent protégées). Le coût consommé projet n’est diminué que pour les lignes non stockées.
+- **Base** (migration `20261005090000_supplier_returns`) : pièces `supplier_returns` et `supplier_return_lines` append-only (trigger), contraintes CHECK sur le reçu net, le cumul retourné, la quantité et le motif ; idempotence par clé unique ; audit `procurement.return.created`.
+- **Interface** : bouton « Retour fournisseur » sur la commande, colonne « Retourné », historique des retours avec motif et valeur ; modale validant le reçu net et transmettant une clé d’idempotence stable.
+- **Correctif de test** : l’assertion de `inventory.e2e` attendait « Stock insuffisant » alors que le ledger contrôle d’abord le stock **libre** depuis les réservations ; l’échec existait avant cet incrément (vérifié sur l’arbre sans modification) ; le comportement métier n’a pas changé.
+- **Contrôles locaux observés** (base isolée `axora_erp24_product_test`) : retours fournisseur 6/6 ; régression Achats, Stock, Réservations, Finance, Sous-traitance, Projets, Portail, GMAO et Opérations projet **83/83** (10 fichiers) ; unitaires sécurité 25, web 77, API 108 ; lint sans erreur (8 avertissements d’images existants), typecheck et build réussis. Parcours navigateur réel sur la commande DEMO `BC-2026-0001` : pièce `RF-2026-0001` créée, reçu net diminué, axe-core sans violation sur la modale, aucun débordement à 390 px. Tentative de `UPDATE` direct sur `supplier_returns` refusée par la base.
+- La CI distante reste `BLOCKED` (compte GitHub verrouillé pour facturation) ; aucun statut `VERIFIED` n’est promu.
+
+### Qualification navigateur de la tranche (5-6 octobre 2026)
+
+Suite Playwright rejouée par lots contre l’instance locale (`next dev`, base `axora_erp24_product_dev`, jeu DEMO) :
+accessibilité, écrans, impressions et retours **78/78** ; responsive, clavier, états d’erreur, sécurité et thème **78/78** après corrections ; parcours métier (avoirs, DQE, RH, réservations, paie, opérations projet, inscription, MFA, PWA) **tous réussis**, avec un saut PWA attendu hors build de production. Les corrections de cette passe :
+
+- **`/copilot` plantait** (« Application error ») : un `useEffect` renvoyait le résultat de `scrollIntoView`, que les navigateurs récents exposent comme une Promise ; React tentait de l’appeler au démontage. Corps de l’effet passé en bloc. C’était la seule occurrence dans l’application.
+- **Palette clavier** : le test attendait « Projets » après une flèche alors que « Ressources projet », ajouté après la qualification `b1a6cb1`, correspond aussi à « projet ». Le test vérifie désormais réellement le déplacement de l’option active (flèche bas puis haut).
+- **Thème sombre** : l’audit axe-core des 31 écrans dépassait 60 s contre le serveur de développement ; le délai suit maintenant le nombre d’écrans.
+- **Paie** : le test attendait l’apostrophe typographique alors que l’écran utilise l’apostrophe droite depuis `2d858f0` ; l’expression accepte les deux.
+
+Prérequis d’environnement constatés, sans changement de code : `MFA_ENCRYPTION_KEY` doit être défini dans `.env` pour le parcours MFA, et l’API doit être démarrée avec `REGISTRATION_LIMIT=100` (comme le job CI navigateur) pour les parcours qui créent des organisations. Ne pas lancer `pnpm build` pendant que `next dev` tourne : le build écrase `.next` et le serveur de développement renvoie 500 jusqu’à son redémarrage.
