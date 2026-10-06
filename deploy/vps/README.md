@@ -39,8 +39,22 @@ Le fichier est généré une seule fois par `deploy/vps/init-env.sh`. Il contien
 
 ## Mettre à jour l'application
 
-1. Copier les nouvelles sources dans `/srv/axora/docker/stacks/erp24-build/`.
-2. Construire et redémarrer (les migrations s'appliquent au démarrage de l'API) :
+Depuis le poste de développement, sur un arbre sans modification non committée :
+
+```sh
+bash scripts/deploy-vps.sh
+```
+
+Le script envoie le commit courant au VPS, puis `deploy/vps/remote-deploy.sh` enchaîne :
+
+1. la construction des images candidates API et web ;
+2. la vérification sur une pile jetable sans port public : page de connexion, création de la première organisation, session, tableau de bord, refus de la seconde organisation ;
+3. une sauvegarde complète de la production ;
+4. la bascule de l'API et de l'interface, avec retour automatique à la version précédente si la nouvelle ne devient pas saine.
+
+Les migrations s'appliquent au démarrage de l'API. Un retour arrière ne défait pas une migration déjà appliquée : la sauvegarde de l'étape 3 sert alors de point de reprise. Le commit en service est noté dans `/srv/axora/docker/stacks/erp24/DEPLOYED`.
+
+Procédure manuelle équivalente, depuis `/srv/axora/docker/stacks/erp24-build/` :
 
 ```sh
 cd /srv/axora/docker/stacks/erp24
