@@ -157,3 +157,9 @@ Guide complet : `deploy/vps/README.md`.
 - **Hôte** : PostgreSQL et Redis (5432, 6379, 5440), exposés à Internet et sondés par des attaquants, sont désormais bloqués sur l’interface publique (vérifié de l’extérieur) ; accès local, Docker et Tailscale inchangés.
 - **Sauvegarde** quotidienne installée ; première sauvegarde réelle effectuée puis restaurée sur une base jetable (58 migrations).
 - **En attente** : enregistrement DNS `A erp24 → 57.128.181.32` chez N0C. Le certificat HTTPS sera obtenu automatiquement dans les 5 minutes suivant sa propagation. Le parcours navigateur complet en production (cookie `Secure`) est `NOT TESTED` tant que le HTTPS public n’est pas actif.
+
+### Déploiement continu et avoir depuis un retour (6 octobre 2026)
+
+- **Déploiement en une commande** : `bash scripts/deploy-vps.sh` (images candidates, vérification sur base jetable, sauvegarde, bascule avec retour automatique). Première utilisation réelle : `9dd7595` en service le 6 octobre à 03:10 UTC.
+- **Avoir fournisseur depuis un retour** (`267b208`) : `POST /procurement/orders/:orderId/returns/:returnId/credit-note`. Brouillon sur la facture fournisseur approuvée de la commande, quantités nettes des avoirs déjà en cours, calcul identique aux avoirs Finance, refus explicite si le retour couvre plusieurs factures, idempotent, lien immuable (migration `20261006040000_supplier_return_credit_notes`). L’écran commande propose « Préparer l’avoir » puis renvoie à `/finance?tab=credits`.
+- **Contrôles** : e2e avoir depuis un retour 5/5 ; régression 75/75 sur 9 fichiers (achats, retours, avoirs, finance, stock, inscription, sous-traitance, portail) ; unitaires 25 + 80 + 118 ; lint sans erreur, typecheck et build de production réussis ; parcours navigateur 3/3 (brouillon réel créé sur `FF-2026-0001` pour `RF-2026-0001` dans le jeu DEMO local).
