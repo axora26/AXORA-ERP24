@@ -70,6 +70,12 @@ La qualification globale du nouvel arbre (migrations, lint/typecheck, suites com
 
 Le backlog fondateur est plus large que les increments de base : bibliotheque d ouvrages DQE (INC-03), sourcing partiel et retours fournisseurs (INC-06), reservations/lots de stock (INC-07), rapprochement bancaire et previsions (INC-08), ressources/prevision a terminaison du projet (INC-05), parametrage social/fiscal et processus RH elargis (INC-09). Ces evolutions exigent encore du code ou des regles explicites ; elles ne peuvent pas etre decrites comme de simples branchements externes.
 
+### Vague locale du 6 octobre 2026 — interface et documents
+
+- **Socle / shell** : navigation métier réorganisée, repliable et persistante, favoris, fil d'Ariane et sidebar compacte. Qualification locale : 9 tests ciblés, 51 tests composants et typecheck web réussis ; contrôle visuel authentifié `NOT TESTED` faute d'API/PostgreSQL locale.
+- **Documents** : 14 exemples PDF premium AXORA générés et conservés dans `docs/document-samples/`; tous passent le vérificateur PDF sans débordement, page vide, artefact Markdown ou glyphe signalé. Quatre documents ont été rasterisés et inspectés ; cinq aperçus sont conservés.
+- **RH / ouvriers** : le catalogue inclut une fiche de présence mensuelle, une feuille de temps et un bulletin de paie de démonstration, mais ces exemples ne remplacent pas la persistance métier. L'analyse et le design d'implémentation sont dans `docs/analysis/`; présence journalière validée, rubriques détaillées et charges patronales restent `IN_PROGRESS`/à coder.
+
 Restent aussi les connecteurs a services/materiels reels, les signatures natives et la preuve CI distante. Le noyau MEP elementaire, le connecteur Revit et les protocoles GTB conservent les limites indiquees dans leurs lignes ; aucun label VERIFIED de la reference ERP3602 ne se transfere au produit AXORA-ERP24.
 ## Incréments récents — 4 octobre 2026
 

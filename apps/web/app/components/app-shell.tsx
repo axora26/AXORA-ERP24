@@ -3,9 +3,9 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, Building2, LogOut, Menu, Search, WifiOff, X } from "lucide-react";
+import { AlertTriangle, Building2, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, WifiOff, X } from "lucide-react";
 import { api, ApiError, setActiveCompanyId } from "../lib/api";
-import { isActive, visibleGroups, type NavItem } from "../lib/navigation";
+import { visibleGroups, type NavGroup } from "../lib/navigation";
 import { SessionContext, type SessionApi, type SessionContextValue } from "../lib/session";
 import { Brand } from "./brand";
 import { NotificationBell } from "./notification-bell";
@@ -13,8 +13,11 @@ import { purgeOfflinePages } from "./sw-register";
 import { purgeOfflineData, readContext, saveContext, setOfflineScope } from "../lib/offline-cache";
 import { useModalFocus } from "../lib/use-modal-focus";
 import { ThemeSelector, useTheme } from "./theme";
+import { NavBreadcrumbs } from "./nav-breadcrumbs";
+import { NavSidebar } from "./nav-sidebar";
 
 const COMPANY_STORAGE_KEY = "axora.activeCompanyId";
+const SIDEBAR_STORAGE_KEY = "axora.nav.sidebar.collapsed";
 
 type ContextResponse = Omit<SessionContextValue, "activeCompanyId">;
 
@@ -47,11 +50,20 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
   const [session, setSession] = useState<SessionContextValue | null>(null);
   const [failure, setFailure] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [offline, setOffline] = useState(false);
   const mobileNavRef = useModalFocus<HTMLElement>(mobileNav, () => setMobileNav(false));
   const { loadPreference, error: themeError } = useTheme();
   useEffect(() => { if (session?.user.id) void loadPreference(); }, [session?.user.id, loadPreference]);
+
+  useEffect(() => {
+    try {
+      setSidebarCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true");
+    } catch {
+      // La largeur standard reste disponible si le stockage est bloqué.
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,6 +152,7 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
       logout,
     };
   }, [session, logout]);
+  const groups = useMemo(() => sessionApi ? visibleGroups(sessionApi.can) : [], [sessionApi]);
 
   if (failure) {
     return (
@@ -165,45 +178,43 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
     );
   }
 
-  const groups = visibleGroups(sessionApi.can);
   const activeCompany = sessionApi.companies.find((company) => company.id === sessionApi.activeCompanyId);
 
   return (
     <SessionContext.Provider value={sessionApi}>
       <div className="app-shell">
         <a className="skip-link" href="#main-content">Aller au contenu principal</a>
-        <aside className={`sidebar ${mobileNav ? "open" : ""}`} ref={mobileNavRef} role={mobileNav ? "dialog" : undefined} aria-modal={mobileNav ? true : undefined} aria-label={mobileNav ? "Navigation principale" : undefined} tabIndex={mobileNav ? -1 : undefined}>
+        <aside id="axora-sidebar" className={`sidebar ${mobileNav ? "open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`} ref={mobileNavRef} role={mobileNav ? "dialog" : undefined} aria-modal={mobileNav ? true : undefined} aria-label={mobileNav ? "Navigation principale" : undefined} tabIndex={mobileNav ? -1 : undefined}>
           <div className="sidebar-head">
             <Brand />
+            <button
+              type="button"
+              className="sidebar-collapse"
+              aria-label={sidebarCollapsed ? "Déployer la barre latérale" : "Réduire la barre latérale"}
+              aria-controls="axora-sidebar"
+              aria-expanded={!sidebarCollapsed}
+              title={sidebarCollapsed ? "Déployer la barre latérale" : "Réduire la barre latérale"}
+              onClick={() => {
+                setSidebarCollapsed((current) => {
+                  const next = !current;
+                  try {
+                    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+                  } catch {
+                    // La préférence reste limitée à l'onglet courant.
+                  }
+                  return next;
+                });
+              }}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
+            </button>
             <button className="close-nav" onClick={() => setMobileNav(false)} aria-label="Fermer le menu">
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
-          <nav aria-label="Navigation principale">
-            {groups.map((group) => (
-              <React.Fragment key={group.label}>
-                <p>{group.label.toUpperCase()}</p>
-                {group.items.map((item) => {
-                  const active = isActive(pathname, item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={active ? "active" : ""}
-                      aria-current={active ? "page" : undefined}
-                      onClick={() => setMobileNav(false)}
-                    >
-                      <item.icon size={18} />
-                      <span>{item.label}</span>
-                      {active && <i />}
-                    </Link>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </nav>
-          <button className="sign-out" onClick={() => void logout()}>
-            <LogOut size={18} /> Déconnexion
+          <NavSidebar groups={groups} pathname={pathname} onNavigate={() => setMobileNav(false)} />
+          <button className="sign-out" onClick={() => void logout()} title="Déconnexion">
+            <LogOut size={18} aria-hidden="true" /> <span>Déconnexion</span>
           </button>
         </aside>
         {mobileNav && <button className="nav-backdrop" onClick={() => setMobileNav(false)} aria-label="Fermer le menu" />}
@@ -271,12 +282,16 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
             </div>
           )}
 
-          <div className="dashboard-content" id="main-content" tabIndex={-1}>{themeError && <div className="form-error" role="alert">{themeError}</div>}{children}</div>
+          <div className="dashboard-content" id="main-content" tabIndex={-1}>
+            <NavBreadcrumbs pathname={pathname} />
+            {themeError && <div className="form-error" role="alert">{themeError}</div>}
+            {children}
+          </div>
         </main>
 
         {paletteOpen && (
           <CommandPalette
-            items={groups.flatMap((group) => group.items)}
+            groups={groups}
             onClose={() => setPaletteOpen(false)}
             onNavigate={(href) => {
               setPaletteOpen(false);
@@ -298,11 +313,11 @@ function normalize(text: string): string {
 
 /** Palette de commandes (Ctrl K) : navigation clavier vers les modules accessibles. */
 function CommandPalette({
-  items,
+  groups,
   onClose,
   onNavigate,
 }: {
-  items: NavItem[];
+  groups: NavGroup[];
   onClose: () => void;
   onNavigate: (href: string) => void;
 }): React.ReactElement {
@@ -311,6 +326,7 @@ function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useModalFocus<HTMLDivElement>(true, onClose);
   const resultsId = useId();
+  const items = groups.flatMap((group) => group.items.map((item) => ({ ...item, group: group.label })));
 
   const matches = items.filter((item) => {
     const needle = normalize(query.trim());
@@ -355,9 +371,12 @@ function CommandPalette({
                 className={index === cursor ? "active" : ""}
                 onMouseEnter={() => setCursor(index)}
                 onClick={() => onNavigate(item.href)}
+                data-group={item.group}
+                aria-label={`${item.label}, groupe ${item.group}`}
               >
                 <item.icon size={16} aria-hidden="true" />
-                {item.label}
+                <span>{item.label}</span>
+                <small>{item.group}</small>
               </button>
             </li>
           ))}
