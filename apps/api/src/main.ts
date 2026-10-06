@@ -5,10 +5,13 @@ import cookieParser from "cookie-parser";
 import { AppModule } from "./app.module.js";
 import { applySecurityHeaders } from "./common/security-headers.js";
 import { trustedOrigins } from "./auth/origin.guard.js";
+import { trustProxySetting } from "./config/trust-proxy.js";
 
 async function bootstrap(): Promise<void> {
   // rawBody : les webhooks entrants verifient leur signature sur le corps brut.
   const app = await NestFactory.create(AppModule, { rawBody: true });
+  // Adresse reelle du client derriere les proxys de confiance (budgets anti-abus par IP).
+  app.getHttpAdapter().getInstance().set("trust proxy", trustProxySetting());
   applySecurityHeaders(app);
   app.use(cookieParser());
   app.enableCors({

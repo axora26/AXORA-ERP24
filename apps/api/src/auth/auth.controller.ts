@@ -15,6 +15,12 @@ export class AuthController {
     private readonly account: AccountService,
   ) {}
 
+  /** Politique d'inscription publique : l'interface masque la creation d'espace si elle est fermee. */
+  @Get("registration")
+  registration() {
+    return this.authService.registrationStatus();
+  }
+
   @Post("register-organization")
   async registerOrganization(
     @Body() body: RegisterOrganizationDto,

@@ -190,6 +190,7 @@ export const DOMAIN_MESSAGES: Record<string, string> = {
   "lines[{x}].wbsItemId must be a leaf WBS item of the project": "lines[{1}] : l'élément WBS doit être une feuille du projet",
   "warehouseId is required to receive stocked items": "Un dépôt est obligatoire pour réceptionner des articles stockés",
   "lines must contain at least one returned line": "Le retour doit contenir au moins une ligne",
+  "Organization registration is closed on this instance": "La création d'espaces est fermée sur cette instance. Demandez un accès à votre administrateur.",
   "Only an issued order with receipts can be returned to the supplier": "Seule une commande émise et réceptionnée peut faire l'objet d'un retour fournisseur",
   "A returned line does not belong to this order": "Une ligne retournée n'appartient pas à cette commande",
   "Each order line may appear only once per return": "Chaque ligne de commande n'apparaît qu'une fois par retour",

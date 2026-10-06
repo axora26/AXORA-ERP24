@@ -1,4 +1,4 @@
-import { ConflictException, HttpException, HttpStatus, Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { hashPassword, verifyPassword, createSessionToken, parseEncryptionKey } from "@axora24/security";
 import { AccountService } from "./account.service.js";
 import { ALL_PERMISSIONS } from "@axora24/contracts";
@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from "./session.guard.js";
 import { LoginThrottleService } from "./login-throttle.service.js";
 import { parseLogin, parseRegistration } from "./credentials.js";
 import { SESSION_MAX_AGE_MS, SESSION_IDLE_MS } from "./session-policy.js";
+import { registrationAllowed, registrationMode, type RegistrationMode } from "./registration-policy.js";
 
 const SESSION_TTL_MS = SESSION_MAX_AGE_MS;
 
@@ -36,12 +37,23 @@ export class AuthService {
     private readonly account: AccountService,
   ) {}
 
+  /** Politique publique d'inscription : le mode configure et son effet actuel. */
+  async registrationStatus(): Promise<{ mode: RegistrationMode; open: boolean }> {
+    const mode = registrationMode();
+    if (mode !== "first-organization") return { mode, open: mode === "open" };
+    return { mode, open: registrationAllowed(mode, await this.prisma.organization.count()) };
+  }
+
   /**
    * Bootstrap d'un nouveau tenant : Organization + Company + role OWNER
    * (toutes les permissions Core) + premier utilisateur + session ouverte.
    * Operation transactionnelle — invariant docs/foundation/01-architecture.md §5.1.
    */
   async registerOrganization(body: RegisterOrganizationDto, metadata: RequestMetadata): Promise<SessionResult> {
+    // Avant toute consommation du budget anti-abus : une instance fermee ne doit rien enregistrer.
+    if (!(await this.registrationStatus()).open) {
+      throw new ForbiddenException("Organization registration is closed on this instance");
+    }
     const configuredLimit = Number(process.env.REGISTRATION_LIMIT ?? 5);
     const maxAttempts = Number.isInteger(configuredLimit) && configuredLimit >= 1 && configuredLimit <= 1000 ? configuredLimit : 5;
     const budget = await this.loginThrottle.reserveAttempt("register-organization", metadata.ipAddress, maxAttempts);
@@ -57,6 +69,13 @@ export class AuthService {
     const passwordHash = await hashPassword(input.ownerPassword);
 
     const result = await this.prisma.$transaction(async (tx) => {
+      if (registrationMode() === "first-organization") {
+        // Deux inscriptions simultanees sur une instance vide : une seule devient la premiere organisation.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended('axora:first-organization', 0))`;
+        if ((await tx.organization.count()) > 0) {
+          throw new ForbiddenException("Organization registration is closed on this instance");
+        }
+      }
       const organization = await tx.organization.create({
         data: { name: input.organizationName, slug: input.organizationSlug },
       });

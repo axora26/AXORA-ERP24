@@ -7,6 +7,7 @@ import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { Brand } from "../components/brand";
 import { safeNext } from "../lib/safe-next";
+import { useRegistrationState } from "../lib/registration";
 
 const SHOW_DEMO_HINT = process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === "true";
 
@@ -22,6 +23,7 @@ function LoginForm(): React.ReactElement {
   const [challengeToken, setChallengeToken] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [useRecovery, setUseRecovery] = useState(false);
+  const registration = useRegistrationState();
 
   useEffect(() => {
     // Session deja ouverte : inutile de se reconnecter.
@@ -224,7 +226,8 @@ function LoginForm(): React.ReactElement {
           <small>Vos accès sont contrôlés et les opérations sont tracées.</small>
         </span>
       </div>
-      <p className="registration-login">Vous démarrez sur AXORA ? <Link href="/register">Créer une organisation</Link></p>
+      {registration === "open" && <p className="registration-login">Vous démarrez sur AXORA ? <Link href="/register">Créer une organisation</Link></p>}
+      {registration === "closed" && <p className="registration-login">Pas encore de compte ? Votre administrateur crée les accès depuis l&apos;administration.</p>}
     </div>
   );
 }
