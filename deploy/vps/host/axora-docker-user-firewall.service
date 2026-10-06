@@ -1,0 +1,13 @@
+[Unit]
+Description=AXORA - block public internet access to internal Docker ports
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/axora-docker-user-firewall.sh
+
+[Install]
+WantedBy=multi-user.target docker.service

@@ -1,2 +1,8 @@
 # Fixtures are signed by their documented SHA-256, including original bytes.
 *.ifc -text
+# Scripts et configuration executes sur le VPS Linux : toujours en LF.
+*.sh text eol=lf
+Dockerfile text eol=lf
+deploy/vps/Caddyfile text eol=lf
+deploy/vps/**/*.service text eol=lf
+deploy/vps/**/*.yml text eol=lf

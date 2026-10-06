@@ -145,3 +145,15 @@ accessibilité, écrans, impressions et retours **78/78** ; responsive, clavier,
 - **Paie** : le test attendait l’apostrophe typographique alors que l’écran utilise l’apostrophe droite depuis `2d858f0` ; l’expression accepte les deux.
 
 Prérequis d’environnement constatés, sans changement de code : `MFA_ENCRYPTION_KEY` doit être défini dans `.env` pour le parcours MFA, et l’API doit être démarrée avec `REGISTRATION_LIMIT=100` (comme le job CI navigateur) pour les parcours qui créent des organisations. Ne pas lancer `pnpm build` pendant que `next dev` tourne : le build écrase `.next` et le serveur de développement renvoie 500 jusqu’à son redémarrage.
+
+## Mise en production sur le VPS (6 octobre 2026)
+
+Guide complet : `deploy/vps/README.md`.
+
+- **Code** : `REGISTRATION_MODE` (`open` par défaut, `first-organization`, `closed`, valeur inconnue = fermé) et `GET /auth/registration` ; les écrans masquent la création d’espace quand elle est fermée. `TRUST_PROXY` (nombre de sauts ou sous-réseaux ; `true` refusé) pour que les budgets anti-abus par IP voient le vrai client derrière Caddy et Next.js.
+- **Empaquetage** : `Dockerfile` multi-étapes (API NestJS avec migrations Prisma au démarrage, interface Next.js autonome), `deploy/vps/docker-compose.yml`, `Caddyfile`, `init-env.sh`, `smoke-compose.yml`.
+- **Vérifié sur le VPS** : images construites ; pile jetable sans port public : 58 migrations sur base vide, page de connexion, première organisation créée (201), seconde refusée (403, message français), origine étrangère refusée (403). Production démarrée (postgres, api, web, caddy en bonne santé).
+- **Accès** : création d’organisations bloquée sur le domaine public (403 vérifié via Caddy) ; accès d’administration privé `https://axora-vps.taild4cfa4.ts.net:10443` (tailnet uniquement), vérifié depuis le poste avec un certificat valide.
+- **Hôte** : PostgreSQL et Redis (5432, 6379, 5440), exposés à Internet et sondés par des attaquants, sont désormais bloqués sur l’interface publique (vérifié de l’extérieur) ; accès local, Docker et Tailscale inchangés.
+- **Sauvegarde** quotidienne installée ; première sauvegarde réelle effectuée puis restaurée sur une base jetable (58 migrations).
+- **En attente** : enregistrement DNS `A erp24 → 57.128.181.32` chez N0C. Le certificat HTTPS sera obtenu automatiquement dans les 5 minutes suivant sa propagation. Le parcours navigateur complet en production (cookie `Secure`) est `NOT TESTED` tant que le HTTPS public n’est pas actif.
