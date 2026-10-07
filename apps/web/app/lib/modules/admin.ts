@@ -29,12 +29,15 @@ export const adminApi = {
     const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== "")).toString();
     return api.get<AuditLogPage>(`/admin/audit${query ? `?${query}` : ""}`);
   },
+  organization: () => api.get<{ id: string; name: string; slug: string; mfaRequired: boolean }>("/organizations/me"),
+  updateSecurityPolicy: (mfaRequired: boolean) =>
+    api.patch<{ id: string; name: string; slug: string; mfaRequired: boolean }>("/organizations/me/security-policy", { mfaRequired }),
 };
 
 export const accountApi = {
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<{ success: true }>("/auth/password", { currentPassword, newPassword }),
-  mfaStatus: () => api.get<{ enabled: boolean; pendingSetup: boolean; available: boolean; recoveryCodesRemaining: number }>("/auth/mfa"),
+  mfaStatus: () => api.get<{ enabled: boolean; pendingSetup: boolean; available: boolean; recoveryCodesRemaining: number; requiredByOrganization: boolean }>("/auth/mfa"),
   startMfaSetup: (password: string) => api.post<{ secret: string; otpauthUri: string }>("/auth/mfa/setup", { password }),
   enableMfa: (password: string, code: string) => api.post<{ enabled: boolean; recoveryCodes: string[] }>("/auth/mfa/enable", { password, code }),
   regenerateRecoveryCodes: (password: string, code: string) => api.post<{ recoveryCodes: string[] }>("/auth/mfa/recovery-codes", { password, code }),

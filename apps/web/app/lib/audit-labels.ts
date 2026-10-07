@@ -22,6 +22,8 @@ const LABELS: Record<string, string> = {
   "auth.mfa.enabled": "Double authentification activée",
   "auth.mfa.disabled": "Double authentification désactivée",
   "auth.mfa.failed": "Code MFA invalide",
+  "auth.mfa.step_up.succeeded": "Vérification MFA renforcée",
+  "organization.security.mfa_policy.updated": "Politique MFA de l’organisation modifiée",
   "auth.login.failed": "Échec de connexion",
   "core.user.created": "Utilisateur créé",
   "core.user.updated": "Utilisateur modifié",

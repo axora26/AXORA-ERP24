@@ -21,12 +21,14 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  isDemo    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  isDemo      Boolean  @default(false)
+  /// Exige la MFA pour tous les utilisateurs de l'organisation.
+  mfaRequired Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   companies Company[]
   users     User[]
@@ -122,14 +124,16 @@ model CompanyMembership {
 }
 
 model Session {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
-  ipAddress String?
-  userAgent String?
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  id            String    @id @default(cuid())
+  userId        String
+  tokenHash     String    @unique
+  ipAddress     String?
+  userAgent     String?
+  /// Dernière preuve MFA fraîche pour cette session uniquement.
+  mfaVerifiedAt DateTime?
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

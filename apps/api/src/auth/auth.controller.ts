@@ -5,6 +5,7 @@ import type { LoginDto, RegisterOrganizationDto } from "./auth.dto.js";
 import { SessionGuard } from "./session.guard.js";
 import { AccountService } from "./account.service.js";
 import { hashSessionToken } from "@axora24/security";
+import { AllowMfaEnrollment } from "./allow-mfa-enrollment.decorator.js";
 
 const COOKIE_NAME = process.env.SESSION_COOKIE_NAME ?? "axora_erp24_session";
 
@@ -82,18 +83,21 @@ export class AuthController {
   }
 
   @Get("mfa")
+  @AllowMfaEnrollment()
   @UseGuards(SessionGuard)
   async mfaStatus(@Req() request: Request) {
     return this.account.mfaStatus(request.axoraUser!);
   }
 
   @Post("mfa/setup")
+  @AllowMfaEnrollment()
   @UseGuards(SessionGuard)
   async startMfaSetup(@Req() request: Request, @Body() body: unknown) {
     return this.account.startMfaSetup(request.axoraUser!, body, requestMetadata(request));
   }
 
   @Post("mfa/enable")
+  @AllowMfaEnrollment()
   @UseGuards(SessionGuard)
   async enableMfa(@Req() request: Request, @Body() body: unknown) {
     const token = readSessionToken(request);
@@ -114,7 +118,15 @@ export class AuthController {
     return this.account.regenerateRecoveryCodes(request.axoraUser!, body, requestMetadata(request), token ? hashSessionToken(token) : null);
   }
 
+  /** Renouvelle la preuve MFA de la session courante avant une action sensible. */
+  @Post("mfa/step-up")
+  @UseGuards(SessionGuard)
+  async stepUpMfa(@Req() request: Request, @Body() body: unknown) {
+    return this.account.stepUp(request.axoraUser!, request.axoraSession!, body, requestMetadata(request));
+  }
+
   @Post("logout")
+  @AllowMfaEnrollment()
   @UseGuards(SessionGuard)
   async logout(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
     const rawCookie = request.headers.cookie ?? "";
@@ -131,6 +143,7 @@ export class AuthController {
   }
 
   @Get("me")
+  @AllowMfaEnrollment()
   @UseGuards(SessionGuard)
   async me(@Req() request: Request) {
     return { user: request.axoraUser };
@@ -143,15 +156,18 @@ export class AuthController {
    * serveur par PermissionGuard, independamment de ce que l'UI affiche.
    */
   @Get("context")
+  @AllowMfaEnrollment()
   @UseGuards(SessionGuard)
   async context(@Req() request: Request) {
     return this.authService.context(request.axoraUser!);
   }
   @Get("preferences")
+  @AllowMfaEnrollment()
   @UseGuards(SessionGuard)
   preferences(@Req() request: Request) { return this.account.preferences(request.axoraUser!); }
 
   @Patch("preferences")
+  @AllowMfaEnrollment()
   @UseGuards(SessionGuard)
   updatePreferences(@Req() request: Request, @Body() body: unknown) { return this.account.updatePreferences(request.axoraUser!, body); }
 }

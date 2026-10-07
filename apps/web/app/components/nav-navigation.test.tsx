@@ -14,7 +14,9 @@ describe("navigation premium", () => {
       "Pilotage",
       "Administration",
     ]);
-    expect(NAV_GROUPS.flatMap((group) => group.items)).toHaveLength(35);
+    expect(NAV_GROUPS.flatMap((group) => group.items)).toHaveLength(36);
+    const security = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.href === "/admin/security");
+    expect(security?.permission).toBe("core.organization.manage");
   });
 
   it("conserve le filtrage par permission, y compris lorsqu’une permission parmi plusieurs suffit", () => {

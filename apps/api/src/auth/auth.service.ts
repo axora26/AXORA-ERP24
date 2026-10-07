@@ -216,7 +216,7 @@ export class AuthService {
   }
 
   async context(user: AuthenticatedUser) {
-    const [organization, memberships, assignments] = await Promise.all([
+    const [organization, memberships, assignments, mfaState] = await Promise.all([
       this.prisma.organization.findUnique({
         where: { id: user.organizationId },
         select: { id: true, name: true, slug: true, isDemo: true },
@@ -229,6 +229,10 @@ export class AuthService {
       this.prisma.roleAssignment.findMany({
         where: { userId: user.id, role: { organizationId: user.organizationId } },
         include: { role: { include: { permissions: { include: { permission: true } } } } },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: { mfaEnabled: true, organization: { select: { mfaRequired: true } } },
       }),
     ]);
 
@@ -245,6 +249,7 @@ export class AuthService {
       companies: memberships.map((membership) => ({ ...membership.company, currency: membership.company.currency.trim() })),
       roles: [...roles].sort(),
       permissions: [...permissions].sort(),
+      mfaEnrollmentRequired: Boolean(mfaState?.organization.mfaRequired && !mfaState.mfaEnabled),
     };
   }
 

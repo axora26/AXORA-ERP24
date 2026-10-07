@@ -34,14 +34,30 @@ import type {
  */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
+export class StepUpCancelledError extends Error {
+  constructor() {
+    super("Vérification MFA annulée");
+    this.name = "StepUpCancelledError";
+  }
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code?: string,
   ) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+type MfaStepUpHandler = () => Promise<boolean>;
+let mfaStepUpHandler: MfaStepUpHandler | null = null;
+
+/** Enregistré par le shell authentifié ; aucun code MFA n'est stocké ici. */
+export function setMfaStepUpHandler(handler: MfaStepUpHandler | null): void {
+  mfaStepUpHandler = handler;
 }
 
 /**
@@ -67,7 +83,7 @@ export function assetUrl(url: string): string {
 }
 
 function isCompanyScoped(path: string): boolean {
-  return !path.startsWith("/auth/") && !path.startsWith("/admin/");
+  return !path.startsWith("/auth/") && !path.startsWith("/admin/") && !path.startsWith("/organizations/");
 }
 
 function bodyWithCompany(path: string, body: unknown): unknown {
@@ -75,7 +91,7 @@ function bodyWithCompany(path: string, body: unknown): unknown {
   return "companyId" in body ? body : { ...body, companyId: activeCompanyId };
 }
 
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
+async function call<T>(path: string, init?: RequestInit, retriedAfterStepUp = false): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_URL}${withCompany(path)}`, {
@@ -89,11 +105,15 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    // Le message serveur est affiche tel quel : il est deja redige pour
-    // l'utilisateur et ne contient aucun secret (docs/foundation/03-security.md).
-    const body = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
+    // Le code machine distingue un step-up d'un refus RBAC ordinaire.
+    const body = (await response.json().catch(() => null)) as { code?: string; message?: string | string[] } | null;
     const message = Array.isArray(body?.message) ? body.message.join(" · ") : body?.message;
-    throw new ApiError(response.status, message ?? `Erreur ${response.status}`);
+    if (response.status === 403 && body?.code === "MFA_STEP_UP_REQUIRED" && mfaStepUpHandler && !retriedAfterStepUp) {
+      const verified = await mfaStepUpHandler();
+      if (verified) return call<T>(path, init, true);
+      throw new StepUpCancelledError();
+    }
+    throw new ApiError(response.status, message ?? `Erreur ${response.status}`, body?.code);
   }
 
   if (response.status === 204) {

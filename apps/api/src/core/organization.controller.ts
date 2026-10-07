@@ -1,10 +1,11 @@
-import { Controller, Get, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, Req, UseGuards } from "@nestjs/common";
 import type { Request } from "express";
 import { OrganizationService } from "./organization.service.js";
 import { SessionGuard } from "../auth/session.guard.js";
 import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequirePermission } from "../auth/require-permission.decorator.js";
 import { CORE_PERMISSIONS } from "@axora24/contracts";
+import { RequireMfaStepUp } from "../auth/require-mfa-step-up.decorator.js";
 
 /**
  * Securise par SessionGuard + PermissionGuard (docs/foundation/03-security.md).
@@ -25,5 +26,12 @@ export class OrganizationController {
   async getOwn(@Req() request: Request) {
     const organizationId = request.axoraUser!.organizationId;
     return this.organizationService.getOwn(organizationId);
+  }
+
+  @Patch("me/security-policy")
+  @RequirePermission(CORE_PERMISSIONS.ORG_MANAGE)
+  @RequireMfaStepUp({ always: true })
+  updateSecurityPolicy(@Req() request: Request, @Body() body: unknown) {
+    return this.organizationService.updateSecurityPolicy(request.axoraUser!, body);
   }
 }

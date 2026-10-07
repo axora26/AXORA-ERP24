@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "./api";
+import { ApiError, StepUpCancelledError } from "./api";
 
 export function errorMessage(caught: unknown, fallback: string): string {
   if (caught instanceof ApiError) {
@@ -74,7 +74,7 @@ export function useMutation(): Mutation {
         if (success) setNotice(success);
         return result;
       } catch (caught) {
-        setError(errorMessage(caught, fallback));
+        if (!(caught instanceof StepUpCancelledError)) setError(errorMessage(caught, fallback));
         return undefined;
       } finally {
         setSaving(false);
