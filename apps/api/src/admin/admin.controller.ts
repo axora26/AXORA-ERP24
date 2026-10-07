@@ -4,6 +4,7 @@ import { CORE_PERMISSIONS } from "@axora24/contracts";
 import { SessionGuard } from "../auth/session.guard.js";
 import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequirePermission } from "../auth/require-permission.decorator.js";
+import { RequireMfaStepUp } from "../auth/require-mfa-step-up.decorator.js";
 import { AdminService } from "./admin.service.js";
 
 /**
@@ -30,12 +31,14 @@ export class AdminController {
 
   @Post("users")
   @RequirePermission(CORE_PERMISSIONS.USER_MANAGE)
+  @RequireMfaStepUp()
   createUser(@Req() request: Request, @Body() body: unknown) {
     return this.admin.createUser(request.axoraUser!, body);
   }
 
   @Patch("users/:id")
   @RequirePermission(CORE_PERMISSIONS.USER_MANAGE)
+  @RequireMfaStepUp()
   updateUser(@Req() request: Request, @Param("id") id: string, @Body() body: unknown) {
     return this.admin.updateUser(request.axoraUser!, id, body);
   }
@@ -48,18 +51,21 @@ export class AdminController {
 
   @Post("roles")
   @RequirePermission(CORE_PERMISSIONS.ROLE_MANAGE)
+  @RequireMfaStepUp()
   createRole(@Req() request: Request, @Body() body: unknown) {
     return this.admin.createRole(request.axoraUser!, body);
   }
 
   @Put("roles/:id/permissions")
   @RequirePermission(CORE_PERMISSIONS.ROLE_MANAGE)
+  @RequireMfaStepUp()
   setRolePermissions(@Req() request: Request, @Param("id") id: string, @Body() body: unknown) {
     return this.admin.setRolePermissions(request.axoraUser!, id, body);
   }
 
   @Delete("roles/:id")
   @RequirePermission(CORE_PERMISSIONS.ROLE_MANAGE)
+  @RequireMfaStepUp()
   deleteRole(@Req() request: Request, @Param("id") id: string) {
     return this.admin.deleteRole(request.axoraUser!, id);
   }

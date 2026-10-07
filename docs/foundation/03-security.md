@@ -84,8 +84,12 @@ Statut de chaque exigence : `SPEC` (définie ici, à implémenter), `INHERITED` 
 
 ### 3.2 Politique d'activation
 
-- MFA optionnelle par défaut à l'enrôlement produit, **imposable par politique d'organisation** pour les rôles sensibles (administration, finance, RBAC, intégrations).
-- Toute action de gouvernance critique (modification RBAC, export massif de données, changement de secret d'intégration, suppression irréversible) peut exiger une **réaffirmation MFA** récente (« step-up »), indépendamment de la session active.
+- MFA optionnelle par défaut à l'enrôlement produit, **imposable par politique d'organisation**. L'activation de la politique requiert elle-même une preuve MFA récente de l'administrateur et une configuration cryptographique valide.
+- Lorsqu'elle est imposée, toute session d'un compte non enrôlé est limitée aux routes minimales de contexte, compte, enrôlement et déconnexion ; l'interface redirige vers la configuration MFA sans exposer les modules métier.
+- Toute action de gouvernance critique (politique MFA, mutations RBAC/utilisateurs) exige une **réaffirmation MFA** récente (« step-up »). La preuve est propre à la session, valable 5 minutes et n'est jamais propagée aux autres sessions de l'utilisateur.
+- Le client ne persiste jamais le code TOTP : il ouvre un dialogue accessible, renouvelle la preuve par `POST /auth/mfa/step-up`, puis rejoue l'action métier une seule fois. Seul le code machine `MFA_STEP_UP_REQUIRED` déclenche ce parcours ; les autres refus 403 restent des refus RBAC.
+- Un utilisateur déjà enrôlé bénéficie du step-up sur les actions critiques même sans politique obligatoire. Un utilisateur non enrôlé d'une organisation sans politique conserve le comportement historique jusqu'à activation de sa MFA ou de la politique.
+- La désactivation de la MFA est refusée côté serveur et désactivée dans l'interface tant que la politique d'organisation est active.
 - Aucune méthode MFA n'est déclarée disponible tant qu'elle n'est pas réellement implémentée et testée (pas de simulation présentée comme fonctionnelle — cf. interdiction des faux PASS).
 
 ### 3.3 Évolutions prévues, non engagées à ce stade

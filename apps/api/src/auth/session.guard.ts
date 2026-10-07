@@ -1,13 +1,16 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
 import { hashSessionToken } from "@axora24/security";
 import { PrismaService } from "../core/prisma.service.js";
 import { SESSION_MAX_AGE_MS, nextSessionExpiry } from "./session-policy.js";
+import { ALLOW_MFA_ENROLLMENT_KEY } from "./allow-mfa-enrollment.decorator.js";
 
 export interface AuthenticatedUser {
   id: string;
@@ -22,9 +25,15 @@ export interface AuthenticatedUser {
   fullName: string;
 }
 
+export interface AuthenticatedSession {
+  id: string;
+  mfaVerifiedAt: Date | null;
+}
+
 declare module "express" {
   interface Request {
     axoraUser?: AuthenticatedUser;
+    axoraSession?: AuthenticatedSession;
   }
 }
 
@@ -36,7 +45,7 @@ declare module "express" {
  */
 @Injectable()
 export class SessionGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -51,7 +60,7 @@ export class SessionGuard implements CanActivate {
     const tokenHash = hashSessionToken(plainToken);
     const session = await this.prisma.session.findUnique({
       where: { tokenHash },
-      include: { user: true },
+      include: { user: { include: { organization: { select: { mfaRequired: true } } } } },
     });
 
     const now = Date.now();
@@ -62,6 +71,19 @@ export class SessionGuard implements CanActivate {
     if (!session.user.isActive) {
       throw new UnauthorizedException("User is disabled");
     }
+    if (session.user.organization.mfaRequired && !session.user.mfaEnabled) {
+      const enrollmentAllowed = this.reflector.getAllAndOverride<boolean>(ALLOW_MFA_ENROLLMENT_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+      if (!enrollmentAllowed) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: "MFA_ENROLLMENT_REQUIRED",
+          message: "Votre organisation exige l’activation de la double authentification",
+        });
+      }
+    }
     const extended = await this.prisma.session.updateMany({ where: { id: session.id, revokedAt: null, expiresAt: { gt: new Date(now) } }, data: { expiresAt: nextSessionExpiry(session.createdAt, now) } });
     if (extended.count !== 1) throw new UnauthorizedException("Invalid or expired session");
 
@@ -71,6 +93,7 @@ export class SessionGuard implements CanActivate {
       email: session.user.email,
       fullName: session.user.fullName,
     };
+    request.axoraSession = { id: session.id, mfaVerifiedAt: session.mfaVerifiedAt };
     return true;
   }
 }

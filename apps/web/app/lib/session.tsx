@@ -16,6 +16,7 @@ export interface SessionContextValue {
   activeCompanyId: string | null;
   roles: string[];
   permissions: string[];
+  mfaEnrollmentRequired?: boolean;
 }
 
 export interface SessionApi extends SessionContextValue {

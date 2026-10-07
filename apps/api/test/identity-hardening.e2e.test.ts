@@ -64,6 +64,11 @@ describe("Identity and delegated credentials hardening", () => {
     const challenges = await Promise.all([challenge(tenant), challenge(tenant)]);
     const attempts = await Promise.all(challenges.map((token) => recover(token, codes[0]!)));
     expect(attempts.map((response) => response.status).sort()).toEqual([201, 401]);
+    const recoveredSession = attempts.find((response) => response.status === 201)!;
+    const protectedMutation = await as(harness, { cookie: recoveredSession.headers["set-cookie"] as unknown as string[] })
+      .post("/admin/roles", { name: "Recovery must not elevate", permissions: [] });
+    expect(protectedMutation.status).toBe(403);
+    expect(protectedMutation.body.code).toBe("MFA_STEP_UP_REQUIRED");
     expect((await as(harness, tenant).get("/auth/mfa")).body.recoveryCodesRemaining).toBe(9);
     expect((await recover(await challenge(tenant), codes[0]!)).status).toBe(401);
     expect((await recover(await challenge(tenant), codes[1]!.toLowerCase().replaceAll("-", " "))).status).toBe(201);

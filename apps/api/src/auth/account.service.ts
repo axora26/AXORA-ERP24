@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -24,7 +25,7 @@ import type { Prisma } from "@axora24/database";
 import { PrismaService } from "../core/prisma.service.js";
 import { assertBody, requiredText } from "../common/validation.js";
 import { credentialPassword } from "./credentials.js";
-import type { AuthenticatedUser } from "./session.guard.js";
+import type { AuthenticatedSession, AuthenticatedUser } from "./session.guard.js";
 import type { RequestMetadata } from "./auth.service.js";
 import { SESSION_MAX_AGE_MS, SESSION_IDLE_MS } from "./session-policy.js";
 import { LoginThrottleService } from "./login-throttle.service.js";
@@ -161,13 +162,14 @@ export class AccountService {
   async mfaStatus(user: AuthenticatedUser) {
     const record = await this.prisma.user.findUniqueOrThrow({
       where: { id: user.id },
-      select: { mfaEnabled: true, mfaPendingSecretEnc: true, mfaRecoveryCodeHashes: true },
+      select: { mfaEnabled: true, mfaPendingSecretEnc: true, mfaRecoveryCodeHashes: true, organization: { select: { mfaRequired: true } } },
     });
     return {
       enabled: record.mfaEnabled,
       pendingSetup: record.mfaPendingSecretEnc !== null,
       available: this.key() !== null,
       recoveryCodesRemaining: record.mfaRecoveryCodeHashes.length,
+      requiredByOrganization: record.organization.mfaRequired,
     };
   }
 
@@ -232,6 +234,13 @@ export class AccountService {
     if (!authenticated.mfaEnabled) throw new BadRequestException("MFA is not enabled");
     await this.throttle.enforce(`mfa:${user.id}`, metadata.ipAddress);
     const disabled = await this.prisma.$transaction(async (tx) => {
+      // Keep the same organization -> user lock order as policy activation.
+      await tx.$queryRaw`SELECT "id" FROM "organizations" WHERE "id" = ${user.organizationId} FOR UPDATE`;
+      const organization = await tx.organization.findUnique({
+        where: { id: user.organizationId },
+        select: { mfaRequired: true },
+      });
+      if (organization?.mfaRequired) throw new ConflictException("MFA is required by your organization");
       const record = await this.lockedUser(tx, user.id);
       if (record.passwordHash !== authenticated.passwordHash) throw new UnauthorizedException("Account changed; authenticate again");
       if (!this.factorUpdate(record, factor)) return false;
@@ -283,6 +292,45 @@ export class AccountService {
     }
     await this.throttle.recordSuccess(`mfa:${user.id}`, metadata.ipAddress);
     return { recoveryCodes: recovery.codes };
+  }
+
+  /**
+   * Renouvelle la preuve MFA de la session courante. Les codes de récupération
+   * restent réservés au secours de connexion et ne peuvent pas élever une session.
+   */
+  async stepUp(user: AuthenticatedUser, session: AuthenticatedSession, body: unknown, metadata: RequestMetadata) {
+    const input = assertBody(body);
+    const factor: SecondFactor = { method: "TOTP", value: requiredText(input.code, "code", 12) };
+    await this.throttle.enforce(`mfa:${user.id}`, metadata.ipAddress);
+    const verifiedAt = new Date();
+    const elevated = await this.prisma.$transaction(async (tx) => {
+      const record = await this.lockedUser(tx, user.id);
+      const factorData = this.factorUpdate(record, factor);
+      if (!factorData) return false;
+      const currentSession = await tx.session.updateMany({
+        where: { id: session.id, userId: user.id, revokedAt: null, expiresAt: { gt: verifiedAt } },
+        data: { mfaVerifiedAt: verifiedAt },
+      });
+      if (currentSession.count !== 1) throw new UnauthorizedException("Invalid or expired session");
+      await tx.user.update({ where: { id: user.id }, data: factorData });
+      await tx.auditLog.create({
+        data: {
+          organizationId: user.organizationId,
+          actorUserId: user.id,
+          action: "auth.mfa.step_up.succeeded",
+          resourceType: "Session",
+          resourceId: session.id,
+          metadata: { method: factor.method, ipAddress: metadata.ipAddress },
+        },
+      });
+      return true;
+    });
+    if (!elevated) {
+      await this.recordFactorFailure(user, metadata);
+      throw new UnauthorizedException("Invalid authentication code");
+    }
+    await this.throttle.recordSuccess(`mfa:${user.id}`, metadata.ipAddress);
+    return { verified: true, verifiedAt: verifiedAt.toISOString() };
   }
 
   /** Emis par AuthService.login pour un compte MFA active : aucun cookie de session avant le code. */
@@ -338,7 +386,14 @@ export class AccountService {
       // and recovery batches so each factor can authorize one login only.
       await tx.user.update({ where: { id: user.id }, data: { ...factorData, lastLoginAt: new Date() } });
       await tx.session.create({
-        data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + SESSION_IDLE_MS), ipAddress: metadata.ipAddress, userAgent: metadata.userAgent },
+        data: {
+          userId: user.id,
+          tokenHash,
+          mfaVerifiedAt: factor.method === "TOTP" ? new Date() : null,
+          expiresAt: new Date(Date.now() + SESSION_IDLE_MS),
+          ipAddress: metadata.ipAddress,
+          userAgent: metadata.userAgent,
+        },
       });
       await tx.auditLog.create({
         data: {

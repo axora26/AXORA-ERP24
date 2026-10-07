@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, Building2, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, WifiOff, X } from "lucide-react";
+import { AlertTriangle, Building2, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, ShieldCheck, WifiOff, X } from "lucide-react";
 import { api, ApiError, setActiveCompanyId } from "../lib/api";
 import { visibleGroups, type NavGroup } from "../lib/navigation";
 import { SessionContext, type SessionApi, type SessionContextValue } from "../lib/session";
@@ -15,11 +15,16 @@ import { useModalFocus } from "../lib/use-modal-focus";
 import { ThemeSelector, useTheme } from "./theme";
 import { NavBreadcrumbs } from "./nav-breadcrumbs";
 import { NavSidebar } from "./nav-sidebar";
+import { MfaStepUpProvider } from "./mfa-step-up-provider";
 
 const COMPANY_STORAGE_KEY = "axora.activeCompanyId";
 const SIDEBAR_STORAGE_KEY = "axora.nav.sidebar.collapsed";
 
 type ContextResponse = Omit<SessionContextValue, "activeCompanyId">;
+
+export function mfaEnrollmentDestination(pathname: string, required: boolean | undefined): string | null {
+  return required && pathname !== "/account" ? "/account" : null;
+}
 
 function initialsOf(fullName: string | undefined): string {
   const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
@@ -104,6 +109,17 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
   }, []);
 
   useEffect(() => {
+    const destination = mfaEnrollmentDestination(pathname, session?.mfaEnrollmentRequired);
+    if (destination) router.replace(destination);
+  }, [pathname, router, session?.mfaEnrollmentRequired]);
+
+  useEffect(() => {
+    const enrolled = () => setSession((current) => current ? { ...current, mfaEnrollmentRequired: false } : current);
+    window.addEventListener("axora:mfa-enrolled", enrolled);
+    return () => window.removeEventListener("axora:mfa-enrolled", enrolled);
+  }, []);
+
+  useEffect(() => {
     const goOffline = () => setOffline(true);
     const goOnline = () => setOffline(false);
     window.addEventListener("offline", goOffline);
@@ -182,6 +198,7 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
 
   return (
     <SessionContext.Provider value={sessionApi}>
+      <MfaStepUpProvider>
       <div className="app-shell">
         <a className="skip-link" href="#main-content">Aller au contenu principal</a>
         <aside id="axora-sidebar" className={`sidebar ${mobileNav ? "open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`} ref={mobileNavRef} role={mobileNav ? "dialog" : undefined} aria-modal={mobileNav ? true : undefined} aria-label={mobileNav ? "Navigation principale" : undefined} tabIndex={mobileNav ? -1 : undefined}>
@@ -268,6 +285,12 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
             </div>
           </header>
 
+          {sessionApi.mfaEnrollmentRequired && (
+            <div className="security-strip" role="alert">
+              <ShieldCheck size={14} aria-hidden="true" />
+              Votre organisation exige la double authentification. Configurez-la maintenant pour retrouver l’accès aux modules métier.
+            </div>
+          )}
           {offline && (
             <div className="offline-strip" role="status">
               <WifiOff size={14} aria-hidden="true" />
@@ -300,6 +323,7 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
           />
         )}
       </div>
+      </MfaStepUpProvider>
     </SessionContext.Provider>
   );
 }

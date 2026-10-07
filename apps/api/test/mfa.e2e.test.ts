@@ -25,7 +25,7 @@ describe("MFA TOTP (e2e)", () => {
 
   it("etat initial : MFA disponible mais non activee", async () => {
     const response = await as(harness, tenant).get("/auth/mfa");
-    expect(response.body).toEqual({ enabled: false, pendingSetup: false, available: true, recoveryCodesRemaining: 0 });
+    expect(response.body).toEqual({ enabled: false, pendingSetup: false, available: true, recoveryCodesRemaining: 0, requiredByOrganization: false });
   });
 
   it("enrolement : secret affiche une fois, stocke chiffre, active par un premier code valide", async () => {

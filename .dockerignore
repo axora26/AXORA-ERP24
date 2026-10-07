@@ -13,6 +13,7 @@
 .git
 .github
 .hermes
+graphify-out
 .data
 .vscode
 .idea

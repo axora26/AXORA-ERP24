@@ -128,6 +128,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/users", label: "Utilisateurs", icon: UserCog, permission: "core.user.manage", keywords: "comptes acces" },
       { href: "/admin/roles", label: "Rôles & permissions", icon: ShieldCheck, permission: "core.role.manage", keywords: "rbac droits matrice" },
+      { href: "/admin/security", label: "Sécurité", icon: ShieldPlus, permission: "core.organization.manage", keywords: "mfa authentification politique organisation step-up" },
       { href: "/admin/companies", label: "Entreprises", icon: Building2, permission: "core.company.manage", keywords: "filiales societes" },
       { href: "/admin/audit", label: "Journal d'audit", icon: ScrollText, permission: "core.audit.read", keywords: "traces historique" },
       { href: "/integrations", label: "API & intégrations", icon: Cable, permission: "integrations.apikey.read", keywords: "api cle token webhook connecteurs openapi integration" },
