@@ -94,6 +94,8 @@ export const OPS_MESSAGES: Record<string, string> = {
   'A Study with code "{x}" already exists': "Une étude de code « {1} » existe déjà",
   "At least one immutable requirement is required": "Au moins une exigence (immuable) est requise",
   "DQE not found": "DQE introuvable",
+  "DQE changed since it was loaded": "Le DQE a été modifié depuis son chargement",
+  "DQE lot not found": "Lot de DQE introuvable",
   "DQE was finalized concurrently": "Le DQE vient d'être finalisé par ailleurs",
   "Only a draft DQE can be finalized": "Seul un DQE en brouillon peut être finalisé",
   "Only a draft Study can be marked ready": "Seule une étude en brouillon peut être déclarée prête",

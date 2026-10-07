@@ -53,6 +53,7 @@ const EMPTY_DQE_FORM = {
 };
 
 const EMPTY_LINE_FORM = {
+  lotId: "",
   position: "1",
   reference: "",
   designation: "",
@@ -62,6 +63,7 @@ const EMPTY_LINE_FORM = {
   unitPrice: "",
 };
 
+const EMPTY_LOT_FORM = { position: "1", code: "", designation: "" };
 const EMPTY_PRICING_FORM = { overheadRate: "0", marginRate: "0", taxRate: "0" };
 const EMPTY_VARIANT_FORM = { code: "", title: "" };
 
@@ -82,6 +84,7 @@ export function EstimationWorkspace(): React.ReactElement {
   const [requirementForm, setRequirementForm] = useState(EMPTY_REQUIREMENT_FORM);
   const [selectedDqe, setSelectedDqe] = useState<DqeView | null>(null);
   const [dqeForm, setDqeForm] = useState(EMPTY_DQE_FORM);
+  const [lotForm, setLotForm] = useState(EMPTY_LOT_FORM);
   const [lineForm, setLineForm] = useState(EMPTY_LINE_FORM);
   const [pricingForm, setPricingForm] = useState(EMPTY_PRICING_FORM);
   const [variants, setVariants] = useState<DqeVariantView[]>([]);
@@ -238,6 +241,7 @@ export function EstimationWorkspace(): React.ReactElement {
     setNotice("");
     try {
       await estimationApi.addDqeLine(selectedDqe.id, {
+        ...(lineForm.lotId ? { lotId: lineForm.lotId } : {}),
         position: Number(lineForm.position),
         expectedVersion: selectedDqe.version,
         ...(lineForm.reference.trim() ? { reference: lineForm.reference.trim() } : {}),
@@ -253,6 +257,33 @@ export function EstimationWorkspace(): React.ReactElement {
       await load();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Ajout de la ligne impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createDqeLot(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!selectedDqe) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const updated = await estimationApi.createDqeLot(selectedDqe.id, {
+        expectedVersion: selectedDqe.version,
+        position: Number(lotForm.position),
+        code: lotForm.code,
+        designation: lotForm.designation,
+      });
+      setSelectedDqe(updated);
+      setLotForm({
+        ...EMPTY_LOT_FORM,
+        position: String(Math.max(0, ...(updated.lots ?? []).map((lot) => lot.position)) + 1),
+      });
+      setNotice("Lot créé. Vous pouvez maintenant y classer les ouvrages.");
+      await load();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Création du lot impossible.");
     } finally {
       setSaving(false);
     }
@@ -291,7 +322,7 @@ export function EstimationWorkspace(): React.ReactElement {
     setError("");
     setNotice("");
     try {
-      await estimationApi.createDqeVariant(selectedDqe.id, { code: variantForm.code.trim(), title: variantForm.title.trim() });
+      await estimationApi.createDqeVariant(selectedDqe.id, { expectedVersion: selectedDqe.version, code: variantForm.code.trim(), title: variantForm.title.trim() });
       setVariantForm(EMPTY_VARIANT_FORM);
       setVariants((await estimationApi.dqeVariants(selectedDqe.id)) ?? []);
       setNotice("Variante enregistrée pour comparaison.");
@@ -766,6 +797,38 @@ export function EstimationWorkspace(): React.ReactElement {
             <div className="dqe-financial-total"><span>Total TTC</span><strong>{selectedDqe.total} {selectedDqe.currency}</strong></div>
           </div>
 
+          <section className="dqe-lot-manager" aria-labelledby="dqe-lots-title">
+            <div className="dqe-lot-manager-head">
+              <div>
+                <span className="record-code">Structure du devis</span>
+                <h3 id="dqe-lots-title">Lots & ouvrages</h3>
+                <p>Regroupez les lignes par lot avant de générer le devis et le contrat.</p>
+              </div>
+              <strong>{(selectedDqe.lots ?? []).length} lot(s)</strong>
+            </div>
+            {(selectedDqe.lots ?? []).length > 0 ? (
+              <div className="dqe-lot-strip">
+                {(selectedDqe.lots ?? []).map((lot) => (
+                  <article key={lot.id} className="dqe-lot-card">
+                    <span>{String(lot.position).padStart(2, "0")}</span>
+                    <div><strong>{lot.code}</strong><small>{lot.designation}</small></div>
+                    <div className="dqe-lot-card-total"><strong>{lot.subtotal} {selectedDqe.currency}</strong><small>{lot.lineCount} ouvrage(s)</small></div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="dqe-variants-empty">Aucun lot. Les lignes peuvent rester hors lot ou être structurées avant édition du devis.</p>
+            )}
+            {selectedDqe.status === "DRAFT" && can("estimation.dqe.manage") && (
+              <form className="dqe-lot-form" onSubmit={createDqeLot}>
+                <label htmlFor="lot-position">Position<input id="lot-position" type="number" min="1" step="1" value={lotForm.position} onChange={(event) => setLotForm({ ...lotForm, position: event.currentTarget.value })} required /></label>
+                <label htmlFor="lot-code">Code du lot<input id="lot-code" value={lotForm.code} onChange={(event) => setLotForm({ ...lotForm, code: event.currentTarget.value })} placeholder="LOT-GO" required /></label>
+                <label className="dqe-lot-designation" htmlFor="lot-designation">Désignation du lot<input id="lot-designation" value={lotForm.designation} onChange={(event) => setLotForm({ ...lotForm, designation: event.currentTarget.value })} placeholder="Gros œuvre" required /></label>
+                <button className="secondary-button" type="submit" disabled={saving}><Plus size={15} aria-hidden="true" />Créer le lot</button>
+              </form>
+            )}
+          </section>
+
           {selectedDqe.status === "DRAFT" && can("estimation.pricing.manage") && (
             <form className="dqe-pricing-form" onSubmit={updateDqePricing}>
               <div className="dqe-pricing-copy"><strong>Coefficients de chiffrage</strong><small>Les taux sont enregistrés avec la version du brouillon.</small></div>
@@ -799,6 +862,7 @@ export function EstimationWorkspace(): React.ReactElement {
                 <thead>
                   <tr>
                     <th scope="col">Pos.</th>
+                    <th scope="col">Lot</th>
                     <th scope="col">Référence</th>
                     <th scope="col">Désignation</th>
                     <th scope="col">Famille</th>
@@ -813,6 +877,7 @@ export function EstimationWorkspace(): React.ReactElement {
                   {selectedDqe.lines.map((line) => (
                     <tr key={line.id}>
                       <td>{line.position}</td>
+                      <td>{(selectedDqe.lots ?? []).find((lot) => lot.id === line.lotId)?.code ?? "Hors lot"}</td>
                       <td><strong>{line.reference ?? "—"}</strong></td>
                       <td>{line.designation}</td>
                       <td>{line.costCategory === "MATERIAL" ? "Matériaux" : line.costCategory === "LABOR" ? "Main-d’œuvre" : line.costCategory === "EQUIPMENT" ? "Matériel" : line.costCategory === "SUBCONTRACTING" ? "Sous-traitance" : "Autres"}</td>
@@ -828,9 +893,10 @@ export function EstimationWorkspace(): React.ReactElement {
             </div>
           )}
 
-          {selectedDqe.status === "DRAFT" && (
+          {selectedDqe.status === "DRAFT" && can("estimation.dqe.manage") && (
             <form className="line-form" onSubmit={addDqeLine}>
               {libraryItems.length > 0 && <div className="line-library-field"><label htmlFor="line-library">Depuis la bibliothèque</label><select id="line-library" defaultValue="" onChange={(event) => applyLibraryItem(event.currentTarget.value)}><option value="">Choisir un ouvrage…</option>{libraryItems.filter((item) => item.isActive).map((item) => <option key={item.id} value={item.code}>{item.code} — {item.designation}</option>)}</select></div>}
+              {(selectedDqe.lots ?? []).length > 0 && <div className="line-lot-field"><label htmlFor="line-lot">Lot du devis</label><select id="line-lot" value={lineForm.lotId} onChange={(event) => setLineForm({ ...lineForm, lotId: event.currentTarget.value })}><option value="">Hors lot</option>{(selectedDqe.lots ?? []).map((lot) => <option key={lot.id} value={lot.id}>{lot.code} — {lot.designation}</option>)}</select></div>}
               <div>
                 <label htmlFor="line-position">Position de ligne</label>
                 <input

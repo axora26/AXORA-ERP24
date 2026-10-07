@@ -33,10 +33,10 @@ describe("NavSidebar", () => {
   it("mémorise le dépli d’un groupe sous une clé axora.nav.*", () => {
     render(<NavSidebar groups={NAV_GROUPS} pathname="/" onNavigate={() => undefined} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Commercial" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gestion commerciale" }));
 
-    expect(window.localStorage.getItem("axora.nav.group.commercial")).toBe("true");
-    expect(screen.getByRole("button", { name: "Commercial" }).getAttribute("aria-expanded")).toBe("true");
+    expect(window.localStorage.getItem("axora.nav.group.gestion-commerciale")).toBe("true");
+    expect(screen.getByRole("button", { name: "Gestion commerciale" }).getAttribute("aria-expanded")).toBe("true");
   });
 
   it("mémorise les favoris et les rend dans un groupe Favoris en tête", () => {
@@ -55,14 +55,14 @@ describe("NavSidebar", () => {
   });
 
   it("restaure les groupes dépliés et les favoris d’une session précédente", () => {
-    window.localStorage.setItem("axora.nav.group.commercial", "true");
+    window.localStorage.setItem("axora.nav.group.gestion-commerciale", "true");
     window.localStorage.setItem("axora.nav.favorites", '["/estimation"]');
 
     render(<NavSidebar groups={NAV_GROUPS} pathname="/" onNavigate={() => undefined} />);
 
-    expect(screen.getByRole("button", { name: "Commercial" }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("button", { name: "Gestion commerciale" }).getAttribute("aria-expanded")).toBe("true");
     const favoritesTrigger = screen.getByRole("button", { name: "Favoris" });
     const favorites = document.getElementById(favoritesTrigger.getAttribute("aria-controls") ?? "");
-    expect(within(favorites as HTMLElement).getByRole("link", { name: "Études & DQE" })).toBeTruthy();
+    expect(within(favorites as HTMLElement).getByRole("link", { name: "Études, lots & DQE" })).toBeTruthy();
   });
 });

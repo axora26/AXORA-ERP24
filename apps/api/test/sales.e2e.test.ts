@@ -48,7 +48,7 @@ describe("Sales Quote -> Contract (e2e)", () => {
     tenant.cookie = registered.headers["set-cookie"] as unknown as string[];
   }
 
-  async function createFinalizedDqe(code: string): Promise<string> {
+  async function createFinalizedDqe(code: string, quantity = "10.000000", unitPrice = "100.000000", lineCount = 1): Promise<string> {
     const study = await http()
       .post("/api/v1/estimation/studies")
       .set("Cookie", tenantA.cookie)
@@ -82,18 +82,41 @@ describe("Sales Quote -> Contract (e2e)", () => {
       .send({ studyId: study.body.id, code: `DQE-${code}`, title: "DQE devis", currency: "USD" });
     expect(dqe.status).toBe(201);
 
+    const lot = await http()
+      .post(`/api/v1/estimation/dqes/${dqe.body.id}/lots`)
+      .set("Cookie", tenantA.cookie)
+      .send({ expectedVersion: 1, position: 1, code: "LOT-ELEC", designation: "Electricité" });
+    expect(lot.status).toBe(201);
+
     const line = await http()
       .post(`/api/v1/estimation/dqes/${dqe.body.id}/lines`)
       .set("Cookie", tenantA.cookie)
       .send({
+        lotId: lot.body.lots[0].id,
         position: 1,
         reference: "SOL-001",
         designation: "Panneau photovoltaïque",
         unitCode: "u",
-        quantity: "10.000000",
-        unitPrice: "100.000000",
+        quantity,
+        unitPrice,
       });
     expect(line.status).toBe(201);
+
+    for (let position = 2; position <= lineCount; position += 1) {
+      const extraLine = await http()
+        .post(`/api/v1/estimation/dqes/${dqe.body.id}/lines`)
+        .set("Cookie", tenantA.cookie)
+        .send({
+          lotId: lot.body.lots[0].id,
+          position,
+          reference: `SOL-00${position}`,
+          designation: `Panneau photovoltaïque ${position}`,
+          unitCode: "u",
+          quantity,
+          unitPrice,
+        });
+      expect(extraLine.status).toBe(201);
+    }
 
     return dqe.body.id as string;
   }
@@ -152,8 +175,39 @@ describe("Sales Quote -> Contract (e2e)", () => {
     expect(created.body.status).toBe("DRAFT");
     expect(created.body.subtotal).toBe("1000.000000");
     expect(created.body.lines).toHaveLength(1);
+    expect(created.body.lots).toMatchObject([
+      { position: 1, code: "LOT-ELEC", designation: "Electricité", lineCount: 1, subtotal: "1000.000000" },
+    ]);
+    expect(created.body.lines[0].lotId).toBe(created.body.lots[0].id);
     expect(created.body.source.dqeId).toBe(dqeId);
     quoteId = created.body.id as string;
+    const quoteLot = await prisma.quoteLot.findFirstOrThrow({ where: { quoteId } });
+    await expect(prisma.quoteLot.update({ where: { id: quoteLot.id }, data: { designation: "SQL override" } })).rejects.toThrow();
+    await expect(prisma.quoteLot.delete({ where: { id: quoteLot.id } })).rejects.toThrow();
+    await expect(prisma.quoteLot.create({ data: {
+      organizationId: quoteLot.organizationId,
+      companyId: quoteLot.companyId,
+      quoteId,
+      position: 2,
+      code: "LOT-LATE",
+      designation: "Lot tardif",
+    } })).rejects.toThrow();
+    const quoteLine = await prisma.quoteLine.findFirstOrThrow({ where: { quoteId } });
+    await expect(prisma.quoteLine.update({ where: { id: quoteLine.id }, data: { designation: "SQL override" } })).rejects.toThrow();
+    await expect(prisma.quoteLine.update({ where: { id: quoteLine.id }, data: { lotId: null } })).rejects.toThrow();
+    await expect(prisma.quoteLine.delete({ where: { id: quoteLine.id } })).rejects.toThrow();
+    await expect(prisma.quoteLine.create({ data: {
+      organizationId: quoteLine.organizationId,
+      companyId: quoteLine.companyId,
+      quoteId,
+      lotId: quoteLot.id,
+      position: 2,
+      reference: "LATE",
+      designation: "Ligne tardive",
+      unitCode: "u",
+      quantity: "1.000000",
+      unitPrice: "1.000000",
+    } })).rejects.toThrow();
   });
 
   it("walks Quote through submit -> accept before a Contract can exist", async () => {
@@ -186,7 +240,38 @@ describe("Sales Quote -> Contract (e2e)", () => {
     expect(contract.body.status).toBe("ACTIVE");
     expect(contract.body.subtotal).toBe("1000.000000");
     expect(contract.body.lines).toHaveLength(1);
+    expect(contract.body.lots).toMatchObject([
+      { position: 1, code: "LOT-ELEC", designation: "Electricité", lineCount: 1, subtotal: "1000.000000" },
+    ]);
+    expect(contract.body.lines[0].lotId).toBe(contract.body.lots[0].id);
     expect(contract.body.source.quoteId).toBe(quoteId);
+    const contractLot = await prisma.contractLot.findFirstOrThrow({ where: { contractId: contract.body.id } });
+    await expect(prisma.contractLot.update({ where: { id: contractLot.id }, data: { designation: "SQL override" } })).rejects.toThrow();
+    await expect(prisma.contractLot.delete({ where: { id: contractLot.id } })).rejects.toThrow();
+    await expect(prisma.contractLot.create({ data: {
+      organizationId: contractLot.organizationId,
+      companyId: contractLot.companyId,
+      contractId: contract.body.id,
+      position: 2,
+      code: "LOT-LATE",
+      designation: "Lot tardif",
+    } })).rejects.toThrow();
+    const contractLine = await prisma.contractLine.findFirstOrThrow({ where: { contractId: contract.body.id } });
+    await expect(prisma.contractLine.update({ where: { id: contractLine.id }, data: { designation: "SQL override" } })).rejects.toThrow();
+    await expect(prisma.contractLine.update({ where: { id: contractLine.id }, data: { lotId: null } })).rejects.toThrow();
+    await expect(prisma.contractLine.delete({ where: { id: contractLine.id } })).rejects.toThrow();
+    await expect(prisma.contractLine.create({ data: {
+      organizationId: contractLine.organizationId,
+      companyId: contractLine.companyId,
+      contractId: contract.body.id,
+      lotId: contractLot.id,
+      position: 2,
+      reference: "LATE",
+      designation: "Ligne tardive",
+      unitCode: "u",
+      quantity: "1.000000",
+      unitPrice: "1.000000",
+    } })).rejects.toThrow();
 
     const second = await http()
       .post("/api/v1/sales/contracts")
@@ -228,6 +313,19 @@ describe("Sales Quote -> Contract (e2e)", () => {
     expect(rejected.status).toBe(201);
     expect(rejected.body.status).toBe("REJECTED");
     expect(rejected.body.rejectionReason).toBe("Budget client insuffisant");
+  });
+
+  it("uses the same six-decimal line rounding for document and lot subtotals", async () => {
+    const fractionalDqeId = await createFinalizedDqe(`${suffix}-rounding`, "0.000001", "0.400000", 3);
+    expect((await http().post(`/api/v1/estimation/dqes/${fractionalDqeId}/finalize`).set("Cookie", tenantA.cookie)).status).toBe(201);
+    const quote = await http()
+      .post("/api/v1/sales/quotes")
+      .set("Cookie", tenantA.cookie)
+      .send({ dqeId: fractionalDqeId, code: `Q-${suffix}-rounding`, title: "Devis arrondi" });
+    expect(quote.status).toBe(201);
+    expect(quote.body.lines[0].lineTotal).toBe("0.000000");
+    expect(quote.body.lots[0].subtotal).toBe("0.000000");
+    expect(quote.body.subtotal).toBe("0.000000");
   });
 
   it("never exposes another tenant's Quote or Contract by direct identifier", async () => {

@@ -62,11 +62,12 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Commercial",
+    label: "Gestion commerciale",
     items: [
+      { href: "/commercial", label: "Cockpit commercial", icon: Handshake, permission: ["crm.account.read", "estimation.dqe.read", "sales.quote.read", "sales.contract.read", "procurement.request.read", "procurement.order.read", "procurement.supplier.read", "inventory.item.read", "finance.invoice.read", "finance.payable.read", "finance.credit.read"], keywords: "gestion commerciale ventes achats devis facture directe stock articles fournisseurs commandes receptions lots ouvrages batiment" },
       { href: "/crm", label: "CRM & Pipeline", icon: UsersRound, permission: ["crm.opportunity.read", "crm.lead.read", "crm.account.read", "crm.contact.read", "crm.activity.read"], keywords: "prospects leads opportunites clients comptes contacts activites" },
-      { href: "/estimation", label: "Études & DQE", icon: Calculator, permission: "estimation.dqe.read", keywords: "bpu boq chiffrage estimation" },
-      { href: "/sales", label: "Devis & Contrats", icon: Receipt, permission: "sales.quote.read", keywords: "offres contrats ventes" },
+      { href: "/estimation", label: "Études, lots & DQE", icon: Calculator, permission: "estimation.dqe.read", keywords: "bpu boq chiffrage estimation lots ouvrages déboursé marge" },
+      { href: "/sales", label: "Devis & Contrats", icon: Receipt, permission: ["sales.quote.read", "sales.contract.read"], keywords: "offres contrats ventes revisions" },
     ],
   },
   {
@@ -84,7 +85,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Achats & stock",
     items: [
-      { href: "/procurement", label: "Achats", icon: ShoppingCart, permission: "procurement.request.read", keywords: "demandes commandes fournisseurs receptions" },
+      { href: "/procurement", label: "Achats", icon: ShoppingCart, permission: ["procurement.request.read", "procurement.order.read", "procurement.supplier.read"], keywords: "demandes commandes fournisseurs receptions" },
       { href: "/inventory", label: "Stock & logistique", icon: Boxes, permission: "inventory.item.read", keywords: "articles magasins inventaire sorties transferts" },
       { href: "/inventory/reservations", label: "Réservations de stock", icon: Boxes, permission: "inventory.item.read", keywords: "réservations allocations matériel chantier libre" },
     ],

@@ -3,6 +3,7 @@ export type ContractStatus = "ACTIVE" | "ARCHIVED";
 
 export interface QuoteLineView {
   id: string;
+  lotId?: string | null;
   position: number;
   reference: string | null;
   designation: string;
@@ -11,6 +12,15 @@ export interface QuoteLineView {
   quantity: string;
   unitPrice: string;
   lineTotal: string;
+}
+
+export interface CommercialDocumentLotView {
+  id: string;
+  position: number;
+  code: string;
+  designation: string;
+  lineCount: number;
+  subtotal: string;
 }
 
 export interface QuoteSourceView {
@@ -34,6 +44,7 @@ export interface QuoteView {
   rejectedAt: string | null;
   rejectionReason: string | null;
   createdAt: string;
+  lots?: CommercialDocumentLotView[];
   lines: QuoteLineView[];
   source: QuoteSourceView;
 }
@@ -42,6 +53,7 @@ export type QuoteSummaryView = QuoteView;
 
 export interface ContractLineView {
   id: string;
+  lotId?: string | null;
   position: number;
   reference: string | null;
   designation: string;
@@ -67,6 +79,7 @@ export interface ContractView {
   status: ContractStatus;
   subtotal: string;
   createdAt: string;
+  lots?: CommercialDocumentLotView[];
   lines: ContractLineView[];
   source: ContractSourceView;
 }

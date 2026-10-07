@@ -67,6 +67,39 @@ describe("Study and DQE draft corrections (PostgreSQL)", () => {
     expect(audit.metadata).toMatchObject({ parentId: current.id, version: 5, deletedSnapshot: { statement: "Corrected evidence", category: "ASSUMPTION" } });
   });
 
+  it("creates a versioned lot, assigns an ouvrage and returns the exact lot subtotal", async () => {
+    const current = await dqe();
+    expect(current).toMatchObject({ version: 2, lots: [] });
+
+    const created = await post(`dqes/${current.id}/lots`, {
+      expectedVersion: 2,
+      position: 1,
+      code: "LOT-GO",
+      designation: "Gros œuvre",
+    });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({
+      version: 3,
+      lots: [{ position: 1, code: "LOT-GO", designation: "Gros œuvre", lineCount: 0, subtotal: "0.000000" }],
+    });
+
+    const lotId = created.body.lots[0].id as string;
+    const assigned = await patch(`dqes/${current.id}/lines/${current.lines[0].id}`, { expectedVersion: 3, lotId });
+    expect(assigned.status).toBe(200);
+    expect(assigned.body).toMatchObject({ version: 4, subtotal: "10.000000" });
+    expect(assigned.body.lines[0]).toMatchObject({ lotId, lineTotal: "10.000000" });
+    expect(assigned.body.lots[0]).toMatchObject({ id: lotId, lineCount: 1, subtotal: "10.000000" });
+    expect(await prisma.auditLog.count({ where: { organizationId, resourceId: lotId, action: "estimation.dqe.lot.created" } })).toBe(1);
+
+    const other = await dqe();
+    const otherLot = await post(`dqes/${other.id}/lots`, { expectedVersion: 2, position: 1, code: "LOT-OTHER", designation: "Lot d'un autre DQE" });
+    expect(otherLot.status).toBe(201);
+    await expect(prisma.dqeLine.update({
+      where: { id: current.lines[0].id },
+      data: { lotId: otherLot.body.lots[0].id },
+    })).rejects.toMatchObject({ code: "P2003" });
+  });
+
   it("corrects exact DQE quantities and prices, recalculates totals and deletes draft lines", async () => {
     const current = await dqe(); const line = current.lines[0];
     const edited = await patch(`dqes/${current.id}/lines/${line.id}`, { expectedVersion: 2, quantity: "1.234560", unitPrice: "123.456780", designation: "Corrected item", reference: "BPU-1" });
@@ -179,8 +212,16 @@ describe("Study and DQE draft corrections (PostgreSQL)", () => {
     await expect(prisma.estimationStudyRequirement.delete({ where: { id: source.requirements[0].id } })).rejects.toThrow();
     await expect(prisma.estimationStudyRequirement.create({ data: { organizationId, companyId, studyId: source.id, position: 2, category: "NOTE", statement: "SQL append after freeze" } })).rejects.toThrow();
     const current = await dqe();
-    expect((await post(`dqes/${current.id}/finalize`, { expectedVersion: current.version })).status).toBe(201);
+    const structured = await post(`dqes/${current.id}/lots`, { expectedVersion: current.version, position: 1, code: "LOT-FROZEN", designation: "Lot figé" });
+    expect(structured.status).toBe(201);
+    const frozenLotId = structured.body.lots[0].id as string;
+    expect((await post(`dqes/${current.id}/finalize`, { expectedVersion: structured.body.version })).status).toBe(201);
     await expect(prisma.dqeLine.update({ where: { id: current.lines[0].id }, data: { quantity: "99" } })).rejects.toThrow();
+    await expect(prisma.dqeLot.update({ where: { id: frozenLotId }, data: { designation: "SQL override" } })).rejects.toThrow();
+    await expect(prisma.dqeLot.delete({ where: { id: frozenLotId } })).rejects.toThrow();
+    await expect(prisma.dqeLot.create({ data: { organizationId, companyId, dqeId: current.id, position: 2, code: "LOT-LATE", designation: "Lot tardif" } })).rejects.toThrow();
+    const otherDraft = await dqe();
+    await expect(prisma.dqeLot.update({ where: { id: frozenLotId }, data: { dqeId: otherDraft.id } })).rejects.toThrow();
     await expect(prisma.dqeLine.delete({ where: { id: current.lines[0].id } })).rejects.toThrow();
     const sourceBefore = (await get(`dqes/${current.id}`)).body;
     expect(sourceBefore.lines[0].quantity).toBe("1.000000");
@@ -228,12 +269,23 @@ describe("Study and DQE draft corrections (PostgreSQL)", () => {
 
   it("captures immutable DQE variants and compares their current delta", async () => {
     const current = await dqe();
-    const captured = await post(`dqes/${current.id}/variants`, { code: "OPT-A", title: "Option de référence" });
+    const structured = await post(`dqes/${current.id}/lots`, { expectedVersion: 2, position: 1, code: "LOT-A", designation: "Lot capturé" });
+    expect(structured.status).toBe(201);
+    const lotId = structured.body.lots[0].id as string;
+    expect((await patch(`dqes/${current.id}/lines/${current.lines[0].id}`, { expectedVersion: 3, lotId })).status).toBe(200);
+    expect((await post(`dqes/${current.id}/variants`, { code: "OPT-NO-VERSION", title: "Sans version" })).status).toBe(400);
+    const captured = await post(`dqes/${current.id}/variants`, { expectedVersion: 4, code: "OPT-A", title: "Option de référence" });
     expect(captured.status).toBe(201);
     expect(captured.body).toMatchObject({ dqeId: current.id, code: "OPT-A", subtotal: "10.000000", total: "10.000000", deltaSubtotal: "0.000000", deltaTotal: "0.000000" });
-    expect((await post(`dqes/${current.id}/variants`, { code: "OPT-A", title: "Doublon" })).status).toBe(409);
-    const priced = await patch(`dqes/${current.id}/pricing`, { expectedVersion: 2, marginRate: "10.000000" });
+    const persisted = await prisma.dqeVariant.findUniqueOrThrow({ where: { id: captured.body.id } });
+    expect(persisted.snapshot).toMatchObject({
+      lots: [{ id: lotId, position: 1, code: "LOT-A", designation: "Lot capturé", lineCount: 1, subtotal: "10.000000" }],
+      lines: [expect.objectContaining({ lotId })],
+    });
+    expect((await post(`dqes/${current.id}/variants`, { expectedVersion: 4, code: "OPT-A", title: "Doublon" })).status).toBe(409);
+    const priced = await patch(`dqes/${current.id}/pricing`, { expectedVersion: 4, marginRate: "10.000000" });
     expect(priced.status).toBe(200);
+    expect((await post(`dqes/${current.id}/variants`, { expectedVersion: 4, code: "OPT-STALE", title: "Capture périmée" })).status).toBe(409);
     const variants = await get(`dqes/${current.id}/variants`);
     expect(variants.status).toBe(200);
     expect(variants.body[0]).toMatchObject({ code: "OPT-A", deltaSubtotal: "0.000000", deltaTotal: "-1.000000" });

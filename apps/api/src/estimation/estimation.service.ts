@@ -15,6 +15,7 @@ import {
   draftVersion,
   type CreateDqeDto,
   type CreateDqeLineDto,
+  type CreateDqeLotDto,
   type CreateDqeVariantDto,
   type CreateDqeLibraryItemDto,
   type CreateStudyDto,
@@ -274,14 +275,16 @@ export class EstimationService {
   }
 
   async addDqeLine(scope: CompanyScope, dqeId: string, input: CreateDqeLineDto, actorUserId: string) {
-    assertDraftFields(input, ["companyId", "expectedVersion", "position", "reference", "designation", "unitCode", "costCategory", "quantity", "unitPrice"]);
+    assertDraftFields(input, ["companyId", "expectedVersion", "lotId", "position", "reference", "designation", "unitCode", "costCategory", "quantity", "unitPrice"]);
     const version = draftVersion(input.expectedVersion, false);
     return this.prisma.$transaction(async (tx) => {
       const document = await this.lockDqe(tx, scope, dqeId);
       checkDraft(document.status, document.version, version, "DQE");
       const position = positiveInteger(input.position, "position");
       await this.linePosition(tx, scope, dqeId, position);
-      const line = await tx.dqeLine.create({ data: { ...scope, dqeId, position,
+      const lotId = input.lotId === undefined ? null : requiredText(input.lotId, "lotId", 120);
+      if (lotId) await this.requireLot(tx, scope, dqeId, lotId);
+      const line = await tx.dqeLine.create({ data: { ...scope, dqeId, lotId, position,
         reference: optionalText(input.reference, "reference", 120), designation: requiredText(input.designation, "designation", 500),
         unitCode: requiredText(input.unitCode, "unitCode", 32), costCategory: costCategory(input.costCategory), quantity: new Prisma.Decimal(decimal6(input.quantity, "quantity", false)),
         unitPrice: new Prisma.Decimal(decimal6(input.unitPrice, "unitPrice", true)) } });
@@ -292,7 +295,7 @@ export class EstimationService {
   }
 
   async updateDqeLine(scope: CompanyScope, dqeId: string, lineId: string, input: UpdateDqeLineDto, actorUserId: string) {
-    assertDraftFields(input, ["companyId", "expectedVersion", "position", "reference", "designation", "unitCode", "costCategory", "quantity", "unitPrice"]);
+    assertDraftFields(input, ["companyId", "expectedVersion", "lotId", "position", "reference", "designation", "unitCode", "costCategory", "quantity", "unitPrice"]);
     const version = draftVersion(input.expectedVersion)!;
     const data: Prisma.DqeLineUpdateInput = {};
     if (input.position !== undefined) data.position = positiveInteger(input.position, "position");
@@ -302,16 +305,48 @@ export class EstimationService {
     if (input.costCategory !== undefined) data.costCategory = costCategory(input.costCategory);
     if (input.quantity !== undefined) data.quantity = new Prisma.Decimal(decimal6(input.quantity, "quantity", false));
     if (input.unitPrice !== undefined) data.unitPrice = new Prisma.Decimal(decimal6(input.unitPrice, "unitPrice", true));
-    if (!Object.keys(data).length) throw new BadRequestException("Provide at least one DQE line field to update");
+    if (!Object.keys(data).length && input.lotId === undefined) throw new BadRequestException("Provide at least one DQE line field to update");
     return this.prisma.$transaction(async (tx) => {
       const document = await this.lockDqe(tx, scope, dqeId);
       checkDraft(document.status, document.version, version, "DQE");
       const current = await tx.dqeLine.findFirst({ where: { id: lineId, dqeId, ...scope } });
       if (!current) throw new NotFoundException("DQE line not found");
+      if (input.lotId !== undefined) {
+        if (input.lotId === null || input.lotId === "") data.lot = { disconnect: true };
+        else {
+          const lotId = requiredText(input.lotId, "lotId", 120);
+          await this.requireLot(tx, scope, dqeId, lotId);
+          data.lot = { connect: { id: lotId } };
+        }
+      }
       if (typeof data.position === "number") await this.linePosition(tx, scope, dqeId, data.position, lineId);
       await tx.dqeLine.update({ where: { id: lineId }, data });
       await this.bumpDqe(tx, scope, dqeId, document.version);
       await this.draftAudit(tx, scope, actorUserId, "dqe.line.updated", "DqeLine", lineId, dqeId, document.version + 1, Object.keys(data));
+      return toDqeView(await tx.dqeDocument.findUniqueOrThrow({ where: { id: dqeId }, include: dqeInclude }));
+    });
+  }
+
+  async createDqeLot(scope: CompanyScope, dqeId: string, input: CreateDqeLotDto, actorUserId: string) {
+    assertDraftFields(input, ["companyId", "expectedVersion", "position", "code", "designation"]);
+    const version = draftVersion(input.expectedVersion)!;
+    return this.prisma.$transaction(async (tx) => {
+      const document = await this.lockDqe(tx, scope, dqeId);
+      checkDraft(document.status, document.version, version, "DQE");
+      const position = positiveInteger(input.position, "position");
+      const code = requiredText(input.code, "code", 80).toUpperCase();
+      const duplicate = await tx.dqeLot.findFirst({
+        where: { ...scope, dqeId, OR: [{ position }, { code }] },
+        select: { position: true, code: true },
+      });
+      if (duplicate) {
+        throw new ConflictException(duplicate.position === position ? "This DQE lot position already exists" : "This DQE lot code already exists");
+      }
+      const lot = await tx.dqeLot.create({
+        data: { ...scope, dqeId, position, code, designation: requiredText(input.designation, "designation", 180) },
+      });
+      await this.bumpDqe(tx, scope, dqeId, document.version);
+      await this.draftAudit(tx, scope, actorUserId, "dqe.lot.created", "DqeLot", lot.id, dqeId, document.version + 1);
       return toDqeView(await tx.dqeDocument.findUniqueOrThrow({ where: { id: dqeId }, include: dqeInclude }));
     });
   }
@@ -334,12 +369,14 @@ export class EstimationService {
   }
 
   async createDqeVariant(scope: CompanyScope, dqeId: string, input: CreateDqeVariantDto, actorUserId: string) {
-    assertDraftFields(input, ["companyId", "code", "title"]);
+    assertDraftFields(input, ["companyId", "expectedVersion", "code", "title"]);
+    const version = draftVersion(input.expectedVersion)!;
     const code = requiredText(input.code, "code", 80).toUpperCase();
     const title = requiredText(input.title, "title", 180);
     return this.prisma.$transaction(async (tx) => {
-      const document = await tx.dqeDocument.findFirst({ where: { id: dqeId, ...scope }, include: dqeInclude });
-      if (!document) throw new NotFoundException("DQE not found");
+      const locked = await this.lockDqe(tx, scope, dqeId);
+      if (locked.version !== version) throw new ConflictException("DQE changed since it was loaded");
+      const document = await tx.dqeDocument.findUniqueOrThrow({ where: { id: dqeId }, include: dqeInclude });
       const duplicate = await tx.dqeVariant.findFirst({ where: { dqeId, ...scope, code }, select: { id: true } });
       if (duplicate) throw new ConflictException("A DQE variant with this code already exists");
       const current = toDqeView(document);
@@ -357,7 +394,8 @@ export class EstimationService {
           subtotal: new Prisma.Decimal(current.subtotal),
           total: new Prisma.Decimal(current.total),
           snapshot: {
-            lines: current.lines.map((line) => ({ position: line.position, reference: line.reference, designation: line.designation, unitCode: line.unitCode, costCategory: line.costCategory ?? "MATERIAL", quantity: line.quantity, unitPrice: line.unitPrice, lineTotal: line.lineTotal })),
+            lots: current.lots.map((lot) => ({ id: lot.id, position: lot.position, code: lot.code, designation: lot.designation, lineCount: lot.lineCount, subtotal: lot.subtotal })),
+            lines: current.lines.map((line) => ({ lotId: line.lotId, position: line.position, reference: line.reference, designation: line.designation, unitCode: line.unitCode, costCategory: line.costCategory ?? "MATERIAL", quantity: line.quantity, unitPrice: line.unitPrice, lineTotal: line.lineTotal })),
             overheadRate: current.overheadRate,
             marginRate: current.marginRate,
             taxRate: current.taxRate,
@@ -510,6 +548,10 @@ export class EstimationService {
       throw new ConflictException("This DQE line position already exists");
     }
   }
+  private async requireLot(tx: Prisma.TransactionClient, scope: CompanyScope, dqeId: string, lotId: string) {
+    const lot = await tx.dqeLot.findFirst({ where: { id: lotId, dqeId, ...scope }, select: { id: true } });
+    if (!lot) throw new NotFoundException("DQE lot not found");
+  }
   private async bumpStudy(tx: Prisma.TransactionClient, scope: CompanyScope, id: string, version: number) {
     const result = await tx.estimationStudy.updateMany({ where: { id, ...scope, status: "DRAFT", version }, data: { version: { increment: 1 } } });
     if (result.count !== 1) throw new ConflictException("Study was changed concurrently; reload before saving");
@@ -532,6 +574,7 @@ function checkDraft(status: string, current: number, expected: number | undefine
 
 const dqeInclude = {
   lines: { orderBy: { position: "asc" as const } },
+  lots: { orderBy: { position: "asc" as const } },
   source: true,
 } as const;
 
@@ -609,6 +652,7 @@ function toDqeLineView(line: DqeLineRecord) {
   const unitPrice = new Prisma.Decimal(line.unitPrice);
   return {
     id: line.id,
+    lotId: line.lotId,
     position: line.position,
     reference: line.reference,
     designation: line.designation,
@@ -632,6 +676,14 @@ function toDqeView(document: DqeWithDetails) {
     categoryTotals[view.costCategory] = (categoryTotals[view.costCategory] ?? new Prisma.Decimal(0)).plus(lineTotal);
     return view;
   });
+  const lotTotals = new Map<string, { lineCount: number; subtotal: Prisma.Decimal }>();
+  for (const line of lines) {
+    if (!line.lotId) continue;
+    const current = lotTotals.get(line.lotId) ?? { lineCount: 0, subtotal: new Prisma.Decimal(0) };
+    current.lineCount += 1;
+    current.subtotal = current.subtotal.plus(line.lineTotal);
+    lotTotals.set(line.lotId, current);
+  }
   const overheadRate = new Prisma.Decimal(document.overheadRate);
   const marginRate = new Prisma.Decimal(document.marginRate);
   const taxRate = new Prisma.Decimal(document.taxRate);
@@ -672,6 +724,17 @@ function toDqeView(document: DqeWithDetails) {
       SUBCONTRACTING: totalFor("SUBCONTRACTING").toFixed(6),
       OTHER: totalFor("OTHER").toFixed(6),
     },
+    lots: document.lots.map((lot) => {
+      const totals = lotTotals.get(lot.id) ?? { lineCount: 0, subtotal: new Prisma.Decimal(0) };
+      return {
+        id: lot.id,
+        position: lot.position,
+        code: lot.code,
+        designation: lot.designation,
+        lineCount: totals.lineCount,
+        subtotal: totals.subtotal.toFixed(6),
+      };
+    }),
     lines,
     source: document.source
       ? {

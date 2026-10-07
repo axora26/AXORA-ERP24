@@ -4,6 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SalesWorkspace } from "./sales-workspace";
 import { estimationApi, salesApi } from "../lib/api";
 
+const permissions = vi.hoisted(() => new Set<string>());
+
+vi.mock("../lib/session", () => ({
+  useSession: () => ({ can: (permission: string) => permissions.has(permission) }),
+}));
+
 vi.mock("../lib/api", () => ({
   estimationApi: { dqes: vi.fn() },
   salesApi: {
@@ -72,8 +78,30 @@ const draftQuote = {
   source: { dqeId: "dqe-1", dqeCode: "DQE-001" },
 };
 
+const activeContract = {
+  id: "contract-1",
+  companyId: "company-1",
+  opportunityId: "opp-1",
+  code: "C-001",
+  title: "Contrat Campus solaire",
+  currency: "USD",
+  status: "ACTIVE" as const,
+  subtotal: "1000.000000",
+  createdAt: "2026-09-22T00:00:00.000Z",
+  lines: finalizedDqe.lines,
+  source: { quoteId: "quote-1", quoteCode: "Q-001" },
+};
+
 describe("SalesWorkspace", () => {
   beforeEach(() => {
+    permissions.clear();
+    [
+      "estimation.dqe.read",
+      "sales.quote.read",
+      "sales.quote.manage",
+      "sales.contract.read",
+      "sales.contract.manage",
+    ].forEach((permission) => permissions.add(permission));
     vi.mocked(estimationApi.dqes).mockResolvedValue([finalizedDqe]);
     vi.mocked(salesApi.quotes).mockResolvedValue([draftQuote]);
     vi.mocked(salesApi.contracts).mockResolvedValue([]);
@@ -130,5 +158,61 @@ describe("SalesWorkspace", () => {
     await waitFor(() =>
       expect(salesApi.rejectQuote).toHaveBeenCalledWith("quote-1", "Budget insuffisant"),
     );
+  });
+
+  it("charge et affiche les contrats avec la seule permission contract.read", async () => {
+    permissions.clear();
+    permissions.add("sales.contract.read");
+    vi.mocked(salesApi.contracts).mockResolvedValue([activeContract]);
+
+    render(<SalesWorkspace />);
+
+    expect(await screen.findByText("Contrat Campus solaire")).toBeTruthy();
+    expect(salesApi.contracts).toHaveBeenCalledTimes(1);
+    expect(salesApi.quotes).not.toHaveBeenCalled();
+    expect(estimationApi.dqes).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { name: "Nouveau devis" })).toBeNull();
+  });
+
+  it("masque toutes les mutations à un lecteur de devis", async () => {
+    permissions.clear();
+    permissions.add("sales.quote.read");
+    const submittedQuote = {
+      ...draftQuote,
+      status: "SUBMITTED" as const,
+      submittedAt: "2026-09-22T00:00:00.000Z",
+    };
+    vi.mocked(salesApi.quote).mockResolvedValue(submittedQuote);
+
+    render(<SalesWorkspace />);
+    fireEvent.click(await screen.findByRole("button", { name: /Ouvrir Q-001/ }));
+
+    expect(await screen.findByText(/Source DQE/)).toBeTruthy();
+    expect(estimationApi.dqes).not.toHaveBeenCalled();
+    expect(salesApi.contracts).not.toHaveBeenCalled();
+    expect(screen.getByText("Statut contrat non disponible")).toBeTruthy();
+    expect(screen.queryByText("Sans contrat")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Accepter le devis/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Rejeter le devis/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Créer le contrat/ })).toBeNull();
+  });
+
+  it("ne propose pas un contrat sans droit de lire l'état contractuel", async () => {
+    permissions.clear();
+    permissions.add("sales.quote.read");
+    permissions.add("sales.contract.manage");
+    const acceptedQuote = {
+      ...draftQuote,
+      status: "ACCEPTED" as const,
+      acceptedAt: "2026-09-22T00:00:00.000Z",
+    };
+    vi.mocked(salesApi.quote).mockResolvedValue(acceptedQuote);
+
+    render(<SalesWorkspace />);
+    fireEvent.click(await screen.findByRole("button", { name: /Ouvrir Q-001/ }));
+
+    expect(await screen.findByText(/Source DQE/)).toBeTruthy();
+    expect(salesApi.contracts).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Créer le contrat/ })).toBeNull();
   });
 });

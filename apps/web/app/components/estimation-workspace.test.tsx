@@ -18,7 +18,10 @@ vi.mock("../lib/api", () => ({
     addRequirement: vi.fn(),
     markStudyReady: vi.fn(),
     createDqe: vi.fn(),
+    createDqeLot: vi.fn(),
     addDqeLine: vi.fn(),
+    dqeVariants: vi.fn(),
+    dqeLibrary: vi.fn(),
     finalizeDqe: vi.fn(),
   },
   ApiError: class ApiError extends Error {},
@@ -80,6 +83,7 @@ const createdDqe = {
   finalizedAt: null,
   createdAt: "2026-09-22T00:00:00.000Z",
   subtotal: "0.000000",
+  lots: [],
   source: {
     studyId: "study-1",
     studyCode: "ETU-001",
@@ -91,6 +95,7 @@ const createdDqe = {
 
 const line = {
   id: "line-1",
+  lotId: null,
   position: 1,
   reference: "REF-001",
   designation: "Béton de propreté",
@@ -107,6 +112,8 @@ describe("EstimationWorkspace", () => {
     vi.mocked(crmApi.opportunities).mockResolvedValue([]);
     vi.mocked(estimationApi.studies).mockResolvedValue([]);
     vi.mocked(estimationApi.dqes).mockResolvedValue([]);
+    vi.mocked(estimationApi.dqeVariants).mockResolvedValue([]);
+    vi.mocked(estimationApi.dqeLibrary).mockResolvedValue([]);
     vi.mocked(estimationApi.addRequirement).mockResolvedValue(requirement);
   });
 
@@ -254,6 +261,28 @@ describe("EstimationWorkspace", () => {
         unitPrice: "95.750000",
       }),
     );
+  });
+
+  it("crée un lot de devis puis le propose pour classer les ouvrages", async () => {
+    const lot = { id: "lot-1", position: 1, code: "LOT-GO", designation: "Gros œuvre", lineCount: 0, subtotal: "0.000000" };
+    const withLot = { ...createdDqe, version: 2, lots: [lot] };
+    vi.mocked(estimationApi.dqes).mockResolvedValue([createdDqe]);
+    vi.mocked(estimationApi.dqe).mockResolvedValue(createdDqe);
+    vi.mocked(estimationApi.createDqeLot).mockResolvedValue(withLot);
+    render(<EstimationWorkspace />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Ouvrir DQE-001" }));
+    fireEvent.change(await screen.findByLabelText("Code du lot"), { target: { value: "LOT-GO" } });
+    fireEvent.change(screen.getByLabelText("Désignation du lot"), { target: { value: "Gros œuvre" } });
+    fireEvent.click(screen.getByRole("button", { name: "Créer le lot" }));
+
+    await waitFor(() => expect(estimationApi.createDqeLot).toHaveBeenCalledWith("dqe-1", {
+      expectedVersion: 1,
+      position: 1,
+      code: "LOT-GO",
+      designation: "Gros œuvre",
+    }));
+    expect(await screen.findByRole("option", { name: "LOT-GO — Gros œuvre" })).toBeTruthy();
   });
 
   it("finalise et fige un DQE qui contient au moins une ligne", async () => {

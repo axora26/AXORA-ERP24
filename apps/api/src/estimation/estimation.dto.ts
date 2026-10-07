@@ -30,6 +30,7 @@ export class CreateDqeDto {
 export class CreateDqeLineDto {
   companyId?: string;
   expectedVersion?: number;
+  lotId?: string;
   position!: number;
   reference?: string;
   designation!: string;
@@ -54,6 +55,7 @@ export class UpdateStudyRequirementDto {
 export class UpdateDqeLineDto {
   companyId?: string;
   expectedVersion!: number;
+  lotId?: string | null;
   position?: number;
   reference?: string | null;
   designation?: string;
@@ -61,6 +63,13 @@ export class UpdateDqeLineDto {
   costCategory?: string;
   quantity?: string;
   unitPrice?: string;
+}
+export class CreateDqeLotDto {
+  companyId?: string;
+  expectedVersion!: number;
+  position!: number;
+  code!: string;
+  designation!: string;
 }
 export class UpdateDqePricingDto {
   companyId?: string;
@@ -71,6 +80,7 @@ export class UpdateDqePricingDto {
 }
 export class CreateDqeVariantDto {
   companyId?: string;
+  expectedVersion!: number;
   code!: string;
   title!: string;
 }
