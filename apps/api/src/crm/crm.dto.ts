@@ -56,6 +56,32 @@ export class ActivityQueryDto {
   pageSize?: string;
 }
 
+export class NextActionQueryDto {
+  companyId?: string;
+  accountId?: string;
+  filter?: string;
+}
+
+export class CreateNextActionDto {
+  companyId?: string;
+  accountId!: string;
+  title!: string;
+  details?: string | null;
+  dueAt!: string;
+  priority?: string;
+  assigneeUserId!: string;
+}
+
+export class UpdateNextActionDto {
+  companyId?: string;
+  expectedVersion!: number;
+  title?: string;
+  details?: string | null;
+  dueAt?: string;
+  priority?: string;
+  assigneeUserId?: string;
+}
+
 export class CreateContactDto {
   companyId?: string;
   accountId?: string;
@@ -215,6 +241,31 @@ export function optionalDate(value: unknown, field: string): Date | null {
     throw new BadRequestException(`${field} is not a valid calendar date`);
   }
   return date;
+}
+
+export function nextActionDueAt(value: unknown): Date {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
+    throw new BadRequestException("dueAt must be an ISO timestamp with timezone");
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new BadRequestException("dueAt is not a valid timestamp");
+  const calendar = new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
+  if (calendar.toISOString().slice(0, 10) !== value.slice(0, 10)) throw new BadRequestException("dueAt is not a valid calendar date");
+  return date;
+}
+
+export function nextActionPriority(value: unknown): "LOW" | "MEDIUM" | "HIGH" | "URGENT" {
+  if (value === undefined || value === "") return "MEDIUM";
+  return enumValue(value, ["LOW", "MEDIUM", "HIGH", "URGENT"] as const, "priority");
+}
+
+export function nextActionFilter(value: unknown): "all" | "overdue" | "today" | "next7days" {
+  if (value === undefined || value === "") return "all";
+  const allowed = ["all", "overdue", "today", "next7days"] as const;
+  if (typeof value !== "string" || !allowed.includes(value as (typeof allowed)[number])) {
+    throw new BadRequestException("filter must be one of: all, overdue, today, next7days");
+  }
+  return value as (typeof allowed)[number];
 }
 
 export function assertFields(input: object, allowed: readonly string[]): void {

@@ -1,112 +1,112 @@
-# Graph Report - AXORA_ERP24-mfa-stepup  (2026-10-07)
+# Graph Report - AXORA_ERP24-premium-wave2  (2026-10-07)
 
 ## Corpus Check
-- 683 files · ~528,627 words
+- 697 files · ~537,296 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 42 file(s) not represented in the graph (top: .prisma 25, (none) 6, .css 5)
+- Unclassified: 43 file(s) not represented in the graph (top: .prisma 25, (none) 6, .css 6)
 
 ## Summary
-- 6746 nodes · 23784 edges · 527 communities (197 shown, 330 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 769 edges (avg confidence: 0.85)
+- 6861 nodes · 24138 edges · 534 communities (203 shown, 331 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 793 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `227cea06`
+- Built from commit: `b2cc9fd3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Form
 - Feedback
-- api.ts
+- estimation-workspace.tsx
 - money
-- EstimationService
-- company-scope.service.ts
+- estimation.service.ts
+- ScopedController
 - @nestjs/common
-- portal.service.ts
-- portal-exposure.ts
-- commissioning.service.ts
+- prisma.service.ts
+- PortalContext
+- hooks.ts
 - sections/index.ts
-- theme.tsx
-- database/src/index.ts
+- CrmService
+- PrismaService
 - AdminService
-- writeAudit
-- contracts/src/index.ts
-- notePath
+- commissioning.service.ts
+- commissioning/[id]/page.tsx
+- finance.service.ts
 - ref_vitest
 - fleet.service.ts
-- CompanyScope
-- ingestion.service.ts
 - RequirePermission
+- company-scope.service.ts
+- CompanyScope
 - hr.service.ts
-- ref_node_crypto
+- local.mjs
 - energy.service.ts
-- CurrentUser
+- AuthenticatedUser
 - assets.service.ts
 - crm.service.ts
-- api-key.guard.ts
-- qhse.service.ts
-- WorkflowService
-- ScopedController
-- credit-notes.service.ts
-- AX-A360 — Modèle de Sécurité et de Gouvernance Technique
 - Scope
-- account.service.ts
+- writeAudit
+- WorkflowController
+- IntegrationsService
+- .refund
+- AX-A360 — Modèle de Sécurité et de Gouvernance Technique
+- planner.ts
+- project-operations.service.ts
 - AXORA-ERP24 — Design System & Architecture de l'Information
 - projects.service.ts
-- CrmService
+- main.ts
 - AXORA-ERP24 — Stratégie QA / DevOps (rapport AXORA-ERP24-QA-DEVOPS)
 - subcontracting.service.ts
-- field-sync.tsx
+- field.service.ts
 - AXORA-ERP24 — Matrice de Livraison & Backlog Vertical Priorisé
-- CrmController
-- fleet/page.tsx
+- .resolve
+- src/finance.ts
 - smart/page.tsx
-- AuthenticatedUser
-- workflow/page.tsx
+- CurrentUser
+- workflow.service.ts
 - tenancy.ts
-- PrismaService
+- crm-workspace.tsx
 - 4. Bounded contexts détaillés — entités prioritaires & invariants
 - index.mjs
-- engine.ts
+- EnergyController
 - ProjectsController
-- ui.tsx
-- tools.ts
+- ref_react
+- next
 - document-catalog.ts
-- sales.service.ts
-- lucide-react
-- FieldService
+- sales.controller.ts
+- field/page.tsx
+- 20260921172536_inc_02_crm/migration.sql
 - smart.service.ts
-- assets/page.tsx
-- src/field.ts
+- formatMoney
+- MepController
 - database/package.json
-- calculation-kernel.ts
+- metrics.ts
 - 20260925034300_inc_08_finance/migration.sql
-- IntegrationsService
+- portal-admin.service.ts
 - src/hr.ts
 - AssetsController
 - BimController
 - ifc-parser.ts
-- models/[id]/page.tsx
-- main.ts
+- devDependencies
+- EchoController
 - translate.ts
-- EnergyController
+- project-forecast.service.ts
 - CreditNotesController
 - 20260922014616_inc_03_estimation_foundation/migration.sql
-- portal-admin.controller.ts
-- qhse/page.tsx
+- tools.ts
+- lucide-react
 - mep.service.ts
 - integrations.service.ts
-- createClient
+- energy.mjs
 - FleetController
 - 20260925043722_inc_11_qhse/migration.sql
 - 20260925041439_inc_10_field_ged/migration.sql
 - ui/package.json
 - api/package.json
-- PublicApiController
-- project-forecast.service.ts
+- fleet/page.tsx
+- src/projects.ts
 - web/package.json
-- crm-workspace.tsx
+- modules/crm.ts
 - security/package.json
 - 20260925054854_inc_16_smart_building/migration.sql
 - analytics.service.ts
@@ -114,31 +114,31 @@
 - AXORA-ERP24 — Architecture cible (rapport AXORA-ERP24-ARCHITECT)
 - SubcontractingController
 - compilerOptions
-- documents.controller.ts
+- DocumentsController
 - Analyse d’écarts BTP — AXORA ERP24 vs Sage Batigest i7
 - AXORA-ERP24 — Journal de decisions (ADR courtes)
 - scripts
 - 20260925032128_inc_06_procurement/migration.sql
-- documents.service.ts
+- optionalId
 - Archive — rapport du 25 septembre 2026
 - AXORA-ERP24 — Etat d'execution courant
 - package.json
 - contracts/package.json
-- PrintableDocument
+- theme.tsx
 - InvoiceSignatureService
 - support.ts
 - manifest.json
 - 20260925062943_inc_18_fleet/migration.sql
+- nav-sidebar.tsx
+- permissions.ts
 - AccountingService
-- public-api.controller.ts
-- PortalAdminService
-- workflow.service.ts
+- ref_node_path
 - dependencies
-- .resolve
-- commissioning.controller.ts
+- MepService
+- CommissioningController
 - compilerOptions
-- EstimationWorkspace
-- portal-client.ts
+- ref_node_fs
+- seed-demo.mjs
 - @playwright/test
 - devDependencies
 - compilerOptions
@@ -150,17 +150,18 @@
 - monthly-chart.tsx
 - 20260925052857_inc_15_assets/migration.sql
 - AuthController
+- EstimationExportController
 - dependencies
 - AXORA-ERP24 — Statut des modules
-- audit/page.tsx
+- contracts/src/index.ts
 - bim.service.ts
-- admin.service.ts
+- PortalAdminController
 - src/procurement.ts
 - AccountService
 - dqe-export.ts
 - 20260925035525_inc_09_hr/migration.sql
 - copilot.service.ts
-- estimation.service.ts
+- Product
 - 20260925033137_inc_07_inventory/migration.sql
 - 20260925064534_inc_19_subcontracting/migration.sql
 - 20260925070104_inc_20_portals/migration.sql
@@ -182,19 +183,19 @@
 - AXORA-ERP24
 - remote-deploy.sh
 - 12. Lots indépendants ordonnés
-- AutomationService
+- PrintableDocument
 - 3. Présence mensuelle ouvrier / chantier
 - trend-chart.tsx
 - app/login/page.tsx
 - 6. Modèle Prisma proposé
 - overrides
-- inbound.controller.ts
+- api-key.guard.ts
 - 20260922133407_inc_04_quote_contract/migration.sql
 - 20261005020000_general_accounting/migration.sql
 - sw.js
 - 20260925045937_inc_12_commissioning/migration.sql
 - tokens.ts
-- reliability.test.ts
+- .pageActivities
 - 10. Tests
 - 11. Migration et retour arrière
 - 4. Rubriques salarié configurables
@@ -203,8 +204,8 @@
 - 8. Services et transactions
 - 9. Écrans responsive
 - nest-cli.json
-- .table
-- unplugin-swc
+- sales-workspace.tsx
+- EstimationWorkspace
 - Exemples de documents AXORA ERP24
 - api-entrypoint.sh
 - axora-docker-user-firewall.sh
@@ -214,46 +215,53 @@
 - assets/README.md
 - ifc/README.md
 - deploy-vps.sh
-- mep/page.tsx
+- project-costs.ts
 - 20260925045332_inc_13_mep/migration.sql
-- nav-sidebar.tsx
+- credit-notes.service.ts
 - 20261004003000_hr_service_cards_payroll/migration.sql
 - 20261005090000_supplier_returns/migration.sql
 - OrganizationService
 - HrOperationsController
-- AppShell
+- estimation.ts
 - app-shell.tsx
 - "stock_reservations"
 - "hr_payroll_runs"
 - 20260925074320_inc_22_ai_copilot/migration.sql
 - 20261005000000_project_forecast_revisions/migration.sql
-- commissioning/[id]/page.tsx
-- portal-admin/[id]/page.tsx
-- dashboard.controller.ts
-- 3. Design tokens
+- SalesWorkspace
+- PortalAdminService
+- dashboard.service.ts
+- scripts
 - 20260925110516_inc_23_analytics/migration.sql
-- error-messages.test.ts
+- sales.ts
 - "project_resource_plans"
 - 20261005060000_employee_advances/migration.sql
-- automation.service.ts
-- RegisterOrganization
-- 4. Composants (inventaire du design system)
+- offline-cache.ts
+- "crm_next_actions"
+- workflow.mjs
 - 20261005010000_invoice_signatures/migration.sql
 - 20261005013000_bank_statement_reconciliation/migration.sql
-- SiteDailyLogView
-- nav-breadcrumbs.tsx
+- fleet.mjs
+- RegisterOrganization
 - 20261005050000_dqe_library/migration.sql
-- NotificationBell
+- commercial.mjs
 - http.ts
 - module-status.ts
 - 20260925023439_platform_number_sequences/migration.sql
 - "mfa_challenges"
 - 20260921005944_add_login_throttle/migration.sql
 - reload
+- Surface brief — Commercial Command Center et Account 360
+- assets.mjs
+- run
+- CrmLeadView
+- estimation-workspace.test.tsx
+- nav-breadcrumbs.tsx
+- .get
 
 ## God Nodes (most connected - your core abstractions)
-1. `CompanyScope` - 1012 edges
-2. `RequirePermission()` - 482 edges
+1. `CompanyScope` - 1022 edges
+2. `RequirePermission()` - 490 edges
 3. `Scope` - 409 edges
 4. `AuthenticatedUser` - 321 edges
 5. `CurrentUser` - 260 edges
@@ -278,299 +286,295 @@
 ## Import Cycles
 - None detected.
 
-## Communities (527 total, 330 thin omitted)
+## Communities (534 total, 331 thin omitted)
 
 ### Community 0 - "Form"
 Cohesion: 0.04
-Nodes (139): CreateRoleModal(), AssignmentDraft, CreateUserModal(), EditUserModal(), Option, ProjectOption, RoleAssignmentsEditor(), CaptureForm() (+131 more)
+Nodes (155): CreateRoleModal(), AssignmentDraft, CreateUserModal(), EditUserModal(), Option, ProjectOption, RoleAssignmentsEditor(), CaptureForm() (+147 more)
 
 ### Community 1 - "Feedback"
-Cohesion: 0.09
-Nodes (103): AccountPage(), MfaPanel(), PasswordPanel(), AuditPage(), CompaniesPage(), RolesPage(), SecurityPage(), UsersPage() (+95 more)
+Cohesion: 0.08
+Nodes (108): AccountPage(), MfaPanel(), PasswordPanel(), ACTION_FILTERS, AuditPage(), CompaniesPage(), RolesPage(), SecurityPage() (+100 more)
 
-### Community 2 - "api.ts"
-Cohesion: 0.04
-Nodes (72): SalesPage(), EstimationDraftSelection, Selection, line, parent, EMPTY_DQE_FORM, EMPTY_FORM, EMPTY_LINE_FORM (+64 more)
+### Community 2 - "estimation-workspace.tsx"
+Cohesion: 0.14
+Nodes (12): EstimationDraftSelection, EMPTY_DQE_FORM, EMPTY_FORM, EMPTY_LINE_FORM, EMPTY_PRICING_FORM, EMPTY_REQUIREMENT_FORM, EMPTY_VARIANT_FORM, EmptyState() (+4 more)
 
 ### Community 3 - "money"
-Cohesion: 0.04
-Nodes (54): dec(), money(), qty(), sumDecimals(), requiredDecimal(), CreditTotals, invoiceCreditTotals(), netInvoiceFigures() (+46 more)
+Cohesion: 0.05
+Nodes (44): dec(), money(), qty(), sumDecimals(), optionalBoolean(), optionalInt(), buildLine(), invoiceTotals() (+36 more)
 
-### Community 4 - "EstimationService"
-Cohesion: 0.15
-Nodes (15): assertDraftFields(), costCategory(), decimal6(), draftVersion(), optionalText(), positiveInteger(), requiredText(), checkDraft() (+7 more)
+### Community 4 - "estimation.service.ts"
+Cohesion: 0.07
+Nodes (38): EstimationController, assertDraftFields(), costCategory(), CreateDqeDto, CreateDqeLibraryItemDto, CreateDqeLineDto, CreateDqeVariantDto, CreateStudyDto (+30 more)
 
-### Community 5 - "company-scope.service.ts"
-Cohesion: 0.06
-Nodes (28): JsonBodyGuard, MFA_STEP_UP_MAX_AGE_MS, MfaStepUpGuard, MfaStepUpOptions, express, PermissionGuard, Request, MFA_STEP_UP_KEY (+20 more)
+### Community 5 - "ScopedController"
+Cohesion: 0.05
+Nodes (13): RequireAnyPermission(), EffectivePermissions, express, Request, ScopedController(), CopilotController, DashboardController, DashboardService (+5 more)
 
 ### Community 6 - "@nestjs/common"
-Cohesion: 0.05
-Nodes (33): AdminModule, AnalyticsModule, AssetsModule, AuthModule, BimModule, CommissioningModule, CopilotModule, CoreModule (+25 more)
+Cohesion: 0.04
+Nodes (54): AdminModule, AnalyticsModule, AppModule, AssetsModule, AuthModule, JsonBodyGuard, OriginGuard, BimModule (+46 more)
 
-### Community 7 - "portal.service.ts"
+### Community 7 - "prisma.service.ts"
+Cohesion: 0.06
+Nodes (43): RoleAssignmentInput, UserWithRelations, SecondFactor, ALLOW_MFA_ENROLLMENT_KEY, LoginDto, RegisterOrganizationDto, AuthService, MfaChallengeResult (+35 more)
+
+### Community 8 - "PortalContext"
+Cohesion: 0.22
+Nodes (3): PortalController, setPortalCookie(), PortalContext
+
+### Community 9 - "hooks.ts"
 Cohesion: 0.07
-Nodes (27): LoginDto, RegisterOrganizationDto, AuthService, MfaChallengeResult, SessionResult, credentialPassword(), keys(), organizationSlug() (+19 more)
-
-### Community 8 - "portal-exposure.ts"
-Cohesion: 0.07
-Nodes (24): PortalController, setPortalCookie(), clientProjectIds(), EXPOSABLE_CUSTOMER_INVOICE, EXPOSABLE_ORDER, EXPOSABLE_SUPPLIER_INVOICE, exposableResources(), PrincipalRoot (+16 more)
-
-### Community 9 - "commissioning.service.ts"
-Cohesion: 0.12
-Nodes (12): activityInclude, ActivityRow, CommissioningService, sequenceState(), SEVERITIES, TEST_KINDS, Tx, CommissioningActivityView (+4 more)
+Nodes (33): DAY_NAMES, DraftEntry, toDrafts(), Dialog, TabId, Dialog, Dialog, FigureCard() (+25 more)
 
 ### Community 10 - "sections/index.ts"
-Cohesion: 0.09
-Nodes (31): amountsByCurrency(), countKpi(), DashboardSection, moneyKpi(), assetsSection, crmSection, quotesSection, salesSection (+23 more)
+Cohesion: 0.11
+Nodes (22): amountsByCurrency(), countKpi(), DashboardSection, moneyKpi(), crmSection, quotesSection, salesSection, documentsSection (+14 more)
 
-### Community 11 - "theme.tsx"
-Cohesion: 0.16
-Nodes (12): purgeOfflinePages(), ServiceWorkerRegister(), ContextActions(), ThemeContext, ThemePreference, ThemeProvider(), ThemeSelector(), useTheme() (+4 more)
+### Community 11 - "CrmService"
+Cohesion: 0.14
+Nodes (10): assertFields(), expectedVersion(), checkVersion(), CrmService, toAccountView(), toContactView(), toNextActionView(), CrmAccountView (+2 more)
 
-### Community 12 - "database/src/index.ts"
-Cohesion: 0.03
-Nodes (58): AuditClient, DecimalInput, moneyOrNull(), percent(), NumberingService, SequenceClient, currencyCode(), optionalBoolean() (+50 more)
+### Community 12 - "PrismaService"
+Cohesion: 0.05
+Nodes (16): CommonModule, CompanyScopeService, NumberingService, CompanyScopeGuard, PrismaService, StockLedgerService, AutomationService, isUniqueViolation() (+8 more)
 
 ### Community 13 - "AdminService"
-Cohesion: 0.08
-Nodes (9): AdminController, AdminService, endOfDay(), idList(), parseRoleAssignments(), permissionKeys(), toUserView(), RequireMfaStepUp() (+1 more)
-
-### Community 14 - "writeAudit"
 Cohesion: 0.06
-Nodes (13): writeAudit(), assertBody(), optionalDecimal(), optionalId(), optionalText(), requiredDate(), requiredEnum(), requiredId() (+5 more)
+Nodes (18): AdminController, AdminService, endOfDay(), idList(), parseRoleAssignments(), permissionKeys(), toUserView(), RequireMfaStepUp() (+10 more)
 
-### Community 15 - "contracts/src/index.ts"
-Cohesion: 0.04
-Nodes (71): Dialog, TabId, Dialog, TabId, KpiCard(), ReceiveModal(), EMPTY_LINE, LineDraft (+63 more)
+### Community 14 - "commissioning.service.ts"
+Cohesion: 0.15
+Nodes (11): activityInclude, ActivityRow, sequenceState(), SEVERITIES, TEST_KINDS, Tx, CommissioningActivityView, CommissioningMeasurement (+3 more)
 
-### Community 16 - "notePath"
-Cohesion: 0.40
-Nodes (5): basePath(), open(), perform(), refresh(), notePath()
+### Community 15 - "commissioning/[id]/page.tsx"
+Cohesion: 0.07
+Nodes (37): Dialog, MeasurementDraft, ReceiveModal(), EMPTY_LINE, LineDraft, SCORE, statusTone(), TabId (+29 more)
+
+### Community 16 - "finance.service.ts"
+Cohesion: 0.17
+Nodes (14): netInvoiceFigures(), APPROVED_SUPPLIER, InvoiceLineRow, lineView(), OPEN_CUSTOMER, ParsedLine, PAYMENT_METHODS, PaymentRow (+6 more)
 
 ### Community 17 - "ref_vitest"
-Cohesion: 0.15
-Nodes (18): ask(), Evidence, today(), enroll(), issue(), jpeg(), pdf(), upload() (+10 more)
+Cohesion: 0.07
+Nodes (41): applySecurityHeaders(), allowPrivateWebhookTargets(), allConditionsHold(), conditionHolds(), nextRetryDelayMs(), render(), signWebhook(), verifyWebhook() (+33 more)
 
 ### Community 18 - "fleet.service.ts"
-Cohesion: 0.05
-Nodes (34): blockingDocuments(), compliance(), ComplianceState, D, DocumentKind, EXPIRING_DAYS, fullToFullConsumption(), REQUIRED_DOCUMENTS (+26 more)
+Cohesion: 0.06
+Nodes (35): blockingDocuments(), compliance(), ComplianceState, D, DocumentKind, EXPIRING_DAYS, fullToFullConsumption(), REQUIRED_DOCUMENTS (+27 more)
 
-### Community 20 - "ingestion.service.ts"
-Cohesion: 0.07
-Nodes (16): EnergyGatewayController, AlarmCondition, conditionMet(), parseReadingValue(), withinTolerance(), express, Gateway, GatewayContext (+8 more)
+### Community 20 - "company-scope.service.ts"
+Cohesion: 0.04
+Nodes (44): AuditClient, SequenceClient, CATEGORIES, documentInclude, DocumentRow, STATUSES, Tx, EnergyGatewayController (+36 more)
 
-### Community 21 - "RequirePermission"
-Cohesion: 0.10
-Nodes (3): RequirePermission(), InventoryController, MepController
+### Community 21 - "CompanyScope"
+Cohesion: 0.11
+Nodes (3): CompanyScope, FinanceService, SmartController
 
 ### Community 22 - "hr.service.ts"
-Cohesion: 0.07
-Nodes (27): requiredInt(), AttendanceFact, AttendanceInterval, attendanceIntervals(), splitIntervalUtc(), businessDays(), CONTRACT_TYPES, EMPLOYEE_STATUSES (+19 more)
-
-### Community 23 - "ref_node_crypto"
 Cohesion: 0.06
-Nodes (22): findEnvFile(), loadRootEnv(), unquote(), scope, contentSecurityPolicy, nextConfig, path, outputDir (+14 more)
+Nodes (28): currencyCode(), optionalDate(), optionalDecimal(), requiredDecimal(), requiredInt(), BankReconciliationService, EntryInput, ImportBody (+20 more)
+
+### Community 23 - "local.mjs"
+Cohesion: 0.15
+Nodes (11): children, envPath, localEnvironment, root, run(), shutdown(), start(), [command, ...args] (+3 more)
 
 ### Community 24 - "energy.service.ts"
 Cohesion: 0.06
 Nodes (35): AUTONOMY_WINDOW_HOURS, AutonomyInput, AutonomyResult, computeAutonomy(), coverage(), D, expectedIntervals(), isAligned() (+27 more)
 
 ### Community 26 - "assets.service.ts"
-Cohesion: 0.08
-Nodes (23): AssetsService, completedOnTime(), CRITICALITIES, PRIORITIES, startOfToday(), STATUSES, Tx, FailureRecord (+15 more)
+Cohesion: 0.07
+Nodes (24): AssetsService, completedOnTime(), CRITICALITIES, PRIORITIES, startOfToday(), STATUSES, Tx, FailureRecord (+16 more)
 
 ### Community 27 - "crm.service.ts"
-Cohesion: 0.10
-Nodes (34): ActivityQueryDto, boundedInteger(), CreateActivityDto, CreateLeadDto, CreatePipelineStageDto, currencyCode(), decimalAmount(), DirectoryQueryDto (+26 more)
+Cohesion: 0.09
+Nodes (44): ActivityQueryDto, boundedInteger(), ConvertLeadDto, CreateAccountDto, CreateActivityDto, CreateContactDto, CreateLeadDto, CreateNextActionDto (+36 more)
 
-### Community 29 - "api-key.guard.ts"
-Cohesion: 0.26
-Nodes (10): bearerKey(), generateApiKey(), ApiKeyGuard, express, Request, hashApiKey(), ipAllowed(), normalizeIp() (+2 more)
+### Community 30 - "writeAudit"
+Cohesion: 0.05
+Nodes (15): BimService, CommissioningService, writeAudit(), assertBody(), optionalText(), requiredEnum(), requiredId(), requiredText() (+7 more)
 
-### Community 30 - "qhse.service.ts"
-Cohesion: 0.08
-Nodes (23): fileView(), safeName(), DOMAINS, INCIDENT_TYPES, PERMIT_TYPES, QhseService, RESULTS, SEVERITIES (+15 more)
+### Community 32 - "IntegrationsService"
+Cohesion: 0.13
+Nodes (3): IntegrationsController, IntegrationsService, InboundEndpointView
 
-### Community 31 - "WorkflowService"
-Cohesion: 0.10
-Nodes (6): NotificationsController, WorkflowController, WorkflowService, NotificationView, WebhookDeliveryView, WorkflowDefinitionView
-
-### Community 32 - "ScopedController"
-Cohesion: 0.06
-Nodes (5): AnalyticsController, EffectivePermissions, ScopedController(), CopilotController, IntegrationsController
-
-### Community 33 - "credit-notes.service.ts"
-Cohesion: 0.08
-Nodes (29): creditAllocation(), CreditExportController, assertSource(), checkNote(), checkReplay(), CreditNotesService, dateInput(), INCLUDE (+21 more)
+### Community 33 - ".refund"
+Cohesion: 0.29
+Nodes (8): assertSource(), checkNote(), CreditNotesService, inputFields(), lineTotals(), parseLines(), versionInput(), CreditNoteKind
 
 ### Community 34 - "AX-A360 — Modèle de Sécurité et de Gouvernance Technique"
 Cohesion: 0.04
 Nodes (44): 0. Méthode et sources, 10. Fichiers (téléversements, GED, pièces jointes), 11. Intégrations (API, webhooks, connecteurs), 12. Journalisation (logs applicatifs, hors audit métier), 13. Sécurité applicative transverse (rappels architecturaux), 14.1 Isolation tenant/société/projet, 14.2 Isolation RBAC, 14.3 Isolation des sessions et de l'authentification (+36 more)
 
-### Community 36 - "account.service.ts"
-Cohesion: 0.09
-Nodes (27): SecondFactor, AuthenticatedSession, cardPayload(), createCardCredential(), serviceCardKey(), RFC-4226, generateRecoveryCodes(), normalizeRecoveryCode() (+19 more)
+### Community 35 - "planner.ts"
+Cohesion: 0.23
+Nodes (13): kpiValue(), BRIEFING, extractReferences(), formatAmount(), formatDay(), mentions(), normalize(), Plan (+5 more)
+
+### Community 36 - "project-operations.service.ts"
+Cohesion: 0.06
+Nodes (35): AttendanceFact, AttendanceInterval, attendanceIntervals(), splitIntervalUtc(), projectPresence(), cardPayload(), createCardCredential(), normalizeCardToken() (+27 more)
 
 ### Community 37 - "AXORA-ERP24 — Design System & Architecture de l'Information"
-Cohesion: 0.07
-Nodes (27): 0. Méthode et sources, 10. Vues spécialisées (prompt §34), 11. Anti-patterns interdits (prompt §34, §46 + ui-ux-pro-max), 12. Suites recommandées (hors périmètre de ce document), 1. Principes directeurs, 2.1 Couleurs de référence (imposées par le mandat), 2.2 Typographie de marque, 2.3 Différenciation explicite vs. ERP3602 (+19 more)
+Cohesion: 0.05
+Nodes (42): 0. Méthode et sources, 10. Vues spécialisées (prompt §34), 11. Anti-patterns interdits (prompt §34, §46 + ui-ux-pro-max), 12. Suites recommandées (hors périmètre de ce document), 1. Principes directeurs, 2.1 Couleurs de référence (imposées par le mandat), 2.2 Typographie de marque, 2.3 Différenciation explicite vs. ERP3602 (+34 more)
 
 ### Community 38 - "projects.service.ts"
-Cohesion: 0.14
-Nodes (13): assertDateOrder(), assertEditable(), COST_CATEGORIES, PROJECT_STATUSES, ProjectsService, RISK_STATUSES, startOfDay(), summaryFields() (+5 more)
+Cohesion: 0.12
+Nodes (16): DecimalInput, moneyOrNull(), percent(), assertDateOrder(), assertEditable(), COST_CATEGORIES, PROJECT_STATUSES, ProjectsService (+8 more)
 
-### Community 39 - "CrmService"
-Cohesion: 0.10
-Nodes (15): assertFields(), ConvertLeadDto, CreateAccountDto, CreateContactDto, CreateOpportunityDto, MoveOpportunityStageDto, UpdateAccountDto, UpdateContactDto (+7 more)
+### Community 39 - "main.ts"
+Cohesion: 0.12
+Nodes (11): MFA_STEP_UP_MAX_AGE_MS, MfaStepUpGuard, MfaStepUpOptions, trustedOrigins(), MFA_STEP_UP_KEY, MfaStepUpOptions, trustProxySetting, bootstrap() (+3 more)
 
 ### Community 40 - "AXORA-ERP24 — Stratégie QA / DevOps (rapport AXORA-ERP24-QA-DEVOPS)"
 Cohesion: 0.05
 Nodes (39): 0. Principe directeur, 10. Boucle de correction automatique (prompt §47) — application QA/DevOps, 11. Risques et points ouverts explicitement non tranchés ici, 12. Ce que ce document ne prétend pas être, 1. Constat technique repris d'ERP3602 (référence de faisabilité, lecture seule), 2.10 Tests de build et de packaging (gate 9), 2.11 Tests de performance (gate 10 — mesuré, pas supposé, prompt §54), 2.12 Tests de régression (gate 11 — transverse) (+31 more)
 
 ### Community 41 - "subcontracting.service.ts"
-Cohesion: 0.11
+Cohesion: 0.09
 Nodes (16): blocking(), Client, DOCUMENT_KINDS, DOCUMENT_LABEL, REQUIRED_SUBCONTRACTOR_DOCUMENTS, startOfDay(), SubcontractingService, subcontractorCompliance() (+8 more)
 
-### Community 42 - "field-sync.tsx"
-Cohesion: 0.18
-Nodes (13): FieldQueue, NewOperation, serverSummary(), useFieldQueue(), applyResults(), newClientId(), pendingOperations(), QueuedOperation (+5 more)
+### Community 42 - "field.service.ts"
+Cohesion: 0.08
+Nodes (19): CATEGORIES, EVIDENCE_KINDS, evidenceInclude, EvidenceRow, FieldService, OPERATION_TYPES, OperationType, SEVERITIES (+11 more)
 
 ### Community 43 - "AXORA-ERP24 — Matrice de Livraison & Backlog Vertical Priorisé"
 Cohesion: 0.05
 Nodes (41): 1. Méthode, 2. Vocabulaire de maturité (obligatoire, aucune exception), 3. Matrice de couverture des modules, 4. Graphe de dépendances (dépendances dures uniquement), 5. Parcours E2E prioritaires (prompt §44) — détaillés avec critères d'acceptation par étape, 6. Backlog vertical priorisé — incréments livrables (INC-00 → INC-24), 7. Definition of Done générique (s'applique à **chaque** incrément ci-dessus), 8. Conditions d'arrêt légitimes (prompt §3) — rappel pour l'exécution du backlog (+33 more)
 
-### Community 45 - "fleet/page.tsx"
-Cohesion: 0.24
-Nodes (13): Dialog, TabId, Dialog, COMPLIANCE_CHIP, COMPLIANCE_LABEL, DOCUMENT_KIND_LABEL, fleetApi, FUEL_LABEL (+5 more)
+### Community 45 - "src/finance.ts"
+Cohesion: 0.12
+Nodes (18): CreditNoteCancelInput, CreditNoteCreateInput, CreditNoteIssueInput, CreditNoteLineView, CreditNoteStatus, CreditNoteUpdateInput, CreditRefundInput, CreditRefundView (+10 more)
 
 ### Community 46 - "smart/page.tsx"
-Cohesion: 0.17
-Nodes (20): Dialog, Dialog, TabId, Dialog, RANGES, TokenReveal(), ALARM_STATUS_CHIP, ALARM_STATUS_LABEL (+12 more)
+Cohesion: 0.15
+Nodes (19): Dialog, Dialog, TabId, Dialog, RANGES, TokenReveal(), ALARM_STATUS_CHIP, ALARM_STATUS_LABEL (+11 more)
 
-### Community 47 - "AuthenticatedUser"
-Cohesion: 0.09
-Nodes (6): RequireAnyPermission(), AuthenticatedUser, FilesController, UploadedBinary, FinanceController, AnalyticsDashboardView
+### Community 47 - "CurrentUser"
+Cohesion: 0.12
+Nodes (3): AnalyticsController, CurrentUser, FinanceController
 
-### Community 48 - "workflow/page.tsx"
-Cohesion: 0.14
-Nodes (21): DefinitionForm(), hostOf(), TabId, ACTION_LABEL, ActionDraft, APPROVAL_STATUS_CHIP, APPROVAL_STATUS_LABEL, definitionPayload() (+13 more)
+### Community 48 - "workflow.service.ts"
+Cohesion: 0.05
+Nodes (36): EmitInput, ExecutionLogEntry, WorkflowModule, Client, DECIMAL_OPERATORS, EVENT_TYPES, eventLabel(), TEXT_OPERATORS (+28 more)
 
 ### Community 49 - "tenancy.ts"
 Cohesion: 0.40
 Nodes (4): AuditableEntity, DemoFlagged, EntityId, TenantScope
 
-### Community 50 - "PrismaService"
-Cohesion: 0.05
-Nodes (26): AppModule, PrismaService, EstimationExportController, PayrollPolicyService, ServiceCardService, ApiRequestLogMiddleware, invoice(), issue() (+18 more)
+### Community 50 - "crm-workspace.tsx"
+Cohesion: 0.12
+Nodes (17): toStageView(), CrmPage(), CrmPagination(), CrmData, CrmTab, CrmWorkspace(), LEAD_STATUS_LABELS, LeadTable() (+9 more)
 
 ### Community 51 - "4. Bounded contexts détaillés — entités prioritaires & invariants"
 Cohesion: 0.05
 Nodes (36): 1. Méthode, 2.1 Hiérarchie de tenancy cible, 2.2 Entités prioritaires du socle (INC-00/INC-01), 2.3 Invariants du socle (non négociables, base de tout le reste), 2. Socle multi-tenant partagé (Shared Kernel — Core Bounded Context), 3. Carte des bounded contexts (context map), 4. Bounded contexts détaillés — entités prioritaires & invariants, 5. Invariants transverses (s'appliquent à tous les bounded contexts) (+28 more)
 
 ### Community 52 - "index.mjs"
-Cohesion: 0.07
-Nodes (24): adminStep, DEMO_USERS, analyticsStep, assetsStep, bimStep, commercialStep, CONVERSIONS, DQE_LINES (+16 more)
+Cohesion: 0.11
+Nodes (22): createClient(), adminStep, DEMO_USERS, analyticsStep, bimStep, directionClient(), documentsStep, financeStep (+14 more)
 
-### Community 53 - "engine.ts"
-Cohesion: 0.15
-Nodes (15): allConditionsHold(), conditionHolds(), nextRetryDelayMs(), render(), signWebhook(), verifyWebhook(), webhookTargetRefusal(), blockedV4 (+7 more)
+### Community 54 - "ProjectsController"
+Cohesion: 0.14
+Nodes (3): ProjectForecastService, ProjectsController, ProjectForecastRevisionView
 
-### Community 55 - "ui.tsx"
-Cohesion: 0.04
-Nodes (61): AdvanceFilter, Dialog, statusChip(), statusLabel(), Dialog, LEAVE_CHIP, TabId, PayrollPolicyPage() (+53 more)
+### Community 55 - "ref_react"
+Cohesion: 0.03
+Nodes (81): AdvanceFilter, Dialog, statusChip(), statusLabel(), Dialog, LEAVE_CHIP, TabId, PayrollPolicyPage() (+73 more)
 
-### Community 56 - "tools.ts"
-Cohesion: 0.04
-Nodes (45): BucketRow, MetricRows, METRICS, ToolDescriptor, COPILOT_USE, CopilotTool, projectProgress(), ReferenceHandler (+37 more)
+### Community 56 - "next"
+Cohesion: 0.09
+Nodes (27): BimModelPage(), verify(), BindForm(), Dialog, ImportForm(), NoteForm(), TabId, RevisionDetail() (+19 more)
 
 ### Community 57 - "document-catalog.ts"
 Cohesion: 0.13
-Nodes (14): amount(), customer, DOCUMENT_SAMPLES, DocumentSample, DocumentSampleKind, issuer, materialLines, recipientForSampleKind() (+6 more)
+Nodes (23): amount(), baseDocument(), customer, DOCUMENT_SAMPLES, DocumentSample, DocumentSampleKind, generateDocumentSample(), issuer (+15 more)
 
-### Community 58 - "sales.service.ts"
+### Community 58 - "sales.controller.ts"
 Cohesion: 0.11
 Nodes (13): SalesController, AcceptQuoteDto, CreateContractDto, CreateQuoteDto, RejectQuoteDto, requiredText(), SubmitQuoteDto, ContractWithLines (+5 more)
 
-### Community 59 - "lucide-react"
-Cohesion: 0.10
-Nodes (29): DeniedNote(), MetricCard(), TabId, Dialog, Dialog, TabId, Dialog, Dialog (+21 more)
+### Community 59 - "field/page.tsx"
+Cohesion: 0.11
+Nodes (26): Dialog, Dialog, TabId, EvidenceTimeline(), FieldQueue, NewOperation, serverSummary(), SyncPanel() (+18 more)
 
-### Community 60 - "FieldService"
-Cohesion: 0.22
-Nodes (3): FieldService, SiteEvidenceView, SiteIssueView
+### Community 60 - "20260921172536_inc_02_crm/migration.sql"
+Cohesion: 0.17
+Nodes (21): "crm_accounts", crm_accounts_companyId_name_key, crm_accounts_organizationId_companyId_idx, "crm_activities", crm_activities_companyId_relatedType_relatedId_idx, crm_activities_organizationId_companyId_idx, "crm_contacts", crm_contacts_accountId_idx (+13 more)
 
 ### Community 61 - "smart.service.ts"
 Cohesion: 0.06
-Nodes (31): connectivityLevels(), PROTOCOL_CATALOG, TestEvidence, CONDITIONS, Decimalish, KINDS, newGatewayToken(), num() (+23 more)
+Nodes (32): connectivityLevels(), PROTOCOL_CATALOG, TestEvidence, CONDITIONS, Decimalish, KINDS, newGatewayToken(), num() (+24 more)
 
-### Community 62 - "assets/page.tsx"
-Cohesion: 0.17
-Nodes (19): CRITICALITY_OPTIONS, Dialog, PRIORITY_OPTIONS, TabId, Dialog, ASSET_STATUS_CHIP, ASSET_STATUS_LABEL, assetsApi (+11 more)
-
-### Community 63 - "src/field.ts"
-Cohesion: 0.25
-Nodes (6): FieldSyncOperationType, FieldSyncResult, SiteEvidenceKind, SiteIssueCategory, SiteIssueSeverity, SiteIssueStatus
+### Community 62 - "formatMoney"
+Cohesion: 0.09
+Nodes (35): CRITICALITY_OPTIONS, Dialog, PRIORITY_OPTIONS, TabId, Dialog, KpiCard(), overview, summarize() (+27 more)
 
 ### Community 64 - "database/package.json"
 Cohesion: 0.06
 Nodes (30): dependencies, @prisma/client, devDependencies, prisma, tsx, typescript, vitest, typescript (+22 more)
 
-### Community 65 - "calculation-kernel.ts"
-Cohesion: 0.14
-Nodes (13): CalcDefinition, CalcInputSpec, CalcOutputSpec, CalculationResult, CALCULATIONS, D, Dec, KERNEL_VERSION (+5 more)
+### Community 65 - "metrics.ts"
+Cohesion: 0.13
+Nodes (9): BucketRow, MetricRows, METRICS, assetsSection, energySection, fleetSection, ASSETS_PERMISSIONS, ENERGY_PERMISSIONS (+1 more)
 
 ### Community 66 - "20260925034300_inc_08_finance/migration.sql"
 Cohesion: 0.05
 Nodes (66): "bank_accounts", bank_accounts_companyId_code_key, bank_accounts_id_organizationId_companyId_key, bank_accounts_organizationId_companyId_idx, "customer_invoice_lines", customer_invoice_lines_invoiceId_position_key, "customer_invoices", customer_invoices_companyId_code_key (+58 more)
 
-### Community 67 - "IntegrationsService"
-Cohesion: 0.22
-Nodes (3): IntegrationsService, integrationKey(), InboundEndpointView
+### Community 67 - "portal-admin.service.ts"
+Cohesion: 0.19
+Nodes (9): Principal, RESOURCE_TYPES, clientProjectIds(), EXPOSABLE_CUSTOMER_INVOICE, EXPOSABLE_ORDER, EXPOSABLE_SUPPLIER_INVOICE, exposableResources(), PrincipalRoot (+1 more)
 
 ### Community 68 - "src/hr.ts"
 Cohesion: 0.11
-Nodes (21): AttendanceEventView, ContractTypeHr, DepartmentView, EmployeeAdvanceRepaymentMethod, EmployeeAdvanceRepaymentView, EmployeeAdvanceStatus, EmployeeAdvanceView, EmployeeStatus (+13 more)
+Nodes (19): AttendanceEventView, ContractTypeHr, DepartmentView, EmployeeAdvanceRepaymentMethod, EmployeeAdvanceRepaymentView, EmployeeAdvanceStatus, EmployeeAdvanceView, EmployeeStatus (+11 more)
 
 ### Community 71 - "ifc-parser.ts"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (21): decodeStepString(), displayValue(), GROUP_TYPES, IfcElementRecord, IfcParseError, IfcParseResult, IfcSpatialNode, parseIfc() (+13 more)
 
-### Community 73 - "models/[id]/page.tsx"
-Cohesion: 0.20
-Nodes (11): Dialog, ImportForm(), TabId, BIM_DISCIPLINE_LABEL, bimApi, CLASH_STATUS_LABEL, CONNECTOR_STATE_LABEL, CONNECTOR_STEPS (+3 more)
-
-### Community 75 - "main.ts"
+### Community 73 - "devDependencies"
 Cohesion: 0.14
-Nodes (8): OriginGuard, trustedOrigins(), applySecurityHeaders(), trustProxySetting, bootstrap(), EchoController, EchoModule, reflect-metadata
+Nodes (14): devDependencies, @nestjs/cli, @nestjs/testing, supertest, @swc/core, @types/cookie-parser, @types/express, @types/node (+6 more)
 
 ### Community 76 - "translate.ts"
-Cohesion: 0.16
-Nodes (11): FrenchMessagesFilter, CORE_MESSAGES, DOMAIN_MESSAGES, OPS_MESSAGES, Compiled, exact, fill(), HTTP_ERROR_LABELS (+3 more)
+Cohesion: 0.10
+Nodes (17): FrenchMessagesFilter, CORE_MESSAGES, DOMAIN_MESSAGES, OPS_MESSAGES, Compiled, exact, fill(), HTTP_ERROR_LABELS (+9 more)
+
+### Community 77 - "project-forecast.service.ts"
+Cohesion: 0.09
+Nodes (12): ProjectExportController, asLine(), asMoney(), CATEGORIES, ForecastBody, ProjectOperationsService, ACTIVE_STATUSES, KINDS (+4 more)
 
 ### Community 78 - "CreditNotesController"
-Cohesion: 0.21
+Cohesion: 0.22
 Nodes (3): CreditNotesController, requireExtra(), SupplierReturnCreditController
 
 ### Community 79 - "20260922014616_inc_03_estimation_foundation/migration.sql"
-Cohesion: 0.06
-Nodes (57): "crm_accounts", crm_accounts_companyId_name_key, crm_accounts_organizationId_companyId_idx, "crm_activities", crm_activities_companyId_relatedType_relatedId_idx, crm_activities_organizationId_companyId_idx, "crm_contacts", crm_contacts_accountId_idx (+49 more)
+Cohesion: 0.10
+Nodes (36): "dqe_documents", dqe_documents_companyId_code_key, dqe_documents_id_organizationId_companyId_key, dqe_documents_opportunityId_idx, dqe_documents_organizationId_companyId_status_createdAt_idx, "dqe_line_draft_guard", "dqe_lines", dqe_lines_dqeId_position_key (+28 more)
 
-### Community 81 - "qhse/page.tsx"
+### Community 80 - "tools.ts"
+Cohesion: 0.12
+Nodes (10): ToolDescriptor, COPILOT_USE, CopilotTool, projectProgress(), ReferenceHandler, ToolFact, qhseSection, workflowSection (+2 more)
+
+### Community 81 - "lucide-react"
 Cohesion: 0.09
-Nodes (23): Dialog, FolderTree(), Dialog, Dialog, TabId, CATEGORY_LABEL, DOCUMENT_STATUS_CHIP, DOCUMENT_STATUS_LABEL (+15 more)
+Nodes (24): Dialog, FolderTree(), Dialog, Dialog, TabId, CATEGORY_LABEL, DOCUMENT_STATUS_CHIP, DOCUMENT_STATUS_LABEL (+16 more)
 
 ### Community 82 - "mep.service.ts"
-Cohesion: 0.08
-Nodes (19): findCalculation(), runCalculation(), CalculationRow, DISCIPLINES, equipmentInclude, EquipmentRow, MANUAL_STATUSES, MepService (+11 more)
+Cohesion: 0.07
+Nodes (29): CalcDefinition, CalcInputSpec, CalcOutputSpec, CalculationResult, CALCULATIONS, D, Dec, findCalculation() (+21 more)
 
 ### Community 83 - "integrations.service.ts"
-Cohesion: 0.13
-Nodes (16): CONNECTOR_STATUS_CHIP, CONNECTOR_STATUS_LABEL, integrationsApi, KEY_STATUS_CHIP, KEY_STATUS_LABEL, parseIps(), PERMISSION_LABEL, truthCell() (+8 more)
+Cohesion: 0.10
+Nodes (16): PermissionSyncService, CONNECTOR_STATUS_CHIP, CONNECTOR_STATUS_LABEL, integrationsApi, KEY_STATUS_CHIP, KEY_STATUS_LABEL, PERMISSION_LABEL, ApiKeyIssued (+8 more)
 
-### Community 84 - "createClient"
-Cohesion: 0.09
-Nodes (16): createClient(), createGatewayClient(), call(), DEMO_ACCOUNT, copilotStep, directionClient(), documentsStep, energyStep (+8 more)
+### Community 84 - "energy.mjs"
+Cohesion: 0.22
+Nodes (4): createGatewayClient(), call(), energyStep, smartStep
 
 ### Community 86 - "20260925043722_inc_11_qhse/migration.sql"
 Cohesion: 0.09
@@ -585,24 +589,24 @@ Cohesion: 0.09
 Nodes (22): devDependencies, react, @types/react, typescript, vitest, react, @types/react, typescript (+14 more)
 
 ### Community 89 - "api/package.json"
-Cohesion: 0.07
-Nodes (28): @axora24/contracts, @fontsource/inter, qrcode, @types/node, @types/qrcode, typescript, vitest, name (+20 more)
+Cohesion: 0.09
+Nodes (21): @axora24/contracts, @fontsource/inter, qrcode, @types/node, @types/qrcode, typescript, vitest, name (+13 more)
 
-### Community 90 - "PublicApiController"
-Cohesion: 0.32
-Nodes (7): ApiKey, ApiKeyContext, ApiPermission(), day(), page(), pageArgs(), PublicApiController
+### Community 90 - "fleet/page.tsx"
+Cohesion: 0.24
+Nodes (13): Dialog, TabId, Dialog, COMPLIANCE_CHIP, COMPLIANCE_LABEL, DOCUMENT_KIND_LABEL, fleetApi, FUEL_LABEL (+5 more)
 
-### Community 91 - "project-forecast.service.ts"
-Cohesion: 0.05
-Nodes (33): ProjectExportController, asLine(), asMoney(), CATEGORIES, ForecastBody, ProjectForecastService, ProjectOperationsService, ACTIVE_STATUSES (+25 more)
+### Community 91 - "src/projects.ts"
+Cohesion: 0.10
+Nodes (19): decimal(), instant(), ProjectResourceService, ProjectBudgetFigure, ProjectBudgetLineView, ProjectChangeOrderStatus, ProjectChangeOrderView, ProjectCockpitView (+11 more)
 
 ### Community 92 - "web/package.json"
 Cohesion: 0.09
 Nodes (21): start(), @axora24/contracts, eslint, eslint-config-next, @fontsource/inter, qrcode, react, @types/node (+13 more)
 
-### Community 93 - "crm-workspace.tsx"
-Cohesion: 0.06
-Nodes (43): toStageView(), CrmPage(), CrmActivities(), RELATED_LABELS, TYPE_LABELS, TYPES, CrmDirectory(), archive() (+35 more)
+### Community 93 - "modules/crm.ts"
+Cohesion: 0.05
+Nodes (44): CrmAccountPage(), amount(), CrmAccount360(), date(), errorMessage(), actions, can, view (+36 more)
 
 ### Community 94 - "security/package.json"
 Cohesion: 0.09
@@ -613,8 +617,8 @@ Cohesion: 0.11
 Nodes (36): axora_smart_alarm_guard(), axora_smart_gateway_guard(), axora_smart_setpoint_guard(), axora_smart_test_guard(), "smart_alarm_rules", smart_alarm_rules_id_organizationId_companyId_key, "smart_alarms", "smart_alarms_guard" (+28 more)
 
 ### Community 96 - "analytics.service.ts"
-Cohesion: 0.09
-Nodes (22): AnalyticsService, UNIT_LABEL, addMonths(), bucketize(), lastMonths(), monthKey(), monthStart(), toCsv() (+14 more)
+Cohesion: 0.06
+Nodes (37): AnalyticsService, UNIT_LABEL, addMonths(), bucketize(), lastMonths(), monthKey(), monthStart(), toCsv() (+29 more)
 
 ### Community 98 - "AXORA-ERP24 — Architecture cible (rapport AXORA-ERP24-ARCHITECT)"
 Cohesion: 0.10
@@ -629,8 +633,8 @@ Cohesion: 0.11
 Nodes (17): 1. Objet, périmètre et méthode, 2.1 Dépôt local, 2.2 Sources web officielles, 2. Sources consultées, 3. Synthèse décisionnelle, 4. Matrice des écarts, 5.1 Ce qui peut être réutilisé, 5.2 Ruptures à traiter en premier (+9 more)
 
 ### Community 103 - "AXORA-ERP24 — Journal de decisions (ADR courtes)"
-Cohesion: 0.07
-Nodes (20): FileStorage, LocalFileStorage, ADR-0001 — Choix du gestionnaire de paquets : pnpm, ADR-0002 — Prisma sans preview features au demarrage, ADR-0003 — Delegation multi-agents interrompue par rate-limit, ADR-0004 — Defaut d'isolation tenant detecte et corrige sur OrganizationService, ADR-0006 — Limitation persistante des connexions et audit transactionnel des sessions, ADR-0009 — Fichiers immuables adresses par empreinte et synchronisation terrain hors ligne (+12 more)
+Cohesion: 0.11
+Nodes (18): ADR-0001 — Choix du gestionnaire de paquets : pnpm, ADR-0002 — Prisma sans preview features au demarrage, ADR-0003 — Delegation multi-agents interrompue par rate-limit, ADR-0004 — Defaut d'isolation tenant detecte et corrige sur OrganizationService, ADR-0006 — Limitation persistante des connexions et audit transactionnel des sessions, ADR-0009 — Fichiers immuables adresses par empreinte et synchronisation terrain hors ligne, ADR-0010 — Passerelles GTB : jeton machine, ingestion unique, preuves physiques attestees, ADR-0011 — Portails externes : plan d'identite separe et exposition explicite (+10 more)
 
 ### Community 104 - "scripts"
 Cohesion: 0.11
@@ -640,13 +644,13 @@ Nodes (18): scripts, build, build:packages, clean, db:format, db:generate, db:mi
 Cohesion: 0.11
 Nodes (35): "goods_receipt_lines", goods_receipt_lines_orderLineId_idx, "goods_receipts", goods_receipts_companyId_code_key, goods_receipts_companyId_idempotencyKey_key, goods_receipts_organizationId_companyId_orderId_idx, "purchase_order_lines", purchase_order_lines_orderId_position_key (+27 more)
 
-### Community 106 - "documents.service.ts"
-Cohesion: 0.12
-Nodes (13): CATEGORIES, documentInclude, DocumentRow, DocumentsService, revisionLabel(), STATUSES, Tx, DocumentCategory (+5 more)
+### Community 106 - "optionalId"
+Cohesion: 0.05
+Nodes (32): optionalId(), requiredDate(), DocumentsService, revisionLabel(), fileView(), DOMAINS, INCIDENT_TYPES, PERMIT_TYPES (+24 more)
 
 ### Community 108 - "Archive — rapport du 25 septembre 2026"
-Cohesion: 0.12
-Nodes (16): 10. Tracabilite, 1. Verdict historique, 2. Perimetre livre historique (statut par module), 3. Gates historiques (05-qa-devops §2), 4. Securite, 5. Plateformes, 6. Connecteurs et materiels non testes (`NOT_TESTED`), 7. Limites connues (+8 more)
+Cohesion: 0.15
+Nodes (12): 10. Tracabilite, 1. Verdict historique, 2. Perimetre livre historique (statut par module), 3. Gates historiques (05-qa-devops §2), 4. Securite, 5. Plateformes, 6. Connecteurs et materiels non testes (`NOT_TESTED`), 7. Limites connues (+4 more)
 
 ### Community 109 - "AXORA-ERP24 — Etat d'execution courant"
 Cohesion: 0.12
@@ -660,13 +664,13 @@ Nodes (15): description, engines, node, eslint, eslint-config-next, @types/node,
 Cohesion: 0.12
 Nodes (16): devDependencies, typescript, vitest, typescript, vitest, main, name, private (+8 more)
 
-### Community 112 - "PrintableDocument"
-Cohesion: 0.29
-Nodes (6): PrintableDocument, creditNotePdf(), customerInvoicePdf(), payrollSlipPdf(), serviceCardPdf(), projectOperationsPdf()
+### Community 112 - "theme.tsx"
+Cohesion: 0.16
+Nodes (12): purgeOfflinePages(), ServiceWorkerRegister(), ContextActions(), ThemeContext, ThemePreference, ThemeProvider(), ThemeSelector(), useTheme() (+4 more)
 
 ### Community 113 - "InvoiceSignatureService"
-Cohesion: 0.10
-Nodes (6): BankReconciliationService, InvoiceExportController, InvoiceSignatureService, TreasuryForecastService, BankStatementEntryView, InvoiceSignatureView
+Cohesion: 0.13
+Nodes (4): InvoiceSignatureService, TreasuryForecastService, scope, InvoiceSignatureView
 
 ### Community 114 - "support.ts"
 Cohesion: 0.22
@@ -680,37 +684,37 @@ Nodes (15): background_color, categories, description, dir, display, icons, id, 
 Cohesion: 0.12
 Nodes (33): axora_fleet_assignment_guard(), axora_fleet_incident_guard(), axora_fleet_reading_guard(), "fleet_assignments", fleet_assignments_companyId_code_key, "fleet_assignments_guard", "fleet_assignments_no_delete", fleet_assignments_one_open_per_driver (+25 more)
 
-### Community 117 - "AccountingService"
+### Community 117 - "nav-sidebar.tsx"
+Cohesion: 0.22
+Nodes (13): NavEntry(), NavSidebar(), toggleGroup(), readFavoriteHrefs(), readGroupState(), storage, storedValues, isActive() (+5 more)
+
+### Community 118 - "permissions.ts"
+Cohesion: 0.11
+Nodes (17): AI_PERMISSIONS, ANALYTICS_PERMISSIONS, BIM_PERMISSIONS, COMMISSIONING_PERMISSIONS, CorePermissionKey, CrmPermissionKey, DASHBOARD_PERMISSIONS, DOCUMENTS_PERMISSIONS (+9 more)
+
+### Community 121 - "ref_node_path"
 Cohesion: 0.15
-Nodes (12): AccountingService, AccountingAccountType, AccountingAccountView, AccountingEntryLineView, AccountingEntryStatus, AccountingEntryView, AccountingFinancialStatementsView, AccountingJournalType (+4 more)
-
-### Community 118 - "public-api.controller.ts"
-Cohesion: 0.17
-Nodes (7): errors, list(), listParams, money, OPENAPI_SPEC, page(), PublicMetaController
-
-### Community 120 - "PortalAdminService"
-Cohesion: 0.30
-Nodes (4): PortalAdminService, PortalInvitationIssued, PortalPrincipalView, createSessionToken()
-
-### Community 121 - "workflow.service.ts"
-Cohesion: 0.10
-Nodes (15): Client, DECIMAL_OPERATORS, EVENT_TYPES, eventLabel(), TEXT_OPERATORS, Tx, userRoleIds(), AUTOMATION_EVENTS (+7 more)
+Nodes (7): contentSecurityPolicy, nextConfig, path, outputDir, root, runtimeDir, sourceDir
 
 ### Community 122 - "dependencies"
-Cohesion: 0.07
-Nodes (28): dependencies, @axora24/contracts, @axora24/database, @axora24/security, cookie-parser, exceljs, @fontsource/inter, @nestjs/common (+20 more)
+Cohesion: 0.14
+Nodes (14): dependencies, @axora24/contracts, @axora24/database, @axora24/security, cookie-parser, exceljs, @fontsource/inter, @nestjs/common (+6 more)
+
+### Community 123 - "MepService"
+Cohesion: 0.26
+Nodes (3): MepService, EngineeringCalculationView, MepEquipmentView
 
 ### Community 125 - "compilerOptions"
 Cohesion: 0.14
 Nodes (13): compilerOptions, composite, emitDecoratorMetadata, experimentalDecorators, module, moduleResolution, outDir, rootDir (+5 more)
 
-### Community 126 - "EstimationWorkspace"
-Cohesion: 0.14
-Nodes (11): EstimationPage(), EstimationWorkspace(), addDqeLine(), addRequirement(), createDqe(), createDqeVariant(), createStudy(), finalizeDqe() (+3 more)
+### Community 126 - "ref_node_fs"
+Cohesion: 0.27
+Nodes (3): findEnvFile(), loadRootEnv(), unquote()
 
-### Community 127 - "portal-client.ts"
-Cohesion: 0.20
-Nodes (7): call(), portalClient, PortalError, ActivateForm(), PortalActivatePage(), LoginForm(), PortalLoginPage()
+### Community 127 - "seed-demo.mjs"
+Cohesion: 0.17
+Nodes (11): CI : preuve historique et correction des déclencheurs, Documents et limites de la préparation de paie, Rapport courant — qualification locale des 3 et 4 octobre 2026, Traçabilité et réserves actuelles, Dependances externes et historique, 0. Portée et méthode, 8. Accessibilité (prompt §55), DEMO_ACCOUNT (+3 more)
 
 ### Community 129 - "devDependencies"
 Cohesion: 0.14
@@ -721,15 +725,15 @@ Cohesion: 0.14
 Nodes (13): compilerOptions, allowJs, incremental, jsx, lib, module, moduleResolution, noEmit (+5 more)
 
 ### Community 131 - "Archive — qualification du 25 septembre 2026"
-Cohesion: 0.11
-Nodes (17): Archive — qualification du 25 septembre 2026, AXORA-ERP24 — Preuves de test, Build de production (PWA, en-tetes, installabilite), CI distante historique — `BLOCKED`, CI GitHub : constat historique vérifié et correction actuelle du workflow, Environnement d'execution historique, Execution A — SHA `c81196e` (code INC-24), Execution B — arbre final (commit `6c2b576`) (+9 more)
+Cohesion: 0.14
+Nodes (13): Archive — qualification du 25 septembre 2026, AXORA-ERP24 — Preuves de test, Build de production (PWA, en-tetes, installabilite), CI distante historique — `BLOCKED`, CI GitHub : constat historique vérifié et correction actuelle du workflow, Environnement d'execution historique, Execution A — SHA `c81196e` (code INC-24), Execution B — arbre final (commit `6c2b576`) (+5 more)
 
 ### Community 132 - "field.mjs"
 Cohesion: 0.20
 Nodes (8): chunk(), encodePng(), escapePdf(), scenePng(), SCENES, textPdf(), fieldStep, qhseStep
 
 ### Community 133 - "printable-document.ts"
-Cohesion: 0.23
+Cohesion: 0.19
 Nodes (10): AxoraPdfDocument, axoraPdfFont(), axoraPdfFooter(), axoraPdfHeader(), PrintColumn, PrintMetaItem, PrintNoticeTone, PrintParty (+2 more)
 
 ### Community 134 - "20260920213943_init_core_rbac_audit/migration.sql"
@@ -749,8 +753,8 @@ Cohesion: 0.12
 Nodes (31): "assets", assets_companyId_code_key, assets_equipmentId_organizationId_companyId_key, assets_id_organizationId_companyId_key, "assets_no_delete", assets_organizationId_companyId_status_idx, axora_work_order_guard(), "maintenance_plans" (+23 more)
 
 ### Community 138 - "AuthController"
-Cohesion: 0.21
-Nodes (6): ALLOW_MFA_ENROLLMENT_KEY, AllowMfaEnrollment(), AuthController, readSessionToken(), requestMetadata(), setSessionCookie()
+Cohesion: 0.22
+Nodes (5): AllowMfaEnrollment(), AuthController, readSessionToken(), requestMetadata(), setSessionCookie()
 
 ### Community 140 - "dependencies"
 Cohesion: 0.18
@@ -760,17 +764,13 @@ Nodes (11): dependencies, @axora24/contracts, @axora24/ui, @fontsource/inter, @f
 Cohesion: 0.18
 Nodes (10): AXORA-ERP24 — Statut des modules, Ecarts fonctionnels avec le perimetre fondateur, Gates globaux historiques (25 septembre 2026), Incrément du 4 octobre 2026 — réservations de stock, Incréments récents — 4 octobre 2026, Matrice fonctionnelle et reste à faire, Mise à jour locale — avances salariés, RBAC projet et interface responsive, Qualification locale courante — 3 et 4 octobre 2026 (+2 more)
 
-### Community 142 - "audit/page.tsx"
-Cohesion: 0.09
-Nodes (15): ACTION_FILTERS, describeAudit(), LABELS, accountApi, adminApi, post(), AdminCompanyView, AdminProjectView (+7 more)
+### Community 142 - "contracts/src/index.ts"
+Cohesion: 0.07
+Nodes (33): Dialog, TabId, AccountingTab, Dialog, downloadJournalCsv(), EntryLine, today(), basePath() (+25 more)
 
 ### Community 143 - "bim.service.ts"
-Cohesion: 0.08
-Nodes (15): BimService, DISCIPLINES, Tx, VersionRow, FilesService, BimClashView, BimDiscipline, BimElementView (+7 more)
-
-### Community 144 - "admin.service.ts"
-Cohesion: 0.10
-Nodes (13): RoleAssignmentInput, UserWithRelations, PermissionSyncService, ACTION_LABELS, isKnownPermission(), MODULE_LABELS, moduleLabel(), PERMISSION_LABEL_OVERRIDES (+5 more)
+Cohesion: 0.06
+Nodes (25): DISCIPLINES, Tx, VersionRow, FILE_STORAGE, FileStorage, LocalFileStorage, ascii(), DetectedFileType (+17 more)
 
 ### Community 145 - "src/procurement.ts"
 Cohesion: 0.25
@@ -778,7 +778,7 @@ Nodes (7): GoodsReceiptView, PurchaseOrderLineView, PurchaseOrderStatus, Purchas
 
 ### Community 146 - "AccountService"
 Cohesion: 0.19
-Nodes (4): AccountService, RequestMetadata, LoginThrottleService, loginThrottleKey()
+Nodes (3): AccountService, RequestMetadata, LoginThrottleService
 
 ### Community 147 - "dqe-export.ts"
 Cohesion: 0.23
@@ -789,12 +789,12 @@ Cohesion: 0.13
 Nodes (28): "hr_attendance_events", "hr_attendance_events_append_only", hr_attendance_events_organizationId_companyId_employeeId_oc_idx, hr_attendance_events_projectId_idx, "hr_departments", hr_departments_companyId_code_key, hr_departments_id_organizationId_companyId_key, "hr_employee_skills" (+20 more)
 
 ### Community 149 - "copilot.service.ts"
-Cohesion: 0.06
-Nodes (33): COPILOT_ENGINE, CopilotService, kpiValue(), SECTION_LABEL, BRIEFING, extractReferences(), formatAmount(), formatDay() (+25 more)
+Cohesion: 0.08
+Nodes (22): COPILOT_ENGINE, CopilotService, SECTION_LABEL, COPILOT_TOOLS, granted(), REFERENCE_HANDLERS, ToolContext, ToolOutput (+14 more)
 
-### Community 150 - "estimation.service.ts"
-Cohesion: 0.15
-Nodes (22): CreateDqeDto, CreateDqeLibraryItemDto, CreateDqeLineDto, CreateDqeVariantDto, CreateStudyDto, CreateStudyRequirementDto, currencyCode(), DQE_COST_CATEGORIES (+14 more)
+### Community 150 - "Product"
+Cohesion: 0.17
+Nodes (11): Accessibility & Inclusion, Brand Commitments, Capabilities and Constraints, Evidence on Hand, Operating Context, Platform, Positioning, Product (+3 more)
 
 ### Community 151 - "20260925033137_inc_07_inventory/migration.sql"
 Cohesion: 0.14
@@ -872,9 +872,9 @@ Nodes (4): fail(), log(), remote-deploy.sh script, smoke_down()
 Cohesion: 0.29
 Nodes (7): 12. Lots indépendants ordonnés, Lot 0 — Contrats, permissions et moteur pur, Lot 1 — Présence mensuelle chantier, Lot 2 — Catalogue de rubriques versionné, Lot 3 — Paie détaillée et avances, Lot 4 — Bulletin, livre de paie et exports, Lot 5 — Coût chantier et comptabilité de paie
 
-### Community 172 - "AutomationService"
-Cohesion: 0.14
-Nodes (6): AutomationService, isUniqueViolation(), message(), roleMembers(), RunReport, 7.1 Logs
+### Community 172 - "PrintableDocument"
+Cohesion: 0.36
+Nodes (6): PrintableDocument, creditNotePdf(), customerInvoicePdf(), payrollSlipPdf(), serviceCardPdf(), projectOperationsPdf()
 
 ### Community 174 - "3. Présence mensuelle ouvrier / chantier"
 Cohesion: 0.40
@@ -885,8 +885,8 @@ Cohesion: 0.47
 Nodes (5): label(), PAD, time(), TrendChart(), TrendSample
 
 ### Community 176 - "app/login/page.tsx"
-Cohesion: 0.25
-Nodes (9): Brand(), RegistrationState, useRegistrationState(), safeNext(), LoginForm(), submit(), verify(), LoginPage() (+1 more)
+Cohesion: 0.29
+Nodes (8): Brand(), useRegistrationState(), safeNext(), LoginForm(), submit(), verify(), LoginPage(), OfflinePage()
 
 ### Community 177 - "6. Modèle Prisma proposé"
 Cohesion: 0.33
@@ -896,9 +896,9 @@ Nodes (6): 6.1 Enums, 6.2 Présence, 6.3 Rubriques et valeurs, 6.4 Détails de p
 Cohesion: 0.33
 Nodes (6): deepmerge-ts@<8.0.0, exceljs>uuid, multer, postcss@<8.5.23, pnpm, overrides
 
-### Community 179 - "inbound.controller.ts"
-Cohesion: 0.11
-Nodes (9): resolveDelegatedPermissions(), InboundController, LeadEvent, parseLeadEvent(), throttleSubject(), PermissionCheck, assertAuthorized(), isAuthorized() (+1 more)
+### Community 179 - "api-key.guard.ts"
+Cohesion: 0.07
+Nodes (19): resolveDelegatedPermissions(), bearerKey(), generateApiKey(), ApiKeyGuard, express, Request, hashApiKey(), ipAllowed() (+11 more)
 
 ### Community 180 - "20260922133407_inc_04_quote_contract/migration.sql"
 Cohesion: 0.19
@@ -913,8 +913,12 @@ Cohesion: 0.21
 Nodes (16): "commissioning_activities", commissioning_activities_companyId_code_key, commissioning_activities_equipmentId_organizationId_company_key, commissioning_activities_id_organizationId_companyId_key, commissioning_activities_organizationId_companyId_projectId_idx, "commissioning_activities_sequence", "commissioning_documents", commissioning_documents_activityId_documentId_key (+8 more)
 
 ### Community 184 - "tokens.ts"
-Cohesion: 0.40
-Nodes (3): ColorTokens, FontTokens, spacingScaleRem
+Cohesion: 0.22
+Nodes (7): ColorTokens, FontTokens, MotionTokens, RadiusTokens, ShadowTokens, spacingScaleRem, TypographyTokens
+
+### Community 185 - ".pageActivities"
+Cohesion: 0.26
+Nodes (7): archiveWhere(), canonicalRelatedType(), pageInput(), pageResult(), toActivityView(), CrmActivityView, CrmPage
 
 ### Community 186 - "10. Tests"
 Cohesion: 0.50
@@ -944,21 +948,25 @@ Nodes (4): 8.1 `WorkforceService`, 8.2 `PayrollComponentService`, 8.3 `PayrollPr
 Cohesion: 0.50
 Nodes (4): 9.1 `/hr/workforce`, 9.2 `/hr/payroll-components`, 9.3 `/hr/payroll`, 9. Écrans responsive
 
-### Community 194 - ".table"
-Cohesion: 0.35
-Nodes (9): baseDocument(), generateDocumentSample(), renderAcceptance(), renderAttendance(), renderDailyReport(), renderFinancial(), renderMovement(), renderPayslip() (+1 more)
+### Community 194 - "sales-workspace.tsx"
+Cohesion: 0.20
+Nodes (8): CONTRACT_STATUS_LABEL, EMPTY_CONTRACT_FORM, EMPTY_QUOTE_FORM, QUOTE_STATUS_LABEL, draftQuote, finalizedDqe, estimationApi, salesApi
 
-### Community 207 - "mep/page.tsx"
-Cohesion: 0.24
-Nodes (10): RevisionDetail(), NEXT_STATUS, Dialog, TabId, CALC_STATUS_CHIP, CALC_STATUS_LABEL, DISCIPLINE_LABEL, EQUIPMENT_STATUS_CHIP (+2 more)
+### Community 195 - "EstimationWorkspace"
+Cohesion: 0.15
+Nodes (10): EstimationPage(), EstimationWorkspace(), addDqeLine(), addRequirement(), createDqe(), createDqeVariant(), createStudy(), finalizeDqe() (+2 more)
+
+### Community 207 - "project-costs.ts"
+Cohesion: 0.26
+Nodes (8): CreditTotals, invoiceCreditTotals(), zeroCredits(), COMMITTING_ORDER_STATUSES, figure(), hidden(), projectCostFigures(), InvoiceCreditFigures
 
 ### Community 208 - "20260925045332_inc_13_mep/migration.sql"
 Cohesion: 0.22
 Nodes (16): axora_calculation_revision_guard(), "engineering_calculation_revisions", engineering_calculation_revisions_calculationId_revision_key, "engineering_calculation_revisions_immutable", "engineering_calculations", engineering_calculations_companyId_code_key, engineering_calculations_equipmentId_idx, engineering_calculations_id_organizationId_companyId_key (+8 more)
 
-### Community 209 - "nav-sidebar.tsx"
-Cohesion: 0.27
-Nodes (11): NavEntry(), NavSidebar(), toggleGroup(), readFavoriteHrefs(), readGroupState(), isActive(), NAV_GROUPS, NavGroup (+3 more)
+### Community 209 - "credit-notes.service.ts"
+Cohesion: 0.18
+Nodes (9): checkReplay(), dateInput(), INCLUDE, LineInput, Note, Refund, refundView(), Source (+1 more)
 
 ### Community 210 - "20261004003000_hr_service_cards_payroll/migration.sql"
 Cohesion: 0.22
@@ -968,13 +976,13 @@ Nodes (13): axora_service_card_evidence(), "hr_company_payroll_policies", hr_com
 Cohesion: 0.23
 Nodes (14): "supplier_return_lines", "supplier_return_lines_append_only", supplier_return_lines_orderLineId_idx, supplier_return_lines_returnId_orderLineId_key, "supplier_returns", "supplier_returns_append_only", supplier_returns_companyId_code_key, supplier_returns_companyId_idempotencyKey_key (+6 more)
 
-### Community 214 - "AppShell"
-Cohesion: 0.27
-Nodes (11): AuthenticatedLayout(), AppShell(), initialsOf(), readStoredCompany(), cachedLoad(), isNetworkError(), purgeOfflineData(), readContext() (+3 more)
+### Community 214 - "estimation.ts"
+Cohesion: 0.21
+Nodes (11): DqeCostCategory, DqeLibraryItemView, DqeLineUpdateInput, DqePricingUpdateInput, DqeSourceView, DqeStatus, DqeVariantView, EstimationDraftVersionInput (+3 more)
 
 ### Community 215 - "app-shell.tsx"
-Cohesion: 0.21
-Nodes (10): CommandPalette(), ContextResponse, mfaEnrollmentDestination(), normalize(), SessionApi, SessionContext, SessionContextValue, activeScopes (+2 more)
+Cohesion: 0.13
+Nodes (15): AuthenticatedLayout(), AppShell(), CommandPalette(), ContextResponse, initialsOf(), mfaEnrollmentDestination(), normalize(), readStoredCompany() (+7 more)
 
 ### Community 216 - ""stock_reservations""
 Cohesion: 0.24
@@ -992,29 +1000,29 @@ Nodes (11): "ai_copilot_sessions", "ai_copilot_sessions_guard", "ai_copilot_sess
 Cohesion: 0.32
 Nodes (11): axora_project_forecast_guard(), "project_forecast_lines", "project_forecast_lines_append_only", project_forecast_lines_revisionId_category_key, project_forecast_lines_scope_revision_idx, project_forecast_lines_wbsItemId_idx, "project_forecast_revisions", "project_forecast_revisions_guard" (+3 more)
 
-### Community 220 - "commissioning/[id]/page.tsx"
-Cohesion: 0.31
-Nodes (8): Dialog, MeasurementDraft, commissioningApi, PUNCH_STATUS_LABEL, STAGE_CHIP, STAGE_LABEL, STAGES, TEST_KIND_LABEL
+### Community 220 - "SalesWorkspace"
+Cohesion: 0.20
+Nodes (9): SalesPage(), EmptyState(), Metric(), SalesWorkspace(), acceptQuote(), createContract(), createQuote(), rejectQuote() (+1 more)
 
-### Community 221 - "portal-admin/[id]/page.tsx"
-Cohesion: 0.44
-Nodes (5): InvitationReveal(), portalAdminApi, PRINCIPAL_STATUS_CHIP, PRINCIPAL_STATUS_LABEL, RESOURCE_LABEL
+### Community 221 - "PortalAdminService"
+Cohesion: 0.07
+Nodes (22): PortalAdminService, call(), portalClient, PortalError, ActivateForm(), PortalActivatePage(), LoginForm(), PortalLoginPage() (+14 more)
 
-### Community 222 - "dashboard.controller.ts"
-Cohesion: 0.25
-Nodes (3): DashboardController, DashboardService, DASHBOARD_PERMISSIONS
-
-### Community 223 - "3. Design tokens"
+### Community 222 - "dashboard.service.ts"
 Cohesion: 0.22
-Nodes (9): 3.1 Rampes de couleur (dérivées des ancres §2.1), 3.2 Typographie — échelle, 3.3 Espacement — densité dashboard (dial density = 9/10), 3.4 Rayons, élévation, focus, 3.5 Mouvement (dial motion = 3/10, sobre), 3. Design tokens, Bleu de marque (`--ax-blue-*`), Neutres / encre (`--ax-ink-*`, dérivés de `#111827` et `#BFC3C9`) (+1 more)
+Nodes (6): DASHBOARD_SECTIONS, DashboardActivity, DashboardKpi, DashboardOverview, DashboardTone, MoneyAmount
+
+### Community 223 - "scripts"
+Cohesion: 0.25
+Nodes (8): scripts, build, lint, start, start:dev, test, test:e2e, typecheck
 
 ### Community 224 - "20260925110516_inc_23_analytics/migration.sql"
 Cohesion: 0.39
 Nodes (8): "analytics_dashboards", "analytics_dashboards_guard", analytics_dashboards_organizationId_companyId_ownerUserId_idx, "analytics_snapshots", "analytics_snapshots_append_only", analytics_snapshots_companyId_period_version_key, analytics_snapshots_organizationId_companyId_period_idx, axora_analytics_dashboard_guard()
 
-### Community 225 - "error-messages.test.ts"
-Cohesion: 0.25
-Nodes (6): MESSAGE_CATALOGUE, english, files(), NEUTRAL, sourceTemplates, SRC
+### Community 225 - "sales.ts"
+Cohesion: 0.22
+Nodes (9): SalesData, ContractLineView, ContractSourceView, ContractStatus, ContractSummaryView, QuoteLineView, QuoteSourceView, QuoteStatus (+1 more)
 
 ### Community 226 - ""project_resource_plans""
 Cohesion: 0.46
@@ -1024,17 +1032,17 @@ Nodes (7): axora_project_resource_plan_guard(), "project_resource_plans", "proje
 Cohesion: 0.43
 Nodes (6): "hr_employee_advance_repayments", "hr_employee_advance_repayments_append_only", hr_employee_advance_repayments_organizationId_companyId_advanceId_repaymentDate_idx, "hr_employee_advances", hr_employee_advances_organizationId_companyId_employeeId_status_idx, hr_employee_advances_organizationId_companyId_status_requestedAt_idx
 
-### Community 228 - "automation.service.ts"
-Cohesion: 0.33
-Nodes (6): allowPrivateWebhookTargets(), Client, EmitInput, ExecutionLogEntry, Tx, AutomationEventType
+### Community 228 - "offline-cache.ts"
+Cohesion: 0.50
+Nodes (7): cachedLoad(), isNetworkError(), purgeOfflineData(), readContext(), saveContext(), setOfflineScope(), storage()
 
-### Community 229 - "RegisterOrganization"
-Cohesion: 0.33
-Nodes (3): RegisterOrganization(), mocks, RegistrationPage()
+### Community 229 - ""crm_next_actions""
+Cohesion: 0.43
+Nodes (7): crm_accounts_organizationId_companyId_id_key, "crm_next_actions", crm_next_actions_accountId_status_dueAt_idx, crm_next_actions_organizationId_companyId_assigneeUserId_status_dueAt_idx, crm_next_actions_organizationId_companyId_status_dueAt_idx, "crm_next_actions_user_organization_guard", "enforce_crm_next_action_user_organization"()
 
-### Community 230 - "4. Composants (inventaire du design system)"
+### Community 230 - "workflow.mjs"
 Cohesion: 0.33
-Nodes (6): 4.1 Structure & layout, 4.2 Navigation & découverte, 4.3 Données, 4.4 Formulaires & actions, 4.5 États partagés (repris du pattern `ax-state-*` d'ERP3602, retokenisés marque), 4. Composants (inventaire du design system)
+Nodes (3): copilotStep, WORKFLOW_DEMO, workflowStep
 
 ### Community 231 - "20261005010000_invoice_signatures/migration.sql"
 Cohesion: 0.60
@@ -1044,13 +1052,21 @@ Nodes (5): axora_invoice_signature_guard(), invoice_signature_guard, "invoice_si
 Cohesion: 0.60
 Nodes (5): axora_bank_statement_guard(), "bank_statement_entries", bank_statement_entries_company_account_external_key, bank_statement_entries_scope_status_date_idx, bank_statement_guard
 
-### Community 234 - "nav-breadcrumbs.tsx"
-Cohesion: 0.70
-Nodes (3): labelSegment(), NavBreadcrumbs(), activeNavigation()
+### Community 233 - "fleet.mjs"
+Cohesion: 0.24
+Nodes (3): fleetStep, inventoryStep, ITEMS
+
+### Community 234 - "RegisterOrganization"
+Cohesion: 0.33
+Nodes (3): RegisterOrganization(), mocks, RegistrationPage()
 
 ### Community 235 - "20261005050000_dqe_library/migration.sql"
 Cohesion: 0.70
 Nodes (4): "dqe_library_items", dqe_library_items_companyId_code_key, dqe_library_items_id_organizationId_companyId_key, dqe_library_items_organizationId_companyId_isActive_code_idx
+
+### Community 236 - "commercial.mjs"
+Cohesion: 0.40
+Nodes (4): commercialStep, CONVERSIONS, DQE_LINES, LEADS
 
 ### Community 237 - "http.ts"
 Cohesion: 0.50
@@ -1068,25 +1084,41 @@ Nodes (3): "number_sequences", number_sequences_companyId_key_key, number_sequen
 Cohesion: 0.83
 Nodes (3): "mfa_challenges", mfa_challenges_tokenHash_key, mfa_challenges_userId_idx
 
+### Community 527 - "Surface brief — Commercial Command Center et Account 360"
+Cohesion: 0.50
+Nodes (3): Contraintes, Direction contract, Surface brief — Commercial Command Center et Account 360
+
+### Community 531 - "estimation-workspace.test.tsx"
+Cohesion: 0.33
+Nodes (5): createdDqe, createdStudy, line, opportunity, requirement
+
+### Community 532 - "nav-breadcrumbs.tsx"
+Cohesion: 0.70
+Nodes (3): labelSegment(), NavBreadcrumbs(), activeNavigation()
+
+### Community 533 - ".get"
+Cohesion: 0.50
+Nodes (3): figure(), hidden(), operationsRange()
+
 ## Knowledge Gaps
-- **1182 isolated node(s):** `collection`, `sourceRoot`, `name`, `version`, `private` (+1177 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1981 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **330 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1213 isolated node(s):** `collection`, `sourceRoot`, `name`, `version`, `private` (+1208 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2020 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **331 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `CompanyScope` connect `CompanyScope` to `money`, `EstimationService`, `company-scope.service.ts`, `commissioning.service.ts`, `sections/index.ts`, `database/src/index.ts`, `writeAudit`, `bim.service.ts`, `fleet.service.ts`, `ingestion.service.ts`, `copilot.service.ts`, `estimation.service.ts`, `hr.service.ts`, `energy.service.ts`, `CurrentUser`, `assets.service.ts`, `crm.service.ts`, `RequirePermission`, `ProcurementController`, `qhse.service.ts`, `WorkflowService`, `ScopedController`, `credit-notes.service.ts`, `.card`, `Scope`, `projects.service.ts`, `CrmService`, `subcontracting.service.ts`, `CrmController`, `.pdf`, `AutomationService`, `AuthenticatedUser`, `inbound.controller.ts`, `ProjectsController`, `tools.ts`, `sales.service.ts`, `FieldService`, `smart.service.ts`, `src/field.ts`, `IntegrationsService`, `AssetsController`, `BimController`, `EnergyController`, `CreditNotesController`, `portal-admin.controller.ts`, `mep.service.ts`, `integrations.service.ts`, `FleetController`, `HrOperationsController`, `project-forecast.service.ts`, `crm-workspace.tsx`, `dashboard.controller.ts`, `analytics.service.ts`, `FieldController`, `SubcontractingController`, `automation.service.ts`, `documents.controller.ts`, `SiteDailyLogView`, `documents.service.ts`, `InvoiceSignatureService`, `AccountingService`, `PortalAdminService`, `workflow.service.ts`, `commissioning.controller.ts`?**
-  _High betweenness centrality (0.139) - this node is a cross-community bridge._
+- **Why does `CompanyScope` connect `CompanyScope` to `money`, `estimation.service.ts`, `ScopedController`, `sections/index.ts`, `CrmService`, `PrismaService`, `commissioning.service.ts`, `bim.service.ts`, `finance.service.ts`, `PortalAdminController`, `CrmLeadView`, `fleet.service.ts`, `company-scope.service.ts`, `copilot.service.ts`, `hr.service.ts`, `.get`, `energy.service.ts`, `AuthenticatedUser`, `assets.service.ts`, `crm.service.ts`, `ProcurementController`, `Scope`, `writeAudit`, `WorkflowController`, `IntegrationsService`, `.refund`, `.card`, `project-operations.service.ts`, `projects.service.ts`, `subcontracting.service.ts`, `field.service.ts`, `.pdf`, `CurrentUser`, `workflow.service.ts`, `crm-workspace.tsx`, `api-key.guard.ts`, `EnergyController`, `ProjectsController`, `.pageActivities`, `sales.controller.ts`, `smart.service.ts`, `MepController`, `metrics.ts`, `portal-admin.service.ts`, `AssetsController`, `BimController`, `project-forecast.service.ts`, `CreditNotesController`, `project-costs.ts`, `tools.ts`, `credit-notes.service.ts`, `mep.service.ts`, `integrations.service.ts`, `FleetController`, `HrOperationsController`, `src/projects.ts`, `modules/crm.ts`, `dashboard.service.ts`, `PortalAdminService`, `analytics.service.ts`, `FieldController`, `RequirePermission`, `SubcontractingController`, `DocumentsController`, `optionalId`, `InvoiceSignatureService`, `AccountingService`, `MepService`, `CommissioningController`?**
+  _High betweenness centrality (0.177) - this node is a cross-community bridge._
 - **What connects `collection`, `sourceRoot`, `name` to the rest of the system?**
-  _1182 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1213 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Form` be split into smaller, more focused modules?**
-  _Cohesion score 0.043620309050772625 - nodes in this community are weakly interconnected._
-- **Why does `@nestjs/common` connect `@nestjs/common` to `money`, `company-scope.service.ts`, `portal.service.ts`, `commissioning.service.ts`, `AuthController`, `sections/index.ts`, `database/src/index.ts`, `bim.service.ts`, `admin.service.ts`, `ref_vitest`, `fleet.service.ts`, `CompanyScope`, `ingestion.service.ts`, `copilot.service.ts`, `estimation.service.ts`, `hr.service.ts`, `energy.service.ts`, `RequirePermission`, `assets.service.ts`, `crm.service.ts`, `api-key.guard.ts`, `qhse.service.ts`, `ScopedController`, `credit-notes.service.ts`, `Scope`, `account.service.ts`, `projects.service.ts`, `subcontracting.service.ts`, `AuthenticatedUser`, `PrismaService`, `inbound.controller.ts`, `tools.ts`, `sales.service.ts`, `smart.service.ts`, `calculation-kernel.ts`, `main.ts`, `translate.ts`, `portal-admin.controller.ts`, `mep.service.ts`, `integrations.service.ts`, `FleetController`, `api/package.json`, `project-forecast.service.ts`, `dashboard.controller.ts`, `analytics.service.ts`, `automation.service.ts`, `documents.controller.ts`, `documents.service.ts`, `public-api.controller.ts`, `workflow.service.ts`, `commissioning.controller.ts`?**
-  _High betweenness centrality (0.048) - this node is a cross-community bridge._
+  _Cohesion score 0.03930684699915469 - nodes in this community are weakly interconnected._
+- **Why does `@nestjs/common` connect `@nestjs/common` to `money`, `estimation.service.ts`, `ScopedController`, `prisma.service.ts`, `PrismaService`, `commissioning.service.ts`, `bim.service.ts`, `finance.service.ts`, `ref_vitest`, `fleet.service.ts`, `company-scope.service.ts`, `copilot.service.ts`, `hr.service.ts`, `energy.service.ts`, `assets.service.ts`, `crm.service.ts`, `project-operations.service.ts`, `projects.service.ts`, `main.ts`, `subcontracting.service.ts`, `field.service.ts`, `workflow.service.ts`, `api-key.guard.ts`, `sales.controller.ts`, `smart.service.ts`, `portal-admin.service.ts`, `translate.ts`, `project-forecast.service.ts`, `credit-notes.service.ts`, `mep.service.ts`, `integrations.service.ts`, `api/package.json`, `dashboard.service.ts`, `analytics.service.ts`, `optionalId`?**
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
 - **Should `Feedback` be split into smaller, more focused modules?**
-  _Cohesion score 0.08592767295597484 - nodes in this community are weakly interconnected._
-- **Why does `PrismaService` connect `PrismaService` to `money`, `EstimationService`, `company-scope.service.ts`, `portal.service.ts`, `portal-exposure.ts`, `commissioning.service.ts`, `sections/index.ts`, `database/src/index.ts`, `AdminService`, `bim.service.ts`, `admin.service.ts`, `ref_vitest`, `AccountService`, `fleet.service.ts`, `ingestion.service.ts`, `copilot.service.ts`, `estimation.service.ts`, `hr.service.ts`, `energy.service.ts`, `assets.service.ts`, `crm.service.ts`, `api-key.guard.ts`, `qhse.service.ts`, `credit-notes.service.ts`, `account.service.ts`, `projects.service.ts`, `CrmService`, `subcontracting.service.ts`, `AutomationService`, `inbound.controller.ts`, `tools.ts`, `sales.service.ts`, `FieldService`, `smart.service.ts`, `IntegrationsService`, `mep.service.ts`, `integrations.service.ts`, `OrganizationService`, `project-forecast.service.ts`, `dashboard.controller.ts`, `analytics.service.ts`, `automation.service.ts`, `AXORA-ERP24 — Journal de decisions (ADR courtes)`, `documents.service.ts`, `InvoiceSignatureService`, `AccountingService`, `public-api.controller.ts`, `workflow.service.ts`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
-- **Should `api.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.03555649063749211 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07963800904977375 - nodes in this community are weakly interconnected._
+- **Why does `PrismaService` connect `PrismaService` to `money`, `estimation.service.ts`, `ScopedController`, `@nestjs/common`, `prisma.service.ts`, `sections/index.ts`, `CrmService`, `EstimationExportController`, `AdminService`, `commissioning.service.ts`, `bim.service.ts`, `finance.service.ts`, `ref_vitest`, `AccountService`, `fleet.service.ts`, `company-scope.service.ts`, `copilot.service.ts`, `hr.service.ts`, `energy.service.ts`, `assets.service.ts`, `crm.service.ts`, `IntegrationsService`, `.refund`, `project-operations.service.ts`, `projects.service.ts`, `main.ts`, `subcontracting.service.ts`, `field.service.ts`, `workflow.service.ts`, `api-key.guard.ts`, `sales.controller.ts`, `smart.service.ts`, `metrics.ts`, `portal-admin.service.ts`, `project-forecast.service.ts`, `project-costs.ts`, `tools.ts`, `credit-notes.service.ts`, `mep.service.ts`, `integrations.service.ts`, `OrganizationService`, `src/projects.ts`, `PortalAdminService`, `dashboard.service.ts`, `analytics.service.ts`, `optionalId`, `InvoiceSignatureService`, `AccountingService`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+- **Should `estimation-workspace.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.14166666666666666 - nodes in this community are weakly interconnected._

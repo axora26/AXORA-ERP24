@@ -26,4 +26,21 @@ describe("DataTable", () => {
     fireEvent.click(screen.getByText("Alarme A"));
     expect(onRowClick).toHaveBeenCalledWith({ id: "a", label: "Alarme A" });
   });
+
+  it("expose l’action de ligne avec un vrai bouton plutôt qu’une ligne pseudo-interactive", () => {
+    const onRowClick = vi.fn();
+    render(
+      <DataTable
+        rows={[{ id: "a", label: "Alarme A" }]}
+        empty={null}
+        onRowClick={onRowClick}
+        rowActionLabel={(row) => `Ouvrir ${row.label}`}
+        columns={[{ key: "label", header: "Libellé", render: (row) => row.label }]}
+      />,
+    );
+    const row = screen.getByText("Alarme A").closest("tr");
+    expect(row?.getAttribute("tabindex")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Ouvrir Alarme A" }));
+    expect(onRowClick).toHaveBeenCalledWith({ id: "a", label: "Alarme A" });
+  });
 });

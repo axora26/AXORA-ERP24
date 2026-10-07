@@ -18,7 +18,15 @@ export type CrmActivityType =
   | "EMAIL"
   | "TASK"
   | "STAGE_CHANGE"
-  | "CONVERSION";
+  | "CONVERSION"
+  | "NEXT_ACTION_CREATED"
+  | "NEXT_ACTION_UPDATED"
+  | "NEXT_ACTION_COMPLETED"
+  | "NEXT_ACTION_CANCELLED";
+
+export type CrmNextActionStatus = "OPEN" | "COMPLETED" | "CANCELLED";
+export type CrmNextActionPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+export type CrmNextActionDateFilter = "all" | "overdue" | "today" | "next7days";
 
 export type CrmRelatedType = "Lead" | "Opportunity" | "Account" | "Contact";
 
@@ -162,6 +170,64 @@ export interface CrmActivityView {
   relatedId: string;
   actorUserId: string | null;
   occurredAt: string;
+}
+
+export interface CrmNextActionView {
+  id: string;
+  companyId: string;
+  accountId: string;
+  title: string;
+  details: string | null;
+  dueAt: string;
+  priority: CrmNextActionPriority;
+  status: CrmNextActionStatus;
+  assigneeUserId: string;
+  assigneeName: string;
+  createdByUserId: string;
+  updatedByUserId: string;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  overdue: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CrmAssigneeView {
+  id: string;
+  fullName: string;
+}
+
+export interface CrmNextActionInput {
+  companyId?: string;
+  accountId: string;
+  title: string;
+  details?: string | null;
+  dueAt: string;
+  priority?: CrmNextActionPriority;
+  assigneeUserId: string;
+}
+
+export interface CrmNextActionUpdateInput extends CrmVersionInput {
+  title?: string;
+  details?: string | null;
+  dueAt?: string;
+  priority?: CrmNextActionPriority;
+  assigneeUserId?: string;
+}
+
+export interface CrmNextActionQuery {
+  companyId?: string;
+  accountId?: string;
+  filter?: CrmNextActionDateFilter;
+}
+
+export interface CrmAccount360View {
+  account: CrmAccountView;
+  contacts: { available: boolean; items: CrmContactView[] };
+  opportunities: { available: boolean; items: CrmOpportunityView[] };
+  nextActions: { available: boolean; items: CrmNextActionView[] };
+  timeline: { available: boolean; items: CrmActivityView[] };
 }
 
 /** Agregats calcules cote serveur a partir des donnees reelles du tenant. */

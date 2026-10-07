@@ -48,9 +48,9 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  branches     Branch[]
-  users        CompanyMembership[]
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branches      Branch[]
+  users         CompanyMembership[]
   payrollPolicy CompanyPayrollPolicy?
 
   @@unique([id, organizationId])
@@ -79,32 +79,36 @@ model Branch {
 // ---------------------------------------------------------------------------
 
 model User {
-  mfaRecoveryCodeHashes String[] @default([])
-  themePreference     String    @default("system")
-  id                  String    @id @default(cuid())
-  organizationId      String
-  email               String
-  passwordHash        String
-  fullName            String
-  isActive            Boolean   @default(true)
-  mfaEnabled          Boolean   @default(false)
-  mfaSecretEnc        String?
+  mfaRecoveryCodeHashes String[]  @default([])
+  themePreference       String    @default("system")
+  id                    String    @id @default(cuid())
+  organizationId        String
+  email                 String
+  passwordHash          String
+  fullName              String
+  isActive              Boolean   @default(true)
+  mfaEnabled            Boolean   @default(false)
+  mfaSecretEnc          String?
   /// Secret TOTP en cours d'enrolement (chiffre), confirme par un premier code valide.
-  mfaPendingSecretEnc String?
+  mfaPendingSecretEnc   String?
   /// Dernier pas TOTP accepte (anti-rejeu : un code ne sert qu'une fois).
-  mfaLastCounter      Int?
-  lastLoginAt         DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  mfaLastCounter        Int?
+  lastLoginAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  companyMemberships CompanyMembership[]
-  sessions           Session[]
-  roleAssignments    RoleAssignment[]
-  auditLogs          AuditLog[]
-  mfaChallenges      MfaChallenge[]
+  organization           Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companyMemberships     CompanyMembership[]
+  sessions               Session[]
+  roleAssignments        RoleAssignment[]
+  auditLogs              AuditLog[]
+  mfaChallenges          MfaChallenge[]
+  crmNextActionsAssigned CrmNextAction[]     @relation("CrmNextActionAssignee")
+  crmNextActionsCreated  CrmNextAction[]     @relation("CrmNextActionCreatedBy")
+  crmNextActionsUpdated  CrmNextAction[]     @relation("CrmNextActionUpdatedBy")
 
   @@unique([organizationId, email])
+
   @@index([organizationId])
   @@map("users")
 }
@@ -268,12 +272,29 @@ enum CrmActivityType {
   TASK
   STAGE_CHANGE
   CONVERSION
+  NEXT_ACTION_CREATED
+  NEXT_ACTION_UPDATED
+  NEXT_ACTION_COMPLETED
+  NEXT_ACTION_CANCELLED
+}
+
+enum CrmNextActionStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+enum CrmNextActionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 model CrmAccount {
-  archivedAt DateTime?
-  version Int @default(1)
-  id             String   @id @default(cuid())
+  archivedAt     DateTime?
+  version        Int       @default(1)
+  id             String    @id @default(cuid())
   organizationId String
   companyId      String
   name           String
@@ -284,23 +305,25 @@ model CrmAccount {
   phone          String?
   email          String?
   ownerUserId    String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   contacts      CrmContact[]
   leads         CrmLead[]
   opportunities CrmOpportunity[]
+  nextActions   CrmNextAction[]
 
   @@unique([companyId, name])
+  @@unique([organizationId, companyId, id])
   @@index([organizationId, companyId])
   @@index([organizationId, companyId, archivedAt])
   @@map("crm_accounts")
 }
 
 model CrmContact {
-  archivedAt DateTime?
-  version Int @default(1)
-  id             String   @id @default(cuid())
+  archivedAt     DateTime?
+  version        Int       @default(1)
+  id             String    @id @default(cuid())
   organizationId String
   companyId      String
   accountId      String?
@@ -308,9 +331,9 @@ model CrmContact {
   email          String?
   phone          String?
   jobTitle       String?
-  isPrimary      Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isPrimary      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   account       CrmAccount?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
   opportunities CrmOpportunity[]
@@ -411,6 +434,39 @@ model CrmActivity {
   @@index([organizationId, companyId])
   @@index([companyId, relatedType, relatedId])
   @@map("crm_activities")
+}
+
+/// Prochaine action CRM mutable avec verrouillage optimiste. Chaque mutation
+/// produit une CrmActivity append-only et une entree AuditLog dans la meme
+/// transaction ; les lignes d'activite restent la source immuable du parcours.
+model CrmNextAction {
+  id              String                @id @default(cuid())
+  organizationId  String
+  companyId       String
+  accountId       String
+  title           String
+  details         String?
+  dueAt           DateTime
+  priority        CrmNextActionPriority @default(MEDIUM)
+  status          CrmNextActionStatus   @default(OPEN)
+  assigneeUserId  String
+  createdByUserId String
+  updatedByUserId String
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  version         Int                   @default(1)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  account   CrmAccount @relation(fields: [organizationId, companyId, accountId], references: [organizationId, companyId, id], onDelete: Restrict)
+  assignee  User       @relation("CrmNextActionAssignee", fields: [assigneeUserId], references: [id], onDelete: Restrict)
+  createdBy User       @relation("CrmNextActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy User       @relation("CrmNextActionUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId, status, dueAt])
+  @@index([accountId, status, dueAt])
+  @@index([organizationId, companyId, assigneeUserId, status, dueAt])
+  @@map("crm_next_actions")
 }
 
 // ---------------------------------------------------------------------------
@@ -574,7 +630,7 @@ model DqeLibraryItem {
 }
 
 model DqeLine {
-  id             String   @id @default(cuid())
+  id             String          @id @default(cuid())
   organizationId String
   companyId      String
   dqeId          String
@@ -583,10 +639,10 @@ model DqeLine {
   designation    String
   unitCode       String
   costCategory   DqeCostCategory @default(MATERIAL)
-  quantity       Decimal  @db.Decimal(24, 6)
-  unitPrice      Decimal  @db.Decimal(24, 6)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  quantity       Decimal         @db.Decimal(24, 6)
+  unitPrice      Decimal         @db.Decimal(24, 6)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   document DqeDocument @relation(fields: [dqeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
 

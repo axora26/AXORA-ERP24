@@ -38,15 +38,15 @@ test.describe("Navigation et formulaires au clavier", () => {
     // Plusieurs modules correspondent (« Projets », « Ressources projet »…) : les flèches
     // déplacent réellement l'option active, signalée par aria-activedescendant.
     const selected = page.getByRole("listbox", { name: "Modules accessibles" }).getByRole("option", { selected: true });
-    await expect(selected).toHaveText("Projets");
+    await expect(selected).toContainText("Projets");
     const first = await search.getAttribute("aria-activedescendant");
     expect(first).toBeTruthy();
     await page.keyboard.press("ArrowDown");
     await expect(search).not.toHaveAttribute("aria-activedescendant", first!);
-    await expect(selected).not.toHaveText("Projets");
+    await expect(selected).not.toContainText("Projets");
     await page.keyboard.press("ArrowUp");
     await expect(search).toHaveAttribute("aria-activedescendant", first!);
-    await expect(selected).toHaveText("Projets");
+    await expect(selected).toContainText("Projets");
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/projects$/);
     await expect(page.getByRole("dialog", { name: "Palette de commandes" })).toHaveCount(0);

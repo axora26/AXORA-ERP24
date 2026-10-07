@@ -238,21 +238,27 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
 
         <main className="workspace">
           <header className="topbar">
-            <button className="menu-button" onClick={() => setMobileNav(true)} aria-label="Ouvrir le menu" aria-expanded={mobileNav}>
-              <Menu size={21} />
-            </button>
-            <button className="search-box" type="button" onClick={() => setPaletteOpen(true)}>
-              <Search size={18} />
-              <span>Rechercher un module, une action…</span>
-              <kbd>Ctrl K</kbd>
-            </button>
-            <div className="top-actions">
-              <ThemeSelector/>
+            <div className="topbar-primary">
+              <button className="menu-button" onClick={() => setMobileNav(true)} aria-label="Ouvrir le menu" aria-expanded={mobileNav}>
+                <Menu size={21} aria-hidden="true" />
+              </button>
+              <button className="search-box" type="button" onClick={() => setPaletteOpen(true)}>
+                <Search size={18} aria-hidden="true" />
+                <span>Rechercher un module, une action…</span>
+                <kbd>Ctrl K</kbd>
+              </button>
+            </div>
+            <div className="company-context" aria-label="Contexte de travail">
+              <div className="company-context-copy">
+                <span>{sessionApi.organization?.name ?? "Organisation"}</span>
+                <strong>Société active</strong>
+              </div>
               {sessionApi.companies.length > 1 ? (
                 <label className="company-switch">
-                  <Building2 size={15} aria-hidden="true" />
-                  <span className="sr-only">Entreprise active</span>
+                  <Building2 size={16} aria-hidden="true" />
+                  <span className="sr-only">Changer la société active</span>
                   <select
+                    aria-label="Société active"
                     value={sessionApi.activeCompanyId ?? ""}
                     onChange={(event) => {
                       sessionApi.switchCompany(event.currentTarget.value);
@@ -260,20 +266,19 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
                     }}
                   >
                     {sessionApi.companies.map((company) => (
-                      <option key={company.id} value={company.id}>
-                        {company.name}
-                      </option>
+                      <option key={company.id} value={company.id}>{company.name}</option>
                     ))}
                   </select>
                 </label>
-              ) : (
-                activeCompany && (
-                  <span className="company-pill" title="Entreprise active">
-                    <Building2 size={14} aria-hidden="true" />
-                    {activeCompany.name}
-                  </span>
-                )
-              )}
+              ) : activeCompany ? (
+                <span className="company-pill" title="Société active">
+                  <Building2 size={15} aria-hidden="true" />
+                  {activeCompany.name}
+                </span>
+              ) : null}
+            </div>
+            <div className="top-actions">
+              <ThemeSelector/>
               <NotificationBell />
               <Link className="user-menu" href="/account" title="Mon compte">
                 <span>{initialsOf(sessionApi.user.fullName)}</span>

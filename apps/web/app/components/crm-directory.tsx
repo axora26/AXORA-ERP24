@@ -1,5 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { CrmAccountView, CrmContactView, CrmPage } from "@axora24/contracts";
 import { ApiError } from "../lib/api";
 import { crmError, isStaleRecord } from "../lib/crm-error";
@@ -62,7 +63,7 @@ export function CrmDirectory({ kind }: { kind: "accounts" | "contacts" }): React
     {error && <div className="form-error" role="alert">{error}</div>}
     {!data ? <p role="status">{loading ? "Chargement…" : "Les fiches sont indisponibles. Réessayez avec Actualiser."}</p> : <>
       <div aria-busy={loading}><DataTable<RecordView> caption={contacts ? "Répertoire des contacts" : "Répertoire des comptes"} rows={data.items} empty={<p className="panel-note">Aucune fiche ne correspond à  votre recherche.</p>} columns={[
-        { key: "name", header: contacts ? "Contact" : "Compte", render: row => <strong>{nameOf(row)}</strong> },
+        { key: "name", header: contacts ? "Contact" : "Compte", render: row => "fullName" in row ? <strong>{row.fullName}</strong> : <strong><Link href={`/crm/accounts/${row.id}`}>{row.name}</Link></strong> },
         { key: "detail", header: contacts ? "Compte / Fonction" : "Ville / Secteur", render: row => "fullName" in row ? <>{accounts.find(account => account.id === row.accountId)?.name ?? (row.accountId ? "Compte associé" : "Sans compte")}<small className="table-subtext">{row.jobTitle ?? "—"}{row.isPrimary ? " · Principal" : ""}</small></> : <>{[row.city, row.country].filter(Boolean).join(", ") || "—"}<small className="table-subtext">{row.industry ?? "—"}</small></> },
         { key: "email", header: "Courriel / Téléphone", render: row => <>{row.email ? <a href={`mailto:${row.email}`}>{row.email}</a> : "—"}<small className="table-subtext">{row.phone ?? "—"}</small></> },
         { key: "state", header: "État", render: row => row.archivedAt ? "Archivée" : "Active" },

@@ -30,6 +30,8 @@ export const CRM_PERMISSIONS = {
   OPPORTUNITY_MANAGE: "crm.opportunity.manage",
   ACTIVITY_READ: "crm.activity.read",
   ACTIVITY_CREATE: "crm.activity.create",
+  NEXT_ACTION_READ: "crm.nextaction.read",
+  NEXT_ACTION_MANAGE: "crm.nextaction.manage",
   PIPELINE_MANAGE: "crm.pipeline.manage",
 } as const;
 

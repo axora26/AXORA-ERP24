@@ -30,6 +30,10 @@ describe("Répertoire CRM", () => {
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Archiver" }));
     await waitFor(() => expect(crmDirectoryApi.archiveAccount).toHaveBeenCalledWith(account.id, 3, false));
   });
+  it("rend le nom du compte comme lien vers sa vue 360", async () => {
+    render(<CrmDirectory kind="accounts" />);
+    expect((await screen.findByRole("link", { name: "Client Alpha" })).getAttribute("href")).toBe("/crm/accounts/account-1");
+  });
   it("transmet la recherche et recommence à la première page", async () => {
     render(<CrmDirectory kind="accounts" />);
     await screen.findByText("Client Alpha");

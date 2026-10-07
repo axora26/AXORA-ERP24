@@ -63,6 +63,39 @@ describe("Keyboard interactions", () => {
     expect(document.activeElement).toBe(contacts);
   });
 
+  it("garde l’onglet sélectionné visible dans un rail horizontal", () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scrollIntoView });
+    function Example() {
+      const [active, setActive] = useState("clients");
+      return <Tabs active={active} onChange={setActive} tabs={[{ id: "clients", label: "Clients" }, { id: "fournisseurs", label: "Fournisseurs" }, { id: "contacts", label: "Contacts" }]}/>;
+    }
+    render(<Example/>);
+    scrollIntoView.mockClear();
+    fireEvent.click(screen.getByRole("tab", { name: "Contacts" }));
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+  });
+
+  it("relie un onglet à son panneau sans casser les usages historiques", () => {
+    render(
+      <>
+        <Tabs
+          active="clients"
+          onChange={() => undefined}
+          tabs={[
+            { id: "clients", label: "Clients", panelId: "clients-panel" },
+            { id: "contacts", label: "Contacts", panelId: "contacts-panel" },
+          ]}
+        />
+        <section id="clients-panel" role="tabpanel">Liste clients</section>
+      </>,
+    );
+    const clients = screen.getByRole("tab", { name: "Clients" });
+    const panel = screen.getByRole("tabpanel");
+    expect(clients.getAttribute("aria-controls")).toBe("clients-panel");
+    expect(panel.getAttribute("aria-labelledby")).toBe(clients.id);
+  });
+
   it("associates field hints and inline errors with the input", () => {
     render(<TextField label="Nom" value="" onChange={() => undefined} hint="Nom légal complet" error="Le nom est requis"/>);
     const input = screen.getByRole("textbox", { name: "Nom", description: "Nom légal complet Le nom est requis" });
