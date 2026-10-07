@@ -6,7 +6,7 @@
   --theme-link: #2563eb;
 }
 .theme-selector { display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; color: var(--theme-text-secondary); border: 1px solid var(--line); border-radius: 8px; min-height: 38px; }
-.theme-selector select { border: 0; background: transparent; color: inherit; font: 500 11px Inter, sans-serif; max-width: 80px; min-height: 34px; cursor: pointer; }
+.theme-selector select { border: 0; background: transparent; color: inherit; font: 500 12px Inter, sans-serif; max-width: 80px; min-height: 34px; cursor: pointer; }
 .login-card .organization-login-label { margin-top: 18px; }
 .organization-login-label span { font-weight: 400; color: var(--muted); }
 .organization-login-hint { margin: 6px 0 0; font-size: 11px; color: var(--muted); line-height: 1.45; }
@@ -61,10 +61,34 @@
 [data-theme="dark"] .pipeline-stage small { color: var(--theme-text-secondary); }
 [data-theme="dark"] .portal-root { background: var(--surface); }
 [data-theme="dark"] .skip-link { background: var(--theme-panel); color: var(--theme-link); }
+[data-theme="dark"] :is(.command-overview, .command-metric-grid) { background: var(--theme-panel); border-color: var(--line); }
+[data-theme="dark"] .command-overview-count > span { color: #c7d7ec; background: #1b2535; border-color: #52617a; }
+[data-theme="dark"] .command-overview-count button { color: #a6c2ff; }
+[data-theme="dark"] .command-overview-count button:hover { background: #1b335e; }
+[data-theme="dark"] .command-metric { border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .command-metric:hover { background: #1b335e; box-shadow: inset 0 0 0 1px #526b96; }
+[data-theme="dark"] .command-metric-featured { background: #14294b; border-color: #526b96; }
+[data-theme="dark"] .command-metric-featured :is(.metric-label, strong, small, .metric-arrow) { color: #d7e5f8; }
+[data-theme="dark"] .activity-marker { background: var(--theme-panel); box-shadow: 0 0 0 4px #1b335e; }
+[data-theme="dark"] .quick-link-icon { color: #a6c2ff; background: #1b335e; border-color: #52617a; }
+[data-theme="dark"] .quick-links li a { border-color: var(--line); }
+[data-theme="dark"] .command-principles { color: #d7e3f7; background: #162b4d; border-color: #526b96; }
+[data-theme="dark"] .company-context { border-color: var(--line); }
+[data-theme="dark"] :is(.commercial-pulse, .commercial-journeys, .commercial-reference) { color: var(--ink); background: var(--theme-panel); border-color: var(--line); }
+[data-theme="dark"] :is(.commercial-pulse > div, .commercial-journey, .commercial-journey-index, .commercial-journey-actions, .commercial-journey-actions a) { border-color: var(--line); }
+[data-theme="dark"] .commercial-journey-title > span { color: #a6c2ff; background: #1b335e; border-color: #52617a; }
+[data-theme="dark"] :is(.commercial-flow, .commercial-journey-actions a.primary) { color: #a6c2ff; }
+[data-theme="dark"] .commercial-journey-actions a:hover { color: #d7e5f8; background: #1b335e; }
+[data-theme="dark"] .commercial-reference nav a { color: #d7deea; background: #1b2535; border-color: #52617a; }
+[data-theme="dark"] .commercial-reference nav a:hover { color: #d7e5f8; background: #1b335e; border-color: #6f86aa; }
+[data-theme="dark"] .commercial-reference nav a svg { color: #a6c2ff; }
+[data-theme="dark"] .dqe-lot-manager { background: var(--theme-raised); border-color: var(--line); }
+[data-theme="dark"] :is(.dqe-lot-manager-head > strong, .dqe-lot-card > span) { color: #a6c2ff; background: #1b335e; border-color: #52617a; }
+[data-theme="dark"] :is(.dqe-lot-card, .dqe-lot-form, .dqe-lot-form input) { color: var(--ink); background: var(--theme-panel); border-color: var(--line); }
 @media (max-width: 720px) {
   .theme-selector { min-height: 44px; padding-inline: 4px; }
   .theme-selector > svg { display: none; }
-  .theme-selector select { min-height: 42px; font-size: 10px; max-width: 60px; }
+  .theme-selector select { min-height: 42px; font-size: 12px; max-width: 68px; }
   :is(.icon-button, .close-nav, .menu-button) { min-width: 44px; min-height: 44px; }
   :is(.btn, .secondary-button, .primary-inline-button, .tabs button, .quick-links a) { min-height: 44px; }
   .checkbox-group label { min-height: 44px; }

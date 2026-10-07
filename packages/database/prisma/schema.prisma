@@ -48,9 +48,9 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  branches     Branch[]
-  users        CompanyMembership[]
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branches      Branch[]
+  users         CompanyMembership[]
   payrollPolicy CompanyPayrollPolicy?
 
   @@unique([id, organizationId])
@@ -79,32 +79,36 @@ model Branch {
 // ---------------------------------------------------------------------------
 
 model User {
-  mfaRecoveryCodeHashes String[] @default([])
-  themePreference     String    @default("system")
-  id                  String    @id @default(cuid())
-  organizationId      String
-  email               String
-  passwordHash        String
-  fullName            String
-  isActive            Boolean   @default(true)
-  mfaEnabled          Boolean   @default(false)
-  mfaSecretEnc        String?
+  mfaRecoveryCodeHashes String[]  @default([])
+  themePreference       String    @default("system")
+  id                    String    @id @default(cuid())
+  organizationId        String
+  email                 String
+  passwordHash          String
+  fullName              String
+  isActive              Boolean   @default(true)
+  mfaEnabled            Boolean   @default(false)
+  mfaSecretEnc          String?
   /// Secret TOTP en cours d'enrolement (chiffre), confirme par un premier code valide.
-  mfaPendingSecretEnc String?
+  mfaPendingSecretEnc   String?
   /// Dernier pas TOTP accepte (anti-rejeu : un code ne sert qu'une fois).
-  mfaLastCounter      Int?
-  lastLoginAt         DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  mfaLastCounter        Int?
+  lastLoginAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  companyMemberships CompanyMembership[]
-  sessions           Session[]
-  roleAssignments    RoleAssignment[]
-  auditLogs          AuditLog[]
-  mfaChallenges      MfaChallenge[]
+  organization           Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companyMemberships     CompanyMembership[]
+  sessions               Session[]
+  roleAssignments        RoleAssignment[]
+  auditLogs              AuditLog[]
+  mfaChallenges          MfaChallenge[]
+  crmNextActionsAssigned CrmNextAction[]     @relation("CrmNextActionAssignee")
+  crmNextActionsCreated  CrmNextAction[]     @relation("CrmNextActionCreatedBy")
+  crmNextActionsUpdated  CrmNextAction[]     @relation("CrmNextActionUpdatedBy")
 
   @@unique([organizationId, email])
+
   @@index([organizationId])
   @@map("users")
 }
@@ -268,12 +272,29 @@ enum CrmActivityType {
   TASK
   STAGE_CHANGE
   CONVERSION
+  NEXT_ACTION_CREATED
+  NEXT_ACTION_UPDATED
+  NEXT_ACTION_COMPLETED
+  NEXT_ACTION_CANCELLED
+}
+
+enum CrmNextActionStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+enum CrmNextActionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 model CrmAccount {
-  archivedAt DateTime?
-  version Int @default(1)
-  id             String   @id @default(cuid())
+  archivedAt     DateTime?
+  version        Int       @default(1)
+  id             String    @id @default(cuid())
   organizationId String
   companyId      String
   name           String
@@ -284,23 +305,25 @@ model CrmAccount {
   phone          String?
   email          String?
   ownerUserId    String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   contacts      CrmContact[]
   leads         CrmLead[]
   opportunities CrmOpportunity[]
+  nextActions   CrmNextAction[]
 
   @@unique([companyId, name])
+  @@unique([organizationId, companyId, id])
   @@index([organizationId, companyId])
   @@index([organizationId, companyId, archivedAt])
   @@map("crm_accounts")
 }
 
 model CrmContact {
-  archivedAt DateTime?
-  version Int @default(1)
-  id             String   @id @default(cuid())
+  archivedAt     DateTime?
+  version        Int       @default(1)
+  id             String    @id @default(cuid())
   organizationId String
   companyId      String
   accountId      String?
@@ -308,9 +331,9 @@ model CrmContact {
   email          String?
   phone          String?
   jobTitle       String?
-  isPrimary      Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isPrimary      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   account       CrmAccount?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
   opportunities CrmOpportunity[]
@@ -411,6 +434,39 @@ model CrmActivity {
   @@index([organizationId, companyId])
   @@index([companyId, relatedType, relatedId])
   @@map("crm_activities")
+}
+
+/// Prochaine action CRM mutable avec verrouillage optimiste. Chaque mutation
+/// produit une CrmActivity append-only et une entree AuditLog dans la meme
+/// transaction ; les lignes d'activite restent la source immuable du parcours.
+model CrmNextAction {
+  id              String                @id @default(cuid())
+  organizationId  String
+  companyId       String
+  accountId       String
+  title           String
+  details         String?
+  dueAt           DateTime
+  priority        CrmNextActionPriority @default(MEDIUM)
+  status          CrmNextActionStatus   @default(OPEN)
+  assigneeUserId  String
+  createdByUserId String
+  updatedByUserId String
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  version         Int                   @default(1)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  account   CrmAccount @relation(fields: [organizationId, companyId, accountId], references: [organizationId, companyId, id], onDelete: Restrict)
+  assignee  User       @relation("CrmNextActionAssignee", fields: [assigneeUserId], references: [id], onDelete: Restrict)
+  createdBy User       @relation("CrmNextActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy User       @relation("CrmNextActionUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, companyId, status, dueAt])
+  @@index([accountId, status, dueAt])
+  @@index([organizationId, companyId, assigneeUserId, status, dueAt])
+  @@map("crm_next_actions")
 }
 
 // ---------------------------------------------------------------------------
@@ -518,6 +574,7 @@ model DqeDocument {
   updatedAt      DateTime  @updatedAt
 
   lines    DqeLine[]
+  lots     DqeLot[]
   variants DqeVariant[]
   source   DqeStudySource?
 
@@ -574,25 +631,51 @@ model DqeLibraryItem {
 }
 
 model DqeLine {
-  id             String   @id @default(cuid())
+  id             String          @id @default(cuid())
   organizationId String
   companyId      String
   dqeId          String
+  lotId          String?
   position       Int
   reference      String?
   designation    String
   unitCode       String
   costCategory   DqeCostCategory @default(MATERIAL)
-  quantity       Decimal  @db.Decimal(24, 6)
-  unitPrice      Decimal  @db.Decimal(24, 6)
+  quantity       Decimal         @db.Decimal(24, 6)
+  unitPrice      Decimal         @db.Decimal(24, 6)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  document DqeDocument @relation(fields: [dqeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  lot      DqeLot?      @relation(fields: [lotId, organizationId, companyId, dqeId], references: [id, organizationId, companyId, dqeId], onDelete: Restrict)
+
+  @@unique([dqeId, position])
+  @@index([organizationId, companyId, dqeId, position])
+  @@index([organizationId, companyId, lotId, position])
+  @@map("dqe_lines")
+}
+
+/// Lot de chiffrage ordonnant les ouvrages d'un DQE sans modifier leurs montants.
+model DqeLot {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  dqeId          String
+  position       Int
+  code           String
+  designation    String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   document DqeDocument @relation(fields: [dqeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  lines    DqeLine[]
 
   @@unique([dqeId, position])
+  @@unique([dqeId, code])
+  @@unique([id, organizationId, companyId])
+  @@unique([id, organizationId, companyId, dqeId])
   @@index([organizationId, companyId, dqeId, position])
-  @@map("dqe_lines")
+  @@map("dqe_lots")
 }
 
 /// Preuve immuable de provenance Study -> DQE. Aucun endpoint UPDATE/DELETE.
@@ -662,6 +745,7 @@ model Quote {
   updatedAt       DateTime    @updatedAt
 
   lines    QuoteLine[]
+  lots     QuoteLot[]
   contract Contract?
 
   @@unique([companyId, code])
@@ -678,6 +762,7 @@ model QuoteLine {
   organizationId String
   companyId      String
   quoteId        String
+  lotId          String?
   position       Int
   reference      String?
   designation    String
@@ -686,11 +771,34 @@ model QuoteLine {
   unitPrice      Decimal  @db.Decimal(24, 6)
   createdAt      DateTime @default(now())
 
-  quote Quote @relation(fields: [quoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  quote Quote     @relation(fields: [quoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  lot   QuoteLot? @relation(fields: [lotId, organizationId, companyId, quoteId], references: [id, organizationId, companyId, quoteId], onDelete: Restrict)
 
   @@unique([quoteId, position])
   @@index([organizationId, companyId, quoteId, position])
+  @@index([organizationId, companyId, lotId, position])
   @@map("sales_quote_lines")
+}
+
+model QuoteLot {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  quoteId        String
+  position       Int
+  code           String
+  designation    String
+  createdAt      DateTime @default(now())
+
+  quote Quote       @relation(fields: [quoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  lines QuoteLine[]
+
+  @@unique([quoteId, position])
+  @@unique([quoteId, code])
+  @@unique([id, organizationId, companyId])
+  @@unique([id, organizationId, companyId, quoteId])
+  @@index([organizationId, companyId, quoteId, position])
+  @@map("sales_quote_lots")
 }
 
 /// Enregistrement contractuel neutre : aucune portee juridique codee.
@@ -709,6 +817,7 @@ model Contract {
   updatedAt      DateTime       @updatedAt
 
   lines ContractLine[]
+  lots  ContractLot[]
   quote Quote          @relation(fields: [quoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
 
   @@unique([companyId, code])
@@ -725,6 +834,7 @@ model ContractLine {
   organizationId String
   companyId      String
   contractId     String
+  lotId          String?
   position       Int
   reference      String?
   designation    String
@@ -733,9 +843,32 @@ model ContractLine {
   unitPrice      Decimal  @db.Decimal(24, 6)
   createdAt      DateTime @default(now())
 
-  contract Contract @relation(fields: [contractId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  contract Contract    @relation(fields: [contractId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  lot      ContractLot? @relation(fields: [lotId, organizationId, companyId, contractId], references: [id, organizationId, companyId, contractId], onDelete: Restrict)
 
   @@unique([contractId, position])
   @@index([organizationId, companyId, contractId, position])
+  @@index([organizationId, companyId, lotId, position])
   @@map("sales_contract_lines")
+}
+
+model ContractLot {
+  id             String   @id @default(cuid())
+  organizationId String
+  companyId      String
+  contractId     String
+  position       Int
+  code           String
+  designation    String
+  createdAt      DateTime @default(now())
+
+  contract Contract       @relation(fields: [contractId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  lines    ContractLine[]
+
+  @@unique([contractId, position])
+  @@unique([contractId, code])
+  @@unique([id, organizationId, companyId])
+  @@unique([id, organizationId, companyId, contractId])
+  @@index([organizationId, companyId, contractId, position])
+  @@map("sales_contract_lots")
 }

@@ -91,6 +91,19 @@ export const DOMAIN_MESSAGES: Record<string, string> = {
   "{x} employee(s) are paid in another currency than {x}: no implicit conversion": "{1} employé(s) payé(s) dans une autre devise que {2} : aucune conversion implicite",
   "{x} timesheet(s) of the period are not validated ({x}): no payroll without validation": "{1} feuille(s) de temps de la période non validée(s) ({2}) : pas de paie sans validation",
 
+  // --- CRM ----------------------------------------------------------------
+  "An account with open next actions cannot be archived": "Un compte avec des prochaines actions ouvertes ne peut pas être archivé",
+  "Next action not found": "Prochaine action introuvable",
+  "Only an open next action can be updated": "Seule une prochaine action ouverte peut être modifiée",
+  "Only an open next action can be completed": "Seule une prochaine action ouverte peut être terminée",
+  "Only an open next action can be cancelled": "Seule une prochaine action ouverte peut être annulée",
+  "The assignee must be an active member of this company": "Le responsable doit être un utilisateur actif membre de cette entreprise",
+  "Provide at least one next action field to update": "Renseignez au moins un champ de la prochaine action à modifier",
+  "dueAt must be an ISO timestamp with timezone": "dueAt doit être un horodatage ISO avec fuseau horaire",
+  "dueAt is not a valid timestamp": "dueAt n'est pas un horodatage valide",
+  "dueAt is not a valid calendar date": "dueAt n'est pas une date calendaire valide",
+  "filter must be one of: all, overdue, today, next7days": "filter doit valoir all, overdue, today ou next7days",
+
   // --- Stock --------------------------------------------------------------
   "A site store must be attached to a project": "Un magasin de chantier doit être rattaché à un projet",
   "A unit cost is required for this entry of {x} (no stock to value it)": "Un coût unitaire est requis pour cette entrée de {1} (aucun stock pour la valoriser)",

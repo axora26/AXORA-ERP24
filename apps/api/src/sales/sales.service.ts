@@ -29,7 +29,7 @@ export class SalesService {
   async listQuotes(scope: CompanyScope) {
     const quotes = await this.prisma.quote.findMany({
       where: scope,
-      include: { lines: { orderBy: { position: "asc" } } },
+      include: quoteInclude,
       orderBy: { createdAt: "desc" },
     });
     const dqeCodes = await this.dqeCodeMap(scope, quotes.map((quote) => quote.dqeId));
@@ -39,7 +39,7 @@ export class SalesService {
   async getQuote(scope: CompanyScope, id: string) {
     const quote = await this.prisma.quote.findFirst({
       where: { id, ...scope },
-      include: { lines: { orderBy: { position: "asc" } } },
+      include: quoteInclude,
     });
     if (!quote) throw new NotFoundException("Quote not found");
     const dqeCodes = await this.dqeCodeMap(scope, [quote.dqeId]);
@@ -80,7 +80,10 @@ export class SalesService {
     const createdId = await this.prisma.$transaction(async (tx) => {
       const dqe = await tx.dqeDocument.findFirst({
         where: { id: dqeId, ...scope },
-        include: { lines: { orderBy: { position: "asc" } } },
+        include: {
+          lines: { orderBy: { position: "asc" } },
+          lots: { orderBy: { position: "asc" } },
+        },
       });
       if (!dqe) throw new NotFoundException("DQE not found");
       if (dqe.status !== "FINALIZED") {
@@ -92,7 +95,7 @@ export class SalesService {
 
       let subtotal = new Prisma.Decimal(0);
       for (const line of dqe.lines) {
-        subtotal = subtotal.plus(new Prisma.Decimal(line.quantity).mul(line.unitPrice));
+        subtotal = subtotal.plus(new Prisma.Decimal(line.quantity).mul(line.unitPrice).toDecimalPlaces(6));
       }
 
       const quote = await tx.quote.create({
@@ -107,11 +110,20 @@ export class SalesService {
         },
       });
 
+      const quoteLotIds = new Map<string, string>();
+      for (const lot of dqe.lots) {
+        const copied = await tx.quoteLot.create({
+          data: { ...scope, quoteId: quote.id, position: lot.position, code: lot.code, designation: lot.designation },
+        });
+        quoteLotIds.set(lot.id, copied.id);
+      }
+
       if (dqe.lines.length > 0) {
         await tx.quoteLine.createMany({
           data: dqe.lines.map((line) => ({
             ...scope,
             quoteId: quote.id,
+            lotId: line.lotId ? quoteLotIds.get(line.lotId) ?? null : null,
             position: line.position,
             reference: line.reference,
             designation: line.designation,
@@ -241,7 +253,7 @@ export class SalesService {
   async listContracts(scope: CompanyScope) {
     const contracts = await this.prisma.contract.findMany({
       where: scope,
-      include: { lines: { orderBy: { position: "asc" } } },
+      include: contractInclude,
       orderBy: { createdAt: "desc" },
     });
     const quoteCodes = await this.quoteCodeMap(scope, contracts.map((contract) => contract.quoteId));
@@ -251,7 +263,7 @@ export class SalesService {
   async getContract(scope: CompanyScope, id: string) {
     const contract = await this.prisma.contract.findFirst({
       where: { id, ...scope },
-      include: { lines: { orderBy: { position: "asc" } } },
+      include: contractInclude,
     });
     if (!contract) throw new NotFoundException("Contract not found");
     const quoteCodes = await this.quoteCodeMap(scope, [contract.quoteId]);
@@ -280,7 +292,7 @@ export class SalesService {
     const createdId = await this.prisma.$transaction(async (tx) => {
       const quote = await tx.quote.findFirst({
         where: { id: quoteId, ...scope },
-        include: { lines: { orderBy: { position: "asc" } } },
+        include: quoteInclude,
       });
       if (!quote) throw new NotFoundException("Quote not found");
       if (quote.status !== "ACCEPTED") {
@@ -299,11 +311,20 @@ export class SalesService {
         },
       });
 
+      const contractLotIds = new Map<string, string>();
+      for (const lot of quote.lots) {
+        const copied = await tx.contractLot.create({
+          data: { ...scope, contractId: contract.id, position: lot.position, code: lot.code, designation: lot.designation },
+        });
+        contractLotIds.set(lot.id, copied.id);
+      }
+
       if (quote.lines.length > 0) {
         await tx.contractLine.createMany({
           data: quote.lines.map((line) => ({
             ...scope,
             contractId: contract.id,
+            lotId: line.lotId ? contractLotIds.get(line.lotId) ?? null : null,
             position: line.position,
             reference: line.reference,
             designation: line.designation,
@@ -337,11 +358,21 @@ export class SalesService {
   }
 }
 
-type QuoteWithLines = Prisma.QuoteGetPayload<{ include: { lines: true } }>;
-type ContractWithLines = Prisma.ContractGetPayload<{ include: { lines: true } }>;
+const quoteInclude = {
+  lines: { orderBy: { position: "asc" as const } },
+  lots: { orderBy: { position: "asc" as const } },
+} as const;
+const contractInclude = {
+  lines: { orderBy: { position: "asc" as const } },
+  lots: { orderBy: { position: "asc" as const } },
+} as const;
+
+type QuoteWithLines = Prisma.QuoteGetPayload<{ include: typeof quoteInclude }>;
+type ContractWithLines = Prisma.ContractGetPayload<{ include: typeof contractInclude }>;
 
 function toLineView(line: {
   id: string;
+  lotId: string | null;
   position: number;
   reference: string | null;
   designation: string;
@@ -353,6 +384,7 @@ function toLineView(line: {
   const unitPrice = new Prisma.Decimal(line.unitPrice);
   return {
     id: line.id,
+    lotId: line.lotId,
     position: line.position,
     reference: line.reference,
     designation: line.designation,
@@ -364,6 +396,7 @@ function toLineView(line: {
 }
 
 function toQuoteView(quote: QuoteWithLines, dqeCode: string) {
+  const lines = quote.lines.map(toLineView);
   return {
     id: quote.id,
     companyId: quote.companyId,
@@ -379,12 +412,14 @@ function toQuoteView(quote: QuoteWithLines, dqeCode: string) {
     rejectedAt: quote.rejectedAt?.toISOString() ?? null,
     rejectionReason: quote.rejectionReason,
     createdAt: quote.createdAt.toISOString(),
-    lines: quote.lines.map(toLineView),
+    lots: toLotViews(quote.lots, lines),
+    lines,
     source: { dqeId: quote.dqeId, dqeCode },
   };
 }
 
 function toContractView(contract: ContractWithLines, quoteCode: string) {
+  const lines = contract.lines.map(toLineView);
   return {
     id: contract.id,
     companyId: contract.companyId,
@@ -395,7 +430,26 @@ function toContractView(contract: ContractWithLines, quoteCode: string) {
     status: contract.status,
     subtotal: new Prisma.Decimal(contract.subtotal).toFixed(6),
     createdAt: contract.createdAt.toISOString(),
-    lines: contract.lines.map(toLineView),
+    lots: toLotViews(contract.lots, lines),
+    lines,
     source: { quoteId: contract.quoteId, quoteCode },
   };
+}
+
+function toLotViews(
+  lots: Array<{ id: string; position: number; code: string; designation: string }>,
+  lines: Array<{ lotId: string | null; lineTotal: string }>,
+) {
+  return lots.map((lot) => {
+    const assigned = lines.filter((line) => line.lotId === lot.id);
+    const subtotal = assigned.reduce((sum, line) => sum.plus(line.lineTotal), new Prisma.Decimal(0));
+    return {
+      id: lot.id,
+      position: lot.position,
+      code: lot.code,
+      designation: lot.designation,
+      lineCount: assigned.length,
+      subtotal: subtotal.toFixed(6),
+    };
+  });
 }

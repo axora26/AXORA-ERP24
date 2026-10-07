@@ -3,11 +3,14 @@ import { Prisma } from "@axora24/database";
 import { CRM_PERMISSIONS } from "@axora24/contracts";
 import type {
   CrmAccountView,
+  CrmAccount360View,
   CrmActivityView,
+  CrmAssigneeView,
   CrmContactView,
   CrmDashboardView,
   CrmLeadView,
   CrmOpportunityView,
+  CrmNextActionView,
   CrmPipelineStageView,
   CrmPage,
 } from "@axora24/contracts";
@@ -32,14 +35,20 @@ import {
   type CreateContactDto,
   type CreateLeadDto,
   type CreateOpportunityDto,
+  type CreateNextActionDto,
   type CreatePipelineStageDto,
   type MoveOpportunityStageDto,
   type UpdateLeadStatusDto,
   type UpdateAccountDto,
   type UpdateContactDto,
+  type UpdateNextActionDto,
   type VersionDto,
   type DirectoryQueryDto,
   type ActivityQueryDto,
+  type NextActionQueryDto,
+  nextActionDueAt,
+  nextActionFilter,
+  nextActionPriority,
 } from "./crm.dto.js";
 
 const LEAD_STATUSES = ["NEW", "CONTACTED", "QUALIFIED", "CONVERTED", "DISQUALIFIED"] as const;
@@ -51,11 +60,17 @@ const ACTIVITY_TYPES = [
   "TASK",
   "STAGE_CHANGE",
   "CONVERSION",
+  "NEXT_ACTION_CREATED",
+  "NEXT_ACTION_UPDATED",
+  "NEXT_ACTION_COMPLETED",
+  "NEXT_ACTION_CANCELLED",
 ] as const;
 const RELATED_TYPES = ["Lead", "Opportunity", "Account", "Contact"] as const;
 const ACCOUNT_FIELDS = ["companyId", "name", "industry", "city", "country", "website", "phone", "email"] as const;
 const CONTACT_FIELDS = ["companyId", "accountId", "fullName", "email", "phone", "jobTitle", "isPrimary"] as const;
 const MANUAL_ACTIVITY_TYPES = ["NOTE", "CALL", "MEETING", "EMAIL", "TASK"] as const;
+const NEXT_ACTION_FIELDS = ["companyId", "accountId", "title", "details", "dueAt", "priority", "assigneeUserId"] as const;
+const NEXT_ACTION_UPDATE_FIELDS = ["companyId", "expectedVersion", "title", "details", "dueAt", "priority", "assigneeUserId"] as const;
 
 /**
  * Service CRM (INC-02).
@@ -148,6 +163,80 @@ export class CrmService {
     return toAccountView(await this.accountInScope(this.prisma, scope, id));
   }
 
+  async getAccount360(scope: CompanyScope, id: string, permissions: Set<string>): Promise<CrmAccount360View> {
+    const account = await this.accountInScope(this.prisma, scope, id);
+    const canReadContacts = permissions.has(CRM_PERMISSIONS.CONTACT_READ);
+    const canReadOpportunities = permissions.has(CRM_PERMISSIONS.OPPORTUNITY_READ);
+    const canReadActions = permissions.has(CRM_PERMISSIONS.NEXT_ACTION_READ);
+    const canReadTimeline = permissions.has(CRM_PERMISSIONS.ACTIVITY_READ);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const [contacts, opportunities, nextActions, relatedContacts, relatedOpportunities, relatedLeads] = await Promise.all([
+        canReadContacts
+          ? tx.crmContact.findMany({ where: { ...scope, accountId: id, archivedAt: null }, orderBy: [{ isPrimary: "desc" }, { fullName: "asc" }, { id: "asc" }] })
+          : Promise.resolve([]),
+        canReadOpportunities
+          ? tx.crmOpportunity.findMany({ where: { ...scope, accountId: id }, include: { stage: true, account: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] })
+          : Promise.resolve([]),
+        canReadActions
+          ? tx.crmNextAction.findMany({ where: { ...scope, accountId: id }, include: { assignee: { select: { fullName: true } } }, orderBy: [{ status: "asc" }, { dueAt: "asc" }, { id: "asc" }] })
+          : Promise.resolve([]),
+        canReadTimeline ? tx.crmContact.findMany({ where: { ...scope, accountId: id }, select: { id: true } }) : Promise.resolve([]),
+        canReadTimeline ? tx.crmOpportunity.findMany({ where: { ...scope, accountId: id }, select: { id: true } }) : Promise.resolve([]),
+        canReadTimeline ? tx.crmLead.findMany({ where: { ...scope, accountId: id }, select: { id: true } }) : Promise.resolve([]),
+      ]);
+      const timeline = canReadTimeline
+        ? await tx.crmActivity.findMany({
+          where: {
+            ...scope,
+            OR: [
+              { relatedType: "Account", relatedId: id },
+              { relatedType: "Contact", relatedId: { in: relatedContacts.map((item) => item.id) } },
+              { relatedType: "Opportunity", relatedId: { in: relatedOpportunities.map((item) => item.id) } },
+              { relatedType: "Lead", relatedId: { in: relatedLeads.map((item) => item.id) } },
+            ],
+          },
+          orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+          take: 200,
+        })
+        : [];
+      return { contacts, opportunities, nextActions, timeline };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+
+    return {
+      account: toAccountView(account),
+      contacts: { available: canReadContacts, items: result.contacts.map(toContactView) },
+      opportunities: { available: canReadOpportunities, items: result.opportunities.map(toOpportunityView) },
+      nextActions: { available: canReadActions, items: result.nextActions.map(toNextActionView) },
+      timeline: { available: canReadTimeline, items: result.timeline.map(toActivityView) },
+    };
+  }
+
+  async getAccountTimeline(scope: CompanyScope, id: string): Promise<CrmActivityView[]> {
+    const activities = await this.prisma.$transaction(async (tx) => {
+      await this.accountInScope(tx, scope, id);
+      const [contacts, opportunities, leads] = await Promise.all([
+        tx.crmContact.findMany({ where: { ...scope, accountId: id }, select: { id: true } }),
+        tx.crmOpportunity.findMany({ where: { ...scope, accountId: id }, select: { id: true } }),
+        tx.crmLead.findMany({ where: { ...scope, accountId: id }, select: { id: true } }),
+      ]);
+      return tx.crmActivity.findMany({
+        where: {
+          ...scope,
+          OR: [
+            { relatedType: "Account", relatedId: id },
+            { relatedType: "Contact", relatedId: { in: contacts.map((item) => item.id) } },
+            { relatedType: "Opportunity", relatedId: { in: opportunities.map((item) => item.id) } },
+            { relatedType: "Lead", relatedId: { in: leads.map((item) => item.id) } },
+          ],
+        },
+        orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+        take: 200,
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+    return activities.map(toActivityView);
+  }
+
   async createAccount(scope: CompanyScope, input: CreateAccountDto, actorUserId: string): Promise<CrmAccountView> {
     assertFields(input, ACCOUNT_FIELDS);
     const data = accountInput(input, true);
@@ -186,6 +275,10 @@ export class CrmService {
       const current = await this.lockAccount(tx, scope, id);
       checkVersion(current.version, version);
       if (restore ? !current.archivedAt : !!current.archivedAt) throw new ConflictException(restore ? "Account is already active" : "Account is already archived");
+      if (!restore) {
+        const openActions = await tx.crmNextAction.count({ where: { ...scope, accountId: id, status: "OPEN" } });
+        if (openActions > 0) throw new ConflictException("An account with open next actions cannot be archived");
+      }
       const updated = await tx.crmAccount.update({ where: { id }, data: { archivedAt: restore ? null : new Date(), version: { increment: 1 } } });
       await this.directoryAudit(tx, scope, actorUserId, "Account", id, restore ? "restored" : "archived", updated.version);
       return updated;
@@ -695,6 +788,116 @@ export class CrmService {
   }
 
   // -------------------------------------------------------------------------
+  // Prochaines actions (mutables, avec historique append-only)
+  // -------------------------------------------------------------------------
+
+  async listAssignees(scope: CompanyScope): Promise<CrmAssigneeView[]> {
+    const rows = await this.prisma.$queryRaw<Array<{ id: string; fullName: string }>>`
+      SELECT u."id", u."fullName"
+      FROM "users" u
+      JOIN "company_memberships" cm ON cm."userId" = u."id"
+      WHERE u."organizationId" = ${scope.organizationId}
+        AND u."isActive" = true
+        AND cm."companyId" = ${scope.companyId}
+      ORDER BY u."fullName" ASC, u."id" ASC
+    `;
+    return rows;
+  }
+
+  async listNextActions(scope: CompanyScope, query: NextActionQueryDto): Promise<CrmNextActionView[]> {
+    assertFields(query, ["companyId", "accountId", "filter"]);
+    const filter = nextActionFilter(query.filter);
+    const where: Prisma.CrmNextActionWhereInput = { ...scope };
+    if (query.accountId) {
+      const accountId = requiredString(query.accountId, "accountId");
+      await this.accountInScope(this.prisma, scope, accountId);
+      where.accountId = accountId;
+    }
+    Object.assign(where, nextActionDateWindow(filter, new Date()));
+    const actions = await this.prisma.crmNextAction.findMany({
+      where,
+      include: { assignee: { select: { fullName: true } } },
+      orderBy: [{ status: "asc" }, { dueAt: "asc" }, { priority: "desc" }, { id: "asc" }],
+      take: 500,
+    });
+    return actions.map(toNextActionView);
+  }
+
+  async createNextAction(scope: CompanyScope, input: CreateNextActionDto, actorUserId: string): Promise<CrmNextActionView> {
+    assertFields(input, NEXT_ACTION_FIELDS);
+    const accountId = requiredString(input.accountId, "accountId");
+    const title = requiredString(input.title, "title", 200);
+    const details = optionalString(input.details, "details", 4000);
+    const dueAt = nextActionDueAt(input.dueAt);
+    const priority = nextActionPriority(input.priority);
+    const assigneeUserId = requiredString(input.assigneeUserId, "assigneeUserId");
+    const action = await this.prisma.$transaction(async (tx) => {
+      await this.lockActiveAccount(tx, scope, accountId);
+      await this.activeAssignee(tx, scope, assigneeUserId);
+      const created = await tx.crmNextAction.create({
+        data: { ...scope, accountId, title, details, dueAt, priority, assigneeUserId, createdByUserId: actorUserId, updatedByUserId: actorUserId },
+        include: { assignee: { select: { fullName: true } } },
+      });
+      await this.nextActionEvent(tx, scope, actorUserId, created, "created");
+      return created;
+    });
+    return toNextActionView(action);
+  }
+
+  async updateNextAction(scope: CompanyScope, id: string, input: UpdateNextActionDto, actorUserId: string): Promise<CrmNextActionView> {
+    assertFields(input, NEXT_ACTION_UPDATE_FIELDS);
+    const version = expectedVersion(input.expectedVersion);
+    const data: { title?: string; details?: string | null; dueAt?: Date;
+      priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; assigneeUserId?: string } = {};
+    if (input.title !== undefined) data.title = requiredString(input.title, "title", 200);
+    if (input.details !== undefined) data.details = optionalString(input.details, "details", 4000);
+    if (input.dueAt !== undefined) data.dueAt = nextActionDueAt(input.dueAt);
+    if (input.priority !== undefined) data.priority = nextActionPriority(input.priority);
+    if (input.assigneeUserId !== undefined) data.assigneeUserId = requiredString(input.assigneeUserId, "assigneeUserId");
+    const fields = Object.keys(data);
+    if (!fields.length) throw new BadRequestException("Provide at least one next action field to update");
+    const action = await this.prisma.$transaction(async (tx) => {
+      const current = await this.lockNextAction(tx, scope, id);
+      checkVersion(current.version, version);
+      if (current.status !== "OPEN") throw new ConflictException("Only an open next action can be updated");
+      if (typeof data.assigneeUserId === "string") await this.activeAssignee(tx, scope, data.assigneeUserId);
+      const updated = await tx.crmNextAction.update({
+        where: { id },
+        data: { ...data, updatedByUserId: actorUserId, version: { increment: 1 } },
+        include: { assignee: { select: { fullName: true } } },
+      });
+      await this.nextActionEvent(tx, scope, actorUserId, updated, "updated", fields);
+      return updated;
+    });
+    return toNextActionView(action);
+  }
+
+  async transitionNextAction(scope: CompanyScope, id: string, input: VersionDto, actorUserId: string,
+    transition: "completed" | "cancelled"): Promise<CrmNextActionView> {
+    assertFields(input, ["companyId", "expectedVersion"]);
+    const version = expectedVersion(input.expectedVersion);
+    const action = await this.prisma.$transaction(async (tx) => {
+      const current = await this.lockNextAction(tx, scope, id);
+      checkVersion(current.version, version);
+      if (current.status !== "OPEN") {
+        if (transition === "completed") throw new ConflictException("Only an open next action can be completed");
+        throw new ConflictException("Only an open next action can be cancelled");
+      }
+      const now = new Date();
+      const updated = await tx.crmNextAction.update({
+        where: { id },
+        data: transition === "completed"
+          ? { status: "COMPLETED", completedAt: now, updatedByUserId: actorUserId, version: { increment: 1 } }
+          : { status: "CANCELLED", cancelledAt: now, updatedByUserId: actorUserId, version: { increment: 1 } },
+        include: { assignee: { select: { fullName: true } } },
+      });
+      await this.nextActionEvent(tx, scope, actorUserId, updated, transition);
+      return updated;
+    });
+    return toNextActionView(action);
+  }
+
+  // -------------------------------------------------------------------------
   // Tableau de bord commercial — agregats calcules sur des donnees reelles
   // -------------------------------------------------------------------------
 
@@ -868,6 +1071,73 @@ export class CrmService {
       metadata: { companyId: scope.companyId, version, fields } } });
   }
 
+  private async activeAssignee(tx: Prisma.TransactionClient, scope: CompanyScope, userId: string) {
+    const rows = await tx.$queryRaw<Array<{ id: string; fullName: string }>>`
+      SELECT u."id", u."fullName"
+      FROM "users" u
+      JOIN "company_memberships" cm ON cm."userId" = u."id"
+      WHERE u."id" = ${userId}
+        AND u."organizationId" = ${scope.organizationId}
+        AND u."isActive" = true
+        AND cm."companyId" = ${scope.companyId}
+      FOR SHARE OF u, cm
+    `;
+    if (!rows.length) throw new BadRequestException("The assignee must be an active member of this company");
+    return rows[0]!;
+  }
+
+  private async lockNextAction(tx: Prisma.TransactionClient, scope: CompanyScope, id: string) {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "crm_next_actions"
+      WHERE "id" = ${id} AND "organizationId" = ${scope.organizationId} AND "companyId" = ${scope.companyId}
+      FOR UPDATE
+    `;
+    if (!rows.length) throw new NotFoundException("Next action not found");
+    return tx.crmNextAction.findUniqueOrThrow({ where: { id } });
+  }
+
+  private async nextActionEvent(tx: Prisma.TransactionClient, scope: CompanyScope, actorUserId: string,
+    action: { id: string; accountId: string; title: string; dueAt: Date; priority: string; status: string; assigneeUserId: string; version: number },
+    event: "created" | "updated" | "completed" | "cancelled", fields: string[] = []) {
+    const activityType = {
+      created: "NEXT_ACTION_CREATED",
+      updated: "NEXT_ACTION_UPDATED",
+      completed: "NEXT_ACTION_COMPLETED",
+      cancelled: "NEXT_ACTION_CANCELLED",
+    } as const;
+    const labels = { created: "créée", updated: "modifiée", completed: "terminée", cancelled: "annulée" };
+    await tx.crmActivity.create({
+      data: {
+        ...scope,
+        actorUserId,
+        type: activityType[event],
+        relatedType: "Account",
+        relatedId: action.accountId,
+        subject: `Prochaine action ${labels[event]}`,
+        body: `${action.title} — ${action.dueAt.toISOString()}`,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        organizationId: scope.organizationId,
+        actorUserId,
+        action: `crm.next_action.${event}`,
+        resourceType: "CrmNextAction",
+        resourceId: action.id,
+        metadata: {
+          companyId: scope.companyId,
+          accountId: action.accountId,
+          assigneeUserId: action.assigneeUserId,
+          priority: action.priority,
+          status: action.status,
+          dueAt: action.dueAt.toISOString(),
+          version: action.version,
+          fields,
+        },
+      },
+    });
+  }
+
   private async lockLead(tx: Prisma.TransactionClient, scope: CompanyScope, leadId: string) {
     const rows = await tx.$queryRaw<Array<{ id: string }>>`
       SELECT "id" FROM "crm_leads"
@@ -1009,6 +1279,22 @@ function canonicalRelatedType(value: string): (typeof RELATED_TYPES)[number] {
 
 function checkVersion(current: number, expected: number): void {
   if (current !== expected) throw new ConflictException("This record was changed by another user. Reload it before saving.");
+}
+
+function utcDayStart(value: Date): Date {
+  const result = new Date(value);
+  result.setUTCHours(0, 0, 0, 0);
+  return result;
+}
+
+export function nextActionDateWindow(filter: "all" | "overdue" | "today" | "next7days", now: Date): Prisma.CrmNextActionWhereInput {
+  if (filter === "all") return {};
+  const today = utcDayStart(now);
+  const tomorrow = new Date(today.getTime() + 86_400_000);
+  const afterSevenDays = new Date(today.getTime() + 7 * 86_400_000);
+  if (filter === "overdue") return { status: "OPEN", dueAt: { lt: now } };
+  if (filter === "today") return { status: "OPEN", dueAt: { gte: today, lt: tomorrow } };
+  return { status: "OPEN", dueAt: { gte: today, lt: afterSevenDays } };
 }
 
 function archiveWhere(value?: string): { archivedAt?: null | { not: null } } {
@@ -1218,5 +1504,46 @@ function toActivityView(activity: {
     relatedId: activity.relatedId,
     actorUserId: activity.actorUserId,
     occurredAt: activity.occurredAt.toISOString(),
+  };
+}
+
+function toNextActionView(action: {
+  id: string;
+  companyId: string;
+  accountId: string;
+  title: string;
+  details: string | null;
+  dueAt: Date;
+  priority: string;
+  status: string;
+  assigneeUserId: string;
+  assignee: { fullName: string };
+  createdByUserId: string;
+  updatedByUserId: string;
+  completedAt: Date | null;
+  cancelledAt: Date | null;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): CrmNextActionView {
+  return {
+    id: action.id,
+    companyId: action.companyId,
+    accountId: action.accountId,
+    title: action.title,
+    details: action.details,
+    dueAt: action.dueAt.toISOString(),
+    priority: action.priority as CrmNextActionView["priority"],
+    status: action.status as CrmNextActionView["status"],
+    assigneeUserId: action.assigneeUserId,
+    assigneeName: action.assignee.fullName,
+    createdByUserId: action.createdByUserId,
+    updatedByUserId: action.updatedByUserId,
+    completedAt: action.completedAt?.toISOString() ?? null,
+    cancelledAt: action.cancelledAt?.toISOString() ?? null,
+    overdue: action.status === "OPEN" && action.dueAt.getTime() < Date.now(),
+    version: action.version,
+    createdAt: action.createdAt.toISOString(),
+    updatedAt: action.updatedAt.toISOString(),
   };
 }

@@ -14,14 +14,17 @@ import type {
   CreateContactDto,
   CreateLeadDto,
   CreateOpportunityDto,
+  CreateNextActionDto,
   CreatePipelineStageDto,
   MoveOpportunityStageDto,
   UpdateLeadStatusDto,
   UpdateAccountDto,
   UpdateContactDto,
+  UpdateNextActionDto,
   VersionDto,
   DirectoryQueryDto,
   ActivityQueryDto,
+  NextActionQueryDto,
 } from "./crm.dto.js";
 
 /**
@@ -72,6 +75,20 @@ export class CrmController {
   async getAccount(@Req() request: Request, @Param("id") id: string, @Query("companyId") companyId?: string) {
     const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
     return this.crm.getAccount(scope, id);
+  }
+
+  @Get("accounts/:id/360")
+  @RequirePermission(CRM_PERMISSIONS.ACCOUNT_READ)
+  async getAccount360(@Req() request: Request, @Param("id") id: string, @Query("companyId") companyId?: string) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+    return this.crm.getAccount360(scope, id, request.axoraPermissions ?? new Set());
+  }
+
+  @Get("accounts/:id/timeline")
+  @RequirePermission(CRM_PERMISSIONS.ACTIVITY_READ)
+  async getAccountTimeline(@Req() request: Request, @Param("id") id: string, @Query("companyId") companyId?: string) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+    return this.crm.getAccountTimeline(scope, id);
   }
 
   @Patch("accounts/:id")
@@ -257,6 +274,54 @@ export class CrmController {
     const user = request.axoraUser!;
     const scope = await this.companyScope.resolve(user, body.companyId);
     return this.crm.createActivity(scope, body, user.id);
+  }
+
+  // --- Prochaines actions ---------------------------------------------------
+
+  @Get("assignees")
+  @RequirePermission(CRM_PERMISSIONS.NEXT_ACTION_MANAGE)
+  async listAssignees(@Req() request: Request, @Query("companyId") companyId?: string) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+    return this.crm.listAssignees(scope);
+  }
+
+  @Get("next-actions")
+  @RequirePermission(CRM_PERMISSIONS.NEXT_ACTION_READ)
+  async listNextActions(@Req() request: Request, @Query() query: NextActionQueryDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, query.companyId);
+    return this.crm.listNextActions(scope, query);
+  }
+
+  @Post("next-actions")
+  @RequirePermission(CRM_PERMISSIONS.NEXT_ACTION_MANAGE)
+  async createNextAction(@Req() request: Request, @Body() body: CreateNextActionDto) {
+    const user = request.axoraUser!;
+    const scope = await this.companyScope.resolve(user, body.companyId);
+    return this.crm.createNextAction(scope, body, user.id);
+  }
+
+  @Patch("next-actions/:id")
+  @RequirePermission(CRM_PERMISSIONS.NEXT_ACTION_MANAGE)
+  async updateNextAction(@Req() request: Request, @Param("id") id: string, @Body() body: UpdateNextActionDto) {
+    const user = request.axoraUser!;
+    const scope = await this.companyScope.resolve(user, body.companyId);
+    return this.crm.updateNextAction(scope, id, body, user.id);
+  }
+
+  @Post("next-actions/:id/complete")
+  @RequirePermission(CRM_PERMISSIONS.NEXT_ACTION_MANAGE)
+  async completeNextAction(@Req() request: Request, @Param("id") id: string, @Body() body: VersionDto) {
+    const user = request.axoraUser!;
+    const scope = await this.companyScope.resolve(user, body.companyId);
+    return this.crm.transitionNextAction(scope, id, body, user.id, "completed");
+  }
+
+  @Post("next-actions/:id/cancel")
+  @RequirePermission(CRM_PERMISSIONS.NEXT_ACTION_MANAGE)
+  async cancelNextAction(@Req() request: Request, @Param("id") id: string, @Body() body: VersionDto) {
+    const user = request.axoraUser!;
+    const scope = await this.companyScope.resolve(user, body.companyId);
+    return this.crm.transitionNextAction(scope, id, body, user.id, "cancelled");
   }
 
   // --- Tableau de bord commercial ------------------------------------------

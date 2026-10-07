@@ -37,6 +37,7 @@ export type EstimationStudySummaryView = EstimationStudyView;
 
 export interface DqeLineView {
   id: string;
+  lotId?: string | null;
   position: number;
   reference: string | null;
   designation: string;
@@ -48,6 +49,15 @@ export interface DqeLineView {
   unitPrice: string;
   /** Decimal exact calculé côté serveur. */
   lineTotal: string;
+}
+
+export interface DqeLotView {
+  id: string;
+  position: number;
+  code: string;
+  designation: string;
+  lineCount: number;
+  subtotal: string;
 }
 
 export interface DqeSourceView {
@@ -114,6 +124,7 @@ export interface DqeView {
   total?: string;
   categoryTotals?: Record<DqeCostCategory, string>;
   variants?: DqeVariantView[];
+  lots?: DqeLotView[];
   lines: DqeLineView[];
   source: DqeSourceView | null;
 }
@@ -132,6 +143,7 @@ export interface EstimationRequirementUpdateInput extends EstimationDraftVersion
   sourceReference?: string | null;
 }
 export interface DqeLineUpdateInput extends EstimationDraftVersionInput {
+  lotId?: string | null;
   position?: number;
   reference?: string | null;
   designation?: string;

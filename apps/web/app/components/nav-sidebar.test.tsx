@@ -1,15 +1,27 @@
 import React from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NAV_GROUPS } from "../lib/navigation";
 import { NavSidebar } from "./nav-sidebar";
 
-beforeEach(() => localStorage.clear());
+const storedValues = new Map<string, string>();
+const storage = {
+  get length() { return storedValues.size; },
+  clear: () => storedValues.clear(),
+  getItem: (key: string) => storedValues.get(key) ?? null,
+  key: (index: number) => Array.from(storedValues.keys())[index] ?? null,
+  removeItem: (key: string) => { storedValues.delete(key); },
+  setItem: (key: string, value: string) => { storedValues.set(key, value); },
+} satisfies Storage;
+
+beforeAll(() => Object.defineProperty(window, "localStorage", { configurable: true, value: storage }));
+afterAll(() => { delete (window as { localStorage?: Storage }).localStorage; });
+beforeEach(() => window.localStorage.clear());
 afterEach(cleanup);
 
 describe("NavSidebar", () => {
   it("ouvre automatiquement le groupe de la page active malgré une préférence repliée", () => {
-    localStorage.setItem("axora.nav.group.chantiers", "false");
+    window.localStorage.setItem("axora.nav.group.chantiers", "false");
 
     render(<NavSidebar groups={NAV_GROUPS} pathname="/projects/forecasts" onNavigate={() => undefined} />);
 
@@ -21,10 +33,10 @@ describe("NavSidebar", () => {
   it("mémorise le dépli d’un groupe sous une clé axora.nav.*", () => {
     render(<NavSidebar groups={NAV_GROUPS} pathname="/" onNavigate={() => undefined} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Commercial" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gestion commerciale" }));
 
-    expect(localStorage.getItem("axora.nav.group.commercial")).toBe("true");
-    expect(screen.getByRole("button", { name: "Commercial" }).getAttribute("aria-expanded")).toBe("true");
+    expect(window.localStorage.getItem("axora.nav.group.gestion-commerciale")).toBe("true");
+    expect(screen.getByRole("button", { name: "Gestion commerciale" }).getAttribute("aria-expanded")).toBe("true");
   });
 
   it("mémorise les favoris et les rend dans un groupe Favoris en tête", () => {
@@ -34,7 +46,7 @@ describe("NavSidebar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Chantiers" }));
     fireEvent.click(screen.getByRole("button", { name: "Ajouter Projets aux favoris" }));
 
-    expect(localStorage.getItem("axora.nav.favorites")).toBe('["/projects"]');
+    expect(window.localStorage.getItem("axora.nav.favorites")).toBe('["/projects"]');
     const favoritesTrigger = screen.getByRole("button", { name: "Favoris" });
     expect(favoritesTrigger.getAttribute("aria-expanded")).toBe("true");
     const favorites = document.getElementById(favoritesTrigger.getAttribute("aria-controls") ?? "");
@@ -43,14 +55,14 @@ describe("NavSidebar", () => {
   });
 
   it("restaure les groupes dépliés et les favoris d’une session précédente", () => {
-    localStorage.setItem("axora.nav.group.commercial", "true");
-    localStorage.setItem("axora.nav.favorites", '["/estimation"]');
+    window.localStorage.setItem("axora.nav.group.gestion-commerciale", "true");
+    window.localStorage.setItem("axora.nav.favorites", '["/estimation"]');
 
     render(<NavSidebar groups={NAV_GROUPS} pathname="/" onNavigate={() => undefined} />);
 
-    expect(screen.getByRole("button", { name: "Commercial" }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("button", { name: "Gestion commerciale" }).getAttribute("aria-expanded")).toBe("true");
     const favoritesTrigger = screen.getByRole("button", { name: "Favoris" });
     const favorites = document.getElementById(favoritesTrigger.getAttribute("aria-controls") ?? "");
-    expect(within(favorites as HTMLElement).getByRole("link", { name: "Études & DQE" })).toBeTruthy();
+    expect(within(favorites as HTMLElement).getByRole("link", { name: "Études, lots & DQE" })).toBeTruthy();
   });
 });

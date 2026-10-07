@@ -205,6 +205,7 @@ export function DataTable<T extends { id: string }>({
   onRowClick,
   selectedId,
   caption,
+  rowActionLabel,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -212,6 +213,7 @@ export function DataTable<T extends { id: string }>({
   onRowClick?: (row: T) => void;
   selectedId?: string | null;
   caption?: string;
+  rowActionLabel?: (row: T) => string;
 }): React.ReactElement {
   if (rows.length === 0) return <>{empty}</>;
   return (
@@ -241,21 +243,15 @@ export function DataTable<T extends { id: string }>({
                     }
                   : undefined
               }
-              onKeyDown={
-                onRowClick
-                  ? (event) => {
-                      if ((event.key === "Enter" || event.key === " ") && !fromControl(event.target, event.currentTarget)) {
-                        event.preventDefault();
-                        onRowClick(row);
-                      }
-                    }
-                  : undefined
-              }
-              tabIndex={onRowClick ? 0 : undefined}
             >
-              {columns.map((column) => (
+              {columns.map((column, columnIndex) => (
                 <td key={column.key} data-label={column.header} style={{ textAlign: column.align ?? "left" }}>
                   {column.render(row)}
+                  {columnIndex === 0 && onRowClick && (
+                    <button type="button" className="row-action-trigger sr-only" onClick={() => onRowClick(row)}>
+                      {rowActionLabel?.(row) ?? `Ouvrir la ligne ${row.id}`}
+                    </button>
+                  )}
                 </td>
               ))}
             </tr>
@@ -437,20 +433,39 @@ export function Tabs<T extends string>({
   active,
   onChange,
 }: {
-  tabs: Array<{ id: T; label: string; count?: number }>;
+  tabs: Array<{ id: T; label: string; count?: number; panelId?: string }>;
   active: T;
   onChange: (id: T) => void;
 }): React.ReactElement {
+  const tabsId = useId();
+  const tabRefs = React.useRef(new Map<T, HTMLButtonElement>());
+  React.useEffect(() => {
+    for (const tab of tabs) {
+      if (!tab.panelId) continue;
+      const panel = document.getElementById(tab.panelId);
+      if (panel) panel.setAttribute("aria-labelledby", `${tabsId}-${tab.id}`);
+    }
+  }, [tabs, tabsId]);
+  React.useEffect(() => {
+    const selectedTab = tabRefs.current.get(active);
+    selectedTab?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [active]);
   return (
     <div className="tabs" role="tablist" aria-orientation="horizontal">
       {tabs.map((tab) => (
         <button
           key={tab.id}
+          id={`${tabsId}-${tab.id}`}
           role="tab"
           type="button"
           aria-selected={tab.id === active}
+          aria-controls={tab.panelId}
           tabIndex={tab.id === active ? 0 : -1}
           className={tab.id === active ? "active" : ""}
+          ref={(node) => {
+            if (node) tabRefs.current.set(tab.id, node);
+            else tabRefs.current.delete(tab.id);
+          }}
           onClick={() => onChange(tab.id)}
           onKeyDown={(event) => {
             if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;

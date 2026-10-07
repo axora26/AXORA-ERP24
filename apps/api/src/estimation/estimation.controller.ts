@@ -10,6 +10,7 @@ import { EstimationService } from "./estimation.service.js";
 import type {
   CreateDqeDto,
   CreateDqeLineDto,
+  CreateDqeLotDto,
   CreateStudyDto,
   CreateStudyRequirementDto,
   DraftVersionDto,
@@ -130,6 +131,13 @@ export class EstimationController {
   ) {
     const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
     return this.estimation.addDqeLine(scope, id, body, request.axoraUser!.id);
+  }
+
+  @Post("dqes/:id/lots")
+  @RequirePermission(ESTIMATION_PERMISSIONS.DQE_MANAGE)
+  async createDqeLot(@Req() request: Request, @Param("id") id: string, @Body() body: CreateDqeLotDto) {
+    const scope = await this.companyScope.resolve(request.axoraUser!, body?.companyId);
+    return this.estimation.createDqeLot(scope, id, body, request.axoraUser!.id);
   }
 
   @Patch("dqes/:id/lines/:lineId")

@@ -1,5 +1,7 @@
-import type { CrmAccountInput, CrmAccountUpdateInput, CrmAccountView, CrmContactInput, CrmContactUpdateInput, CrmContactView, CrmPage, CrmActivityView, CrmRelatedType, CrmLeadStatus, CrmOpportunityView } from "@axora24/contracts";
+import type { CrmAccountInput, CrmAccountUpdateInput, CrmAccountView, CrmContactInput, CrmContactUpdateInput, CrmContactView, CrmPage, CrmActivityView, CrmRelatedType, CrmLeadStatus, CrmOpportunityView, CrmAccount360View, CrmAssigneeView, CrmNextActionInput, CrmNextActionUpdateInput, CrmNextActionView } from "@axora24/contracts";
 import { api } from "../api";
+
+export type { CrmAccount360View, CrmAssigneeView, CrmNextActionInput, CrmNextActionPriority, CrmNextActionStatus, CrmNextActionUpdateInput, CrmNextActionView } from "@axora24/contracts";
 
 export const crmDirectoryApi = {
   accounts: () => api.get<CrmAccountView[]>("/crm/accounts"),
@@ -16,4 +18,12 @@ export const crmDirectoryApi = {
   createActivity: (input: { type: "NOTE" | "CALL" | "MEETING" | "EMAIL" | "TASK"; subject: string; body?: string; relatedType: CrmRelatedType; relatedId: string }) => api.post<CrmActivityView>("/crm/activities", input),
   leadStatus: (id: string, status: CrmLeadStatus) => api.patch(`/crm/leads/${id}/status`, { status }),
   convert: (id: string, input: { opportunityName?: string; amount: string; currency: string; stageId?: string; expectedCloseDate?: string; accountId?: string; contactId?: string }) => api.post<CrmOpportunityView>(`/crm/leads/${id}/convert`, input),
+  account360: (id: string) => api.get<CrmAccount360View>(`/crm/accounts/${id}/360`),
+  accountTimeline: (id: string) => api.get<CrmActivityView[]>(`/crm/accounts/${id}/timeline`),
+  nextActions: (accountId: string) => api.get<CrmNextActionView[]>(`/crm/next-actions?accountId=${encodeURIComponent(accountId)}`),
+  assignees: () => api.get<CrmAssigneeView[]>("/crm/assignees"),
+  createNextAction: (input: CrmNextActionInput) => api.post<CrmNextActionView>("/crm/next-actions", input),
+  updateNextAction: (id: string, input: CrmNextActionUpdateInput) => api.patch<CrmNextActionView>(`/crm/next-actions/${id}`, input),
+  completeNextAction: (id: string, expectedVersion: number) => api.post<CrmNextActionView>(`/crm/next-actions/${id}/complete`, { expectedVersion }),
+  cancelNextAction: (id: string, expectedVersion: number) => api.post<CrmNextActionView>(`/crm/next-actions/${id}/cancel`, { expectedVersion }),
 };

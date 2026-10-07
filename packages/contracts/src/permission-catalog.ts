@@ -49,6 +49,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   lead: "les prospects",
   opportunity: "les opportunités",
   activity: "les activités",
+  nextaction: "les prochaines actions",
   pipeline: "le pipeline",
   study: "les études",
   dqe: "les DQE",

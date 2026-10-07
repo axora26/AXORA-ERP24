@@ -2,7 +2,14 @@
 
 import React from "react";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { ContractSummaryView, DqeSummaryView, QuoteSummaryView, QuoteView } from "@axora24/contracts";
+import {
+  ESTIMATION_PERMISSIONS,
+  SALES_PERMISSIONS,
+  type ContractSummaryView,
+  type DqeSummaryView,
+  type QuoteSummaryView,
+  type QuoteView,
+} from "@axora24/contracts";
 import {
   Ban,
   CheckCircle2,
@@ -16,6 +23,7 @@ import {
 } from "lucide-react";
 import { ApiError, estimationApi, salesApi } from "../lib/api";
 import { formatMoney, formatQuantity } from "../lib/format";
+import { useSession } from "../lib/session";
 import { BusinessPrintLink } from "./business-print-link";
 
 interface SalesData {
@@ -46,6 +54,12 @@ const CONTRACT_STATUS_LABEL: Record<string, string> = {
  * immuables figées au moment de la création côté serveur.
  */
 export function SalesWorkspace(): React.ReactElement {
+  const { can } = useSession();
+  const canReadDqes = can(ESTIMATION_PERMISSIONS.DQE_READ);
+  const canReadQuotes = can(SALES_PERMISSIONS.QUOTE_READ);
+  const canManageQuotes = can(SALES_PERMISSIONS.QUOTE_MANAGE);
+  const canReadContracts = can(SALES_PERMISSIONS.CONTRACT_READ);
+  const canManageContracts = can(SALES_PERMISSIONS.CONTRACT_MANAGE);
   const [data, setData] = useState<SalesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -59,9 +73,9 @@ export function SalesWorkspace(): React.ReactElement {
   const load = useCallback(async (): Promise<void> => {
     try {
       const [dqes, quotes, contracts] = await Promise.all([
-        estimationApi.dqes(),
-        salesApi.quotes(),
-        salesApi.contracts(),
+        canReadDqes ? estimationApi.dqes() : Promise.resolve([]),
+        canReadQuotes ? salesApi.quotes() : Promise.resolve([]),
+        canReadContracts ? salesApi.contracts() : Promise.resolve([]),
       ]);
       setData({
         finalizedDqes: dqes.filter((dqe) => dqe.status === "FINALIZED"),
@@ -74,7 +88,7 @@ export function SalesWorkspace(): React.ReactElement {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canReadContracts, canReadDqes, canReadQuotes]);
 
   useEffect(() => {
     void load();
@@ -222,30 +236,38 @@ export function SalesWorkspace(): React.ReactElement {
       )}
 
       <section className="metrics-grid" aria-label="Indicateurs commerciaux">
-        <Metric
-          icon={<Receipt size={20} aria-hidden="true" />}
-          tone="blue"
-          label="Devis"
-          value={String(data.quotes.length)}
-          detail={`${data.quotes.filter((quote) => quote.status === "ACCEPTED").length} accepté(s)`}
-        />
-        <Metric
-          icon={<FileSignature size={20} aria-hidden="true" />}
-          tone="green"
-          label="Contrats"
-          value={String(data.contracts.length)}
-          detail={`${data.contracts.filter((contract) => contract.status === "ACTIVE").length} actif(s)`}
-        />
-        <Metric
-          icon={<CheckCircle2 size={20} aria-hidden="true" />}
-          tone="violet"
-          label="DQE finalisés disponibles"
-          value={String(data.finalizedDqes.length)}
-          detail="Sources éligibles à un devis"
-        />
+        {canReadQuotes && (
+          <Metric
+            icon={<Receipt size={20} aria-hidden="true" />}
+            tone="blue"
+            label="Devis"
+            value={String(data.quotes.length)}
+            detail={`${data.quotes.filter((quote) => quote.status === "ACCEPTED").length} accepté(s)`}
+          />
+        )}
+        {canReadContracts && (
+          <Metric
+            icon={<FileSignature size={20} aria-hidden="true" />}
+            tone="green"
+            label="Contrats"
+            value={String(data.contracts.length)}
+            detail={`${data.contracts.filter((contract) => contract.status === "ACTIVE").length} actif(s)`}
+          />
+        )}
+        {canReadDqes && canManageQuotes && (
+          <Metric
+            icon={<CheckCircle2 size={20} aria-hidden="true" />}
+            tone="violet"
+            label="DQE finalisés disponibles"
+            value={String(data.finalizedDqes.length)}
+            detail="Sources éligibles à un devis"
+          />
+        )}
       </section>
 
+      {(canReadQuotes || (canReadDqes && canManageQuotes)) && (
       <section className="estimation-grid">
+        {canReadDqes && canManageQuotes && (
         <article className="panel">
           <div className="panel-head">
             <div>
@@ -305,7 +327,9 @@ export function SalesWorkspace(): React.ReactElement {
             </button>
           </form>
         </article>
+        )}
 
+        {canReadQuotes && (
         <article className="panel">
           <div className="panel-head">
             <div>
@@ -328,7 +352,11 @@ export function SalesWorkspace(): React.ReactElement {
                     <span className={`status-chip status-${quote.status.toLowerCase()}`}>
                       {QUOTE_STATUS_LABEL[quote.status] ?? quote.status}
                     </span>
-                    <small>{hasContractForQuote(quote.id) ? "Contrat créé" : "Sans contrat"}</small>
+                    <small>
+                      {canReadContracts
+                        ? hasContractForQuote(quote.id) ? "Contrat créé" : "Sans contrat"
+                        : "Statut contrat non disponible"}
+                    </small>
                     <button
                       className="link-button"
                       type="button"
@@ -343,9 +371,11 @@ export function SalesWorkspace(): React.ReactElement {
             </ul>
           )}
         </article>
+        )}
       </section>
+      )}
 
-      {selectedQuote && (
+      {canReadQuotes && selectedQuote && (
         <section className="panel study-detail-panel">
           <div className="panel-head">
             <div>
@@ -394,7 +424,7 @@ export function SalesWorkspace(): React.ReactElement {
             </div>
           )}
 
-          {selectedQuote.status === "DRAFT" && (
+          {canManageQuotes && selectedQuote.status === "DRAFT" && (
             <div className="study-actions">
               <p>La soumission transmet le devis pour décision.</p>
               <button className="secondary-button" type="button" disabled={saving} onClick={() => void submitQuote()}>
@@ -404,7 +434,7 @@ export function SalesWorkspace(): React.ReactElement {
             </div>
           )}
 
-          {selectedQuote.status === "SUBMITTED" && (
+          {canManageQuotes && selectedQuote.status === "SUBMITTED" && (
             <div className="study-actions dqe-finalize-actions">
               <button className="secondary-button" type="button" disabled={saving} onClick={() => void acceptQuote()}>
                 <CheckCircle2 size={15} aria-hidden="true" />
@@ -429,7 +459,7 @@ export function SalesWorkspace(): React.ReactElement {
             </div>
           )}
 
-          {selectedQuote.status === "ACCEPTED" && !hasContractForQuote(selectedQuote.id) && (
+          {canReadContracts && canManageContracts && selectedQuote.status === "ACCEPTED" && !hasContractForQuote(selectedQuote.id) && (
             <form className="dqe-create-form" onSubmit={createContract}>
               <div className="dqe-create-copy">
                 <h3>Créer le contrat</h3>
@@ -474,6 +504,7 @@ export function SalesWorkspace(): React.ReactElement {
         </section>
       )}
 
+      {canReadContracts && (
       <section className="panel dqe-panel">
         <div className="panel-head">
           <div>
@@ -521,6 +552,7 @@ export function SalesWorkspace(): React.ReactElement {
           </div>
         )}
       </section>
+      )}
     </>
   );
 }
