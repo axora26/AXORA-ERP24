@@ -690,9 +690,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/finance/accounting.service.ts": {
-    "mtime": 1791470648.8347404,
-    "seen": 1791475466.4714386,
-    "ast_hash": "4de2ec5aa88b83cb6e554d217d52504e",
+    "mtime": 1791499194.0113363,
+    "seen": 1791499623.596192,
+    "ast_hash": "58a181f926601e04766f4bf54a12a229",
     "semantic_hash": ""
   },
   "apps/api/src/finance/bank-reconciliation.service.ts": {
@@ -3690,9 +3690,9 @@
     "semantic_hash": ""
   },
   "docs/EXECUTION_STATE.md": {
-    "mtime": 1791495672.2331288,
-    "seen": 1791496615.967565,
-    "ast_hash": "6a4299e3a77c40f03c69816573b07d7f",
+    "mtime": 1791498985.327953,
+    "seen": 1791499623.5974042,
+    "ast_hash": "61e83de9de2588eb56cff6c1273246d3",
     "semantic_hash": ""
   },
   "docs/MODULE_STATUS.md": {
@@ -4443,6 +4443,12 @@
     "mtime": 1791495216.3166745,
     "seen": 1791496615.967565,
     "ast_hash": "df5356af2ed57c7d14942e72d0cdb067",
+    "semantic_hash": ""
+  },
+  "apps/api/test/accounting-defaults-concurrency.e2e.test.ts": {
+    "mtime": 1791499140.665271,
+    "seen": 1791499623.596885,
+    "ast_hash": "21d54108958637b6e325be4ddea06e9d",
     "semantic_hash": ""
   }
 }
