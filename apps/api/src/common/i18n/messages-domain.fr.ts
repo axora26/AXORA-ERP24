@@ -3,154 +3,251 @@ export const DOMAIN_MESSAGES: Record<string, string> = {
   // --- RH -----------------------------------------------------------------
   "Payroll employee not found": "Salarié introuvable dans cette paie",
   "Employee advance not found": "Avance salarié introuvable",
-  "Only the employee or an HR user can request an advance": "Seul le salarié concerné ou un utilisateur RH peut demander une avance",
-  "Only the requester can cancel an advance": "Seul le demandeur peut annuler une avance",
-  "Only a requested advance can be cancelled": "Seule une avance demandée peut être annulée",
-  "Only a requested advance can be decided": "Seule une avance demandée peut être décidée",
-  "An advance is decided by someone other than its requester": "Une avance est décidée par une autre personne que son demandeur",
-  "A note is required to reject an advance": "Un motif est obligatoire pour refuser une avance",
-  "Only an approved advance can be repaid": "Seule une avance approuvée peut être remboursée",
-  "Repayments cannot exceed the advance amount": "Les remboursements ne peuvent pas dépasser le montant de l’avance",
-  "A terminated employee cannot be reactivated": "Un employé sorti ne peut pas être réactivé",
-  "Attendance requires an active employee": "Le pointage exige un employé actif",
-  "Attendance must preserve chronological entry and exit pairs": "Les pointages doivent conserver l’ordre chronologique des entrées et des sorties",
+  "Only the employee or an HR user can request an advance":
+    "Seul le salarié concerné ou un utilisateur RH peut demander une avance",
+  "Only the requester can cancel an advance":
+    "Seul le demandeur peut annuler une avance",
+  "Only a requested advance can be cancelled":
+    "Seule une avance demandée peut être annulée",
+  "Only a requested advance can be decided":
+    "Seule une avance demandée peut être décidée",
+  "An advance is decided by someone other than its requester":
+    "Une avance est décidée par une autre personne que son demandeur",
+  "A note is required to reject an advance":
+    "Un motif est obligatoire pour refuser une avance",
+  "Only an approved advance can be repaid":
+    "Seule une avance approuvée peut être remboursée",
+  "Repayments cannot exceed the advance amount":
+    "Les remboursements ne peuvent pas dépasser le montant de l’avance",
+  "A terminated employee cannot be reactivated":
+    "Un employé sorti ne peut pas être réactivé",
+  "Attendance requires an active employee":
+    "Le pointage exige un employé actif",
+  "Attendance must preserve chronological entry and exit pairs":
+    "Les pointages doivent conserver l’ordre chronologique des entrées et des sorties",
   "replaceExisting must be a boolean": "replaceExisting doit être un booléen",
-  "The timesheet already has entries; explicitly confirm replacement before importing attendance": "Cette feuille contient déjà des lignes : confirmez leur remplacement avant d’importer les pointages",
-  "Attendance has an open or inconsistent interval; correct the attendance facts before preparing the timesheet": "Un intervalle de présence est ouvert ou incohérent : corrigez les pointages avant de préparer la feuille de temps",
-  "No closed attendance interval exists in this timesheet week": "Aucun intervalle de présence clôturé n’existe pour cette semaine",
-  "Hourly payroll requires validated timesheet hours for every employee of the period": "La paie par heures exige des heures de feuille de temps validées pour chaque employé de la période",
-  "Payroll source amounts cannot be negative": "Les montants et heures à l’origine du calcul de paie ne peuvent pas être négatifs",
-  "Hourly payroll requires explicit standard hours and overtime coefficient": "La paie par heures exige des heures de référence et un coefficient d’heures supplémentaires explicitement configurés",
+  "The timesheet already has entries; explicitly confirm replacement before importing attendance":
+    "Cette feuille contient déjà des lignes : confirmez leur remplacement avant d’importer les pointages",
+  "Attendance has an open or inconsistent interval; correct the attendance facts before preparing the timesheet":
+    "Un intervalle de présence est ouvert ou incohérent : corrigez les pointages avant de préparer la feuille de temps",
+  "No closed attendance interval exists in this timesheet week":
+    "Aucun intervalle de présence clôturé n’existe pour cette semaine",
+  "Hourly payroll requires validated timesheet hours for every employee of the period":
+    "La paie par heures exige des heures de feuille de temps validées pour chaque employé de la période",
+  "Payroll source amounts cannot be negative":
+    "Les montants et heures à l’origine du calcul de paie ne peuvent pas être négatifs",
+  "Hourly payroll requires explicit standard hours and overtime coefficient":
+    "La paie par heures exige des heures de référence et un coefficient d’heures supplémentaires explicitement configurés",
   "Invalid hourly payroll policy": "Paramètres de paie par heures invalides",
-  "Standard monthly hours must have at most two decimals and cannot exceed 744": "Les heures mensuelles de référence doivent avoir au plus deux décimales et ne peuvent pas dépasser 744",
-  "The overtime coefficient must have at most two decimals and cannot exceed 100": "Le coefficient d’heures supplémentaires doit avoir au plus deux décimales et ne peut pas dépasser 100",
-  "The payroll policy changed; reload its current version": "Les paramètres de paie ont changé : rechargez leur version actuelle",
-  "Service card encryption is not configured": "Le chiffrement des cartes de service n’est pas configuré",
-  "A service card QR token is required": "Le code QR protégé d’une carte de service est obligatoire",
-  "Invalid service card QR token": "Code QR protégé de carte de service invalide",
-  "The service card cannot be decrypted; reissue it using the configured key": "La carte de service ne peut pas être déchiffrée : réémettez-la avec la clé configurée",
-  "The service card expiration must be in the future": "L’expiration de la carte de service doit être dans le futur",
-  "A service card requires an active employee": "Une carte de service exige un employé actif",
-  "No active service card exists for this employee": "Aucune carte de service active n’existe pour cet employé",
-  "The service card credential is inconsistent; reissue the card": "Le code protégé de la carte de service est incohérent : réémettez la carte",
+  "Standard monthly hours must have at most two decimals and cannot exceed 744":
+    "Les heures mensuelles de référence doivent avoir au plus deux décimales et ne peuvent pas dépasser 744",
+  "The overtime coefficient must have at most two decimals and cannot exceed 100":
+    "Le coefficient d’heures supplémentaires doit avoir au plus deux décimales et ne peut pas dépasser 100",
+  "The payroll policy changed; reload its current version":
+    "Les paramètres de paie ont changé : rechargez leur version actuelle",
+  "Service card encryption is not configured":
+    "Le chiffrement des cartes de service n’est pas configuré",
+  "A service card QR token is required":
+    "Le code QR protégé d’une carte de service est obligatoire",
+  "Invalid service card QR token":
+    "Code QR protégé de carte de service invalide",
+  "The service card cannot be decrypted; reissue it using the configured key":
+    "La carte de service ne peut pas être déchiffrée : réémettez-la avec la clé configurée",
+  "The service card expiration must be in the future":
+    "L’expiration de la carte de service doit être dans le futur",
+  "A service card requires an active employee":
+    "Une carte de service exige un employé actif",
+  "No active service card exists for this employee":
+    "Aucune carte de service active n’existe pour cet employé",
+  "The service card credential is inconsistent; reissue the card":
+    "Le code protégé de la carte de service est incohérent : réémettez la carte",
   "Service card not found": "Carte de service introuvable",
-  "Service card attendance uses the server timestamp": "Le pointage par carte de service utilise l’heure du serveur",
-  "The service card is revoked, expired, or its employee is inactive": "La carte de service est révoquée ou expirée, ou son employé est inactif",
-  "This attendance idempotency key was already used for another request": "Cette clé d’idempotence de pointage a déjà été utilisée pour une autre demande",
-  "The latest attendance event is in the future": "Le dernier pointage se trouve dans le futur",
-  "Clock-out must keep the clock-in project": "La sortie doit conserver le projet enregistré à l’entrée",
+  "Service card attendance uses the server timestamp":
+    "Le pointage par carte de service utilise l’heure du serveur",
+  "The service card is revoked, expired, or its employee is inactive":
+    "La carte de service est révoquée ou expirée, ou son employé est inactif",
+  "This attendance idempotency key was already used for another request":
+    "Cette clé d’idempotence de pointage a déjà été utilisée pour une autre demande",
+  "The latest attendance event is in the future":
+    "Le dernier pointage se trouve dans le futur",
+  "Clock-out must keep the clock-in project":
+    "La sortie doit conserver le projet enregistré à l’entrée",
   "Unknown operations filter": "Filtre d’opérations inconnu",
-  "Operations range must cover between 1 and 31 inclusive days": "La période des opérations doit couvrir entre 1 et 31 jours, bornes incluses",
-  "A closed payroll cannot be modified": "Une paie clôturée ne peut pas être modifiée",
-  "A leave request is decided by someone other than the requester and the employee": "Un congé est décidé par une autre personne que le demandeur et l'employé",
-  "A note is required to reject a leave request": "Un motif est obligatoire pour refuser un congé",
-  "A note is required to reject a timesheet": "Un motif est obligatoire pour rejeter une feuille de temps",
-  "A terminated employee cannot be reactivated; create a new record": "Un employé sorti ne peut pas être réactivé : créez une nouvelle fiche",
-  "A timesheet already exists for this employee and week": "Une feuille de temps existe déjà pour cet employé et cette semaine",
-  "A timesheet is validated by someone other than the employee and the submitter": "Une feuille de temps est validée par une autre personne que l'employé et celle qui l'a soumise",
-  "An empty timesheet cannot be submitted": "Une feuille de temps vide ne peut pas être soumise",
+  "Operations range must cover between 1 and 31 inclusive days":
+    "La période des opérations doit couvrir entre 1 et 31 jours, bornes incluses",
+  "A closed payroll cannot be modified":
+    "Une paie clôturée ne peut pas être modifiée",
+  "A leave request is decided by someone other than the requester and the employee":
+    "Un congé est décidé par une autre personne que le demandeur et l'employé",
+  "A note is required to reject a leave request":
+    "Un motif est obligatoire pour refuser un congé",
+  "A note is required to reject a timesheet":
+    "Un motif est obligatoire pour rejeter une feuille de temps",
+  "A terminated employee cannot be reactivated; create a new record":
+    "Un employé sorti ne peut pas être réactivé : créez une nouvelle fiche",
+  "A timesheet already exists for this employee and week":
+    "Une feuille de temps existe déjà pour cet employé et cette semaine",
+  "A timesheet is validated by someone other than the employee and the submitter":
+    "Une feuille de temps est validée par une autre personne que l'employé et celle qui l'a soumise",
+  "An empty timesheet cannot be submitted":
+    "Une feuille de temps vide ne peut pas être soumise",
   "Badge not recognized": "Badge non reconnu",
-  "Changing pay data requires hr.payroll.manage": "Modifier les données de paie exige hr.payroll.manage",
+  "Changing pay data requires hr.payroll.manage":
+    "Modifier les données de paie exige hr.payroll.manage",
   'Department "{x}" already exists': "Le département « {1} » existe déjà",
   "Department not found": "Département introuvable",
   "Employee is already clocked in": "L'employé est déjà pointé à l'entrée",
   "Employee is not clocked in": "L'employé n'est pas pointé à l'entrée",
-  "Employee is not part of this payroll": "L'employé ne fait pas partie de cette paie",
+  "Employee is not part of this payroll":
+    "L'employé ne fait pas partie de cette paie",
   "Gross amount cannot become negative": "Le brut ne peut pas devenir négatif",
   "Gross amount cannot be negative": "Le brut ne peut pas être négatif",
-  "countryCode must contain two uppercase letters": "Le code pays doit contenir deux lettres majuscules",
-  "{x} must be between 0 and 100 with at most two decimals": "{1} doit être compris entre 0 et 100 avec au plus deux décimales",
-  "taxFreeAllowance must be non-negative with at most two decimals": "L'abattement fiscal doit être positif ou nul avec au plus deux décimales",
+  "countryCode must contain two uppercase letters":
+    "Le code pays doit contenir deux lettres majuscules",
+  "{x} must be between 0 and 100 with at most two decimals":
+    "{1} doit être compris entre 0 et 100 avec au plus deux décimales",
+  "taxFreeAllowance must be non-negative with at most two decimals":
+    "L'abattement fiscal doit être positif ou nul avec au plus deux décimales",
   "Leave request not found": "Demande de congé introuvable",
   "More than 24 hours declared on {x}": "Plus de 24 heures déclarées le {1}",
-  "Only a draft (or rejected) timesheet can be edited": "Seule une feuille de temps en brouillon (ou rejetée) peut être modifiée",
-  "Only a draft timesheet can be submitted": "Seule une feuille de temps en brouillon peut être soumise",
-  "Only a pending leave request can be decided": "Seul un congé en attente peut être décidé",
-  "Only a submitted timesheet can be decided": "Seule une feuille de temps soumise peut être décidée",
-  "Only the requester can cancel a leave request": "Seul le demandeur peut annuler un congé",
+  "Only a draft (or rejected) timesheet can be edited":
+    "Seule une feuille de temps en brouillon (ou rejetée) peut être modifiée",
+  "Only a draft timesheet can be submitted":
+    "Seule une feuille de temps en brouillon peut être soumise",
+  "Only a pending leave request can be decided":
+    "Seul un congé en attente peut être décidé",
+  "Only a submitted timesheet can be decided":
+    "Seule une feuille de temps soumise peut être décidée",
+  "Only the requester can cancel a leave request":
+    "Seul le demandeur peut annuler un congé",
   "Payroll for {x} already exists": "La paie de {1} existe déjà",
   "Payroll run not found": "Paie introuvable",
-  "Payroll run not found or already closed": "Paie introuvable ou déjà clôturée",
-  "Setting pay data requires hr.payroll.manage": "Saisir les données de paie exige hr.payroll.manage",
-  "The period contains no working day": "La période ne contient aucun jour ouvré",
+  "Payroll run not found or already closed":
+    "Paie introuvable ou déjà clôturée",
+  "Setting pay data requires hr.payroll.manage":
+    "Saisir les données de paie exige hr.payroll.manage",
+  "The period contains no working day":
+    "La période ne contient aucun jour ouvré",
   "This badge code is already assigned": "Ce badge est déjà attribué",
   "This leave request cannot be cancelled": "Ce congé ne peut pas être annulé",
-  "This period overlaps another leave request": "Cette période chevauche un autre congé",
-  "Time cannot be booked on a {x} project": "Aucun temps ne peut être imputé sur un projet au statut {1}",
+  "This period overlaps another leave request":
+    "Cette période chevauche un autre congé",
+  "Time cannot be booked on a {x} project":
+    "Aucun temps ne peut être imputé sur un projet au statut {1}",
   "Timesheet not found": "Feuille de temps introuvable",
   "amount must not be zero": "Le montant ne peut pas être nul",
-  "amount must have at most two decimals": "Le montant doit comporter au plus deux décimales",
-  "endDate must be on or after startDate": "La date de fin doit être postérieure ou égale à la date de début",
+  "amount must have at most two decimals":
+    "Le montant doit comporter au plus deux décimales",
+  "endDate must be on or after startDate":
+    "La date de fin doit être postérieure ou égale à la date de début",
   "entries must be an array": "entries doit être une liste",
-  "entries[{x}].wbsItemId must be a leaf WBS item of the project": "entries[{1}] : l'élément WBS doit être une feuille du projet",
-  "entries[{x}].workDate is outside the timesheet week": "entries[{1}] : la date est hors de la semaine",
+  "entries[{x}].wbsItemId must be a leaf WBS item of the project":
+    "entries[{1}] : l'élément WBS doit être une feuille du projet",
+  "entries[{x}].workDate is outside the timesheet week":
+    "entries[{1}] : la date est hors de la semaine",
   "period must be YYYY-MM": "La période doit être au format AAAA-MM",
-  "terminationDate is required to terminate": "La date de sortie est obligatoire",
-  "userId must be a member of this company": "L'utilisateur doit être membre de cette entreprise",
+  "terminationDate is required to terminate":
+    "La date de sortie est obligatoire",
+  "userId must be a member of this company":
+    "L'utilisateur doit être membre de cette entreprise",
   "wbsItemId requires a projectId": "Un élément WBS exige un projet",
-  "{x} employee(s) are paid in another currency than {x}: no implicit conversion": "{1} employé(s) payé(s) dans une autre devise que {2} : aucune conversion implicite",
-  "{x} timesheet(s) of the period are not validated ({x}): no payroll without validation": "{1} feuille(s) de temps de la période non validée(s) ({2}) : pas de paie sans validation",
+  "{x} employee(s) are paid in another currency than {x}: no implicit conversion":
+    "{1} employé(s) payé(s) dans une autre devise que {2} : aucune conversion implicite",
+  "{x} timesheet(s) of the period are not validated ({x}): no payroll without validation":
+    "{1} feuille(s) de temps de la période non validée(s) ({2}) : pas de paie sans validation",
 
   // --- CRM ----------------------------------------------------------------
-  "An account with open next actions cannot be archived": "Un compte avec des prochaines actions ouvertes ne peut pas être archivé",
+  "An account with open next actions cannot be archived":
+    "Un compte avec des prochaines actions ouvertes ne peut pas être archivé",
   "Next action not found": "Prochaine action introuvable",
-  "Only an open next action can be updated": "Seule une prochaine action ouverte peut être modifiée",
-  "Only an open next action can be completed": "Seule une prochaine action ouverte peut être terminée",
-  "Only an open next action can be cancelled": "Seule une prochaine action ouverte peut être annulée",
-  "The assignee must be an active member of this company": "Le responsable doit être un utilisateur actif membre de cette entreprise",
-  "Provide at least one next action field to update": "Renseignez au moins un champ de la prochaine action à modifier",
-  "dueAt must be an ISO timestamp with timezone": "dueAt doit être un horodatage ISO avec fuseau horaire",
+  "Only an open next action can be updated":
+    "Seule une prochaine action ouverte peut être modifiée",
+  "Only an open next action can be completed":
+    "Seule une prochaine action ouverte peut être terminée",
+  "Only an open next action can be cancelled":
+    "Seule une prochaine action ouverte peut être annulée",
+  "The assignee must be an active member of this company":
+    "Le responsable doit être un utilisateur actif membre de cette entreprise",
+  "Provide at least one next action field to update":
+    "Renseignez au moins un champ de la prochaine action à modifier",
+  "dueAt must be an ISO timestamp with timezone":
+    "dueAt doit être un horodatage ISO avec fuseau horaire",
   "dueAt is not a valid timestamp": "dueAt n'est pas un horodatage valide",
-  "dueAt is not a valid calendar date": "dueAt n'est pas une date calendaire valide",
-  "filter must be one of: all, overdue, today, next7days": "filter doit valoir all, overdue, today ou next7days",
+  "dueAt is not a valid calendar date":
+    "dueAt n'est pas une date calendaire valide",
+  "filter must be one of: all, overdue, today, next7days":
+    "filter doit valoir all, overdue, today ou next7days",
 
   // --- Stock --------------------------------------------------------------
-  "A site store must be attached to a project": "Un magasin de chantier doit être rattaché à un projet",
-  "A unit cost is required for this entry of {x} (no stock to value it)": "Un coût unitaire est requis pour cette entrée de {1} (aucun stock pour la valoriser)",
-  'A warehouse with code "{x}" already exists': "Un dépôt de code « {1} » existe déjà",
-  'An item with code "{x}" already exists': "Un article de code « {1} » existe déjà",
-  "Each item may appear only once per movement": "Chaque article n'apparaît qu'une fois par mouvement",
-  "Insufficient stock for {x} in {x}: available {x} {x}, requested {x}": "Stock insuffisant pour {1} dans {2} : disponible {3} {4}, demandé {5}",
+  "A site store must be attached to a project":
+    "Un magasin de chantier doit être rattaché à un projet",
+  "A unit cost is required for this entry of {x} (no stock to value it)":
+    "Un coût unitaire est requis pour cette entrée de {1} (aucun stock pour la valoriser)",
+  'A warehouse with code "{x}" already exists':
+    "Un dépôt de code « {1} » existe déjà",
+  'An item with code "{x}" already exists':
+    "Un article de code « {1} » existe déjà",
+  "Each item may appear only once per movement":
+    "Chaque article n'apparaît qu'une fois par mouvement",
+  "Insufficient stock for {x} in {x}: available {x} {x}, requested {x}":
+    "Stock insuffisant pour {1} dans {2} : disponible {3} {4}, demandé {5}",
   "Inventory item not found": "Article introuvable",
   "Stock movement not found": "Mouvement de stock introuvable",
-  "Materials can only be issued to an IN_PROGRESS project (currently {x})": "Les sorties ne vont qu'à un projet en cours (actuellement {1})",
-  "Movement quantity must be greater than zero": "La quantité du mouvement doit être strictement positive",
-  "Only a SITE store is attached to a project": "Seul un magasin de chantier se rattache à un projet",
-  "Source and destination must differ": "Source et destination doivent différer",
+  "Materials can only be issued to an IN_PROGRESS project (currently {x})":
+    "Les sorties ne vont qu'à un projet en cours (actuellement {1})",
+  "Movement quantity must be greater than zero":
+    "La quantité du mouvement doit être strictement positive",
+  "Only a SITE store is attached to a project":
+    "Seul un magasin de chantier se rattache à un projet",
+  "Source and destination must differ":
+    "Source et destination doivent différer",
   "Stock count not found": "Inventaire introuvable",
-  "Stock count {x} is already open for this warehouse": "L'inventaire {1} est déjà ouvert pour ce dépôt",
+  "Stock count {x} is already open for this warehouse":
+    "L'inventaire {1} est déjà ouvert pour ce dépôt",
   "This stock count is already closed": "Cet inventaire est déjà clôturé",
   "This stock count is closed": "Cet inventaire est clôturé",
   "Warehouse not found": "Dépôt introuvable",
-  "Warehouse {x} is frozen by the open stock count {x}": "Le dépôt {1} est gelé par l'inventaire en cours {2}",
+  "Warehouse {x} is frozen by the open stock count {x}":
+    "Le dépôt {1} est gelé par l'inventaire en cours {2}",
   "Warehouse {x} is inactive": "Le dépôt {1} est inactif",
   "quantityDelta must not be zero": "L'écart de quantité ne peut pas être nul",
   "unitCost must not be negative": "Le coût unitaire ne peut pas être négatif",
-  "wbsItemId must be a leaf WBS item of the project": "L'élément WBS doit être une feuille du projet",
+  "wbsItemId must be a leaf WBS item of the project":
+    "L'élément WBS doit être une feuille du projet",
   "{x} line(s) have not been counted": "{1} ligne(s) non comptée(s)",
 
   // --- MEP ----------------------------------------------------------------
-  "A calculation is validated by an engineer other than its author": "Une note de calcul est validée par un autre ingénieur que son auteur",
-  "A commissioned equipment is managed as an asset (GMAO)": "Un équipement mis en service se gère comme un actif (GMAO)",
+  "A calculation is validated by an engineer other than its author":
+    "Une note de calcul est validée par un autre ingénieur que son auteur",
+  "A commissioned equipment is managed as an asset (GMAO)":
+    "Un équipement mis en service se gère comme un actif (GMAO)",
   "Calculation not found": "Note de calcul introuvable",
-  "Cite the sources of the input values before validation": "Citez les sources des valeurs d'entrée avant validation",
+  "Cite the sources of the input values before validation":
+    "Citez les sources des valeurs d'entrée avant validation",
   "Equipment not found on this project": "Équipement introuvable sur ce projet",
-  "Only the current draft revision can be validated": "Seule la révision brouillon courante peut être validée",
-  'System "{x}" already exists on this project': "Le système « {1} » existe déjà sur ce projet",
+  "Only the current draft revision can be validated":
+    "Seule la révision brouillon courante peut être validée",
+  'System "{x}" already exists on this project':
+    "Le système « {1} » existe déjà sur ce projet",
   "System not found": "Système introuvable",
   "System not found on this project": "Système introuvable sur ce projet",
-  'Tag "{x}" is already used on this project': "Le repère « {1} » est déjà utilisé sur ce projet",
+  'Tag "{x}" is already used on this project':
+    "Le repère « {1} » est déjà utilisé sur ce projet",
   "Technical document not found": "Fiche technique introuvable",
   'Unknown calculation type "{x}"': "Type de calcul inconnu « {1} »",
-  "inputs.{x} ({x}, {x}) must be a decimal string": "inputs.{1} ({2}, {3}) doit être un décimal en texte",
+  "inputs.{x} ({x}, {x}) must be a decimal string":
+    "inputs.{1} ({2}, {3}) doit être un décimal en texte",
   "inputs.{x} must be <= {x}": "inputs.{1} doit être inférieur ou égal à {2}",
   "inputs.{x} must be > {x}": "inputs.{1} doit être supérieur à {2}",
-  "specs must be an array (60 entries max)": "specs doit être une liste (60 entrées au plus)",
+  "specs must be an array (60 entries max)":
+    "specs doit être une liste (60 entrées au plus)",
 
   // --- Portails -----------------------------------------------------------
-  "A client principal has no supplier": "Un accès client n'a pas de fournisseur",
+  "A client principal has no supplier":
+    "Un accès client n'a pas de fournisseur",
   "A revoked access stays revoked": "Un accès révoqué le reste",
-  "A {x} portal cannot expose a {x}": "Un portail {1} ne peut pas exposer un élément {2}",
+  "A {x} portal cannot expose a {x}":
+    "Un portail {1} ne peut pas exposer un élément {2}",
   "Already exposed": "Déjà exposé",
   "CRM account not found": "Compte CRM introuvable",
   "Grant already revoked": "Exposition déjà retirée",
@@ -158,157 +255,287 @@ export const DOMAIN_MESSAGES: Record<string, string> = {
   "Invalid or expired invitation": "Invitation invalide ou expirée",
   "Invalid or expired portal session": "Session portail invalide ou expirée",
   "No portal session": "Aucune session portail",
-  "Only a suspended access can be reactivated": "Seul un accès suspendu peut être réactivé",
+  "Only a suspended access can be reactivated":
+    "Seul un accès suspendu peut être réactivé",
   "Order not found": "Commande introuvable",
   "Portal principal not authenticated": "Accès portail non authentifié",
   "Portal principal not found": "Accès portail introuvable",
   "The access is revoked": "L'accès est révoqué",
   "The access is {x}": "Accès au statut {1}",
-  "The access was never activated: send an invitation": "L'accès n'a jamais été activé : envoyez une invitation",
+  "The access was never activated: send an invitation":
+    "L'accès n'a jamais été activé : envoyez une invitation",
   "The order is fully received": "La commande est entièrement livrée",
-  "This email already has a portal access in this company": "Cet e-mail a déjà un accès portail dans cette entreprise",
-  "This resource does not belong to the portal account (or is not in an exposable state)": "Cette ressource n'appartient pas au compte du portail (ou n'est pas publiable)",
+  "This email already has a portal access in this company":
+    "Cet e-mail a déjà un accès portail dans cette entreprise",
+  "This resource does not belong to the portal account (or is not in an exposable state)":
+    "Cette ressource n'appartient pas au compte du portail (ou n'est pas publiable)",
   "email is invalid": "E-mail invalide",
 
   // --- Achats -------------------------------------------------------------
-  "A note is required to reject a request": "Un motif est obligatoire pour refuser une demande",
-  "A quote must price every line of the request, and only those": "Un devis doit chiffrer chaque ligne de la demande, et seulement celles-ci",
-  "A received line does not belong to this order": "Une ligne reçue n'appartient pas à cette commande",
+  "A note is required to reject a request":
+    "Un motif est obligatoire pour refuser une demande",
+  "A quote must price every line of the request, and only those":
+    "Un devis doit chiffrer chaque ligne de la demande, et seulement celles-ci",
+  "A received line does not belong to this order":
+    "Une ligne reçue n'appartient pas à cette commande",
   "A request is limited to 200 lines": "Une demande est limitée à 200 lignes",
-  'A supplier named "{x}" already exists': "Un fournisseur nommé « {1} » existe déjà",
-  "An order with receipts (or already cancelled) cannot be cancelled": "Une commande déjà réceptionnée (ou annulée) ne peut pas être annulée",
-  "Each order line may appear only once per receipt": "Chaque ligne de commande n'apparaît qu'une fois par réception",
-  "Line {x}: received {x} exceeds remaining {x}": "Ligne {1} : quantité reçue {2} supérieure au reste {3}",
-  "Only a draft order can be issued": "Seule une commande en brouillon peut être émise",
-  "Only a draft request can be submitted": "Seule une demande en brouillon peut être soumise",
-  "Only a submitted request can be decided": "Seule une demande soumise peut être décidée",
-  "Only an issued order can be received": "Seule une commande émise peut être réceptionnée",
-  "Only the requester can submit their request": "Seul le demandeur peut soumettre sa demande",
+  'A supplier named "{x}" already exists':
+    "Un fournisseur nommé « {1} » existe déjà",
+  "An order with receipts (or already cancelled) cannot be cancelled":
+    "Une commande déjà réceptionnée (ou annulée) ne peut pas être annulée",
+  "Each order line may appear only once per receipt":
+    "Chaque ligne de commande n'apparaît qu'une fois par réception",
+  "Line {x}: received {x} exceeds remaining {x}":
+    "Ligne {1} : quantité reçue {2} supérieure au reste {3}",
+  "Only a draft order can be issued":
+    "Seule une commande en brouillon peut être émise",
+  "Only a draft request can be submitted":
+    "Seule une demande en brouillon peut être soumise",
+  "Only a submitted request can be decided":
+    "Seule une demande soumise peut être décidée",
+  "Only an issued order can be received":
+    "Seule une commande émise peut être réceptionnée",
+  "Only the requester can submit their request":
+    "Seul le demandeur peut soumettre sa demande",
   "Project is {x}": "Projet au statut {1}",
   "Purchase request not found": "Demande d'achat introuvable",
-  "Stocked items must be ordered in the company currency ({x}), not {x}": "Les articles stockés se commandent dans la devise de l'entreprise ({1}), pas en {2}",
+  "Stocked items must be ordered in the company currency ({x}), not {x}":
+    "Les articles stockés se commandent dans la devise de l'entreprise ({1}), pas en {2}",
   "Supplier is inactive": "Fournisseur inactif",
-  "Supplier quote not found for this request": "Devis fournisseur introuvable pour cette demande",
-  "Suppliers are consulted on an APPROVED request": "Les fournisseurs se consultent sur une demande approuvée",
-  "The order does not belong to this supplier": "La commande n'appartient pas à ce fournisseur",
-  "The requester cannot approve or reject their own request": "Le demandeur ne peut ni approuver ni refuser sa propre demande",
-  "This order backs the subcontract package {x}: progress is certified through statements": "Cette commande porte le lot sous-traité {1} : l'avancement est certifié par situations",
-  "This order backs the subcontract package {x}: terminate the package instead": "Cette commande porte le lot sous-traité {1} : résiliez plutôt le lot",
-  "This supplier already quoted this request": "Ce fournisseur a déjà chiffré cette demande",
+  "Supplier quote not found for this request":
+    "Devis fournisseur introuvable pour cette demande",
+  "Suppliers are consulted on an APPROVED request":
+    "Les fournisseurs se consultent sur une demande approuvée",
+  "The order does not belong to this supplier":
+    "La commande n'appartient pas à ce fournisseur",
+  "The requester cannot approve or reject their own request":
+    "Le demandeur ne peut ni approuver ni refuser sa propre demande",
+  "This order backs the subcontract package {x}: progress is certified through statements":
+    "Cette commande porte le lot sous-traité {1} : l'avancement est certifié par situations",
+  "This order backs the subcontract package {x}: terminate the package instead":
+    "Cette commande porte le lot sous-traité {1} : résiliez plutôt le lot",
+  "This supplier already quoted this request":
+    "Ce fournisseur a déjà chiffré cette demande",
   "This supplier quote has expired": "Ce devis fournisseur a expiré",
-  "idempotencyKey already used for another order": "Clé d'idempotence déjà utilisée pour une autre commande",
+  "idempotencyKey already used for another order":
+    "Clé d'idempotence déjà utilisée pour une autre commande",
   "lines are required": "Les lignes sont obligatoires",
-  "lines must contain at least one received line": "Au moins une ligne reçue est requise",
-  "lines[{x}].inventoryItemId is not an active item": "lines[{1}] : article inactif ou inconnu",
-  "lines[{x}].wbsItemId must be a leaf WBS item of the project": "lines[{1}] : l'élément WBS doit être une feuille du projet",
-  "warehouseId is required to receive stocked items": "Un dépôt est obligatoire pour réceptionner des articles stockés",
-  "lines must contain at least one returned line": "Le retour doit contenir au moins une ligne",
-  "Organization registration is closed on this instance": "La création d'espaces est fermée sur cette instance. Demandez un accès à votre administrateur.",
+  "lines must contain at least one received line":
+    "Au moins une ligne reçue est requise",
+  "lines[{x}].inventoryItemId is not an active item":
+    "lines[{1}] : article inactif ou inconnu",
+  "lines[{x}].wbsItemId must be a leaf WBS item of the project":
+    "lines[{1}] : l'élément WBS doit être une feuille du projet",
+  "warehouseId is required to receive stocked items":
+    "Un dépôt est obligatoire pour réceptionner des articles stockés",
+  "lines must contain at least one returned line":
+    "Le retour doit contenir au moins une ligne",
+  "Organization registration is closed on this instance":
+    "La création d'espaces est fermée sur cette instance. Demandez un accès à votre administrateur.",
   "Supplier return not found": "Retour fournisseur introuvable",
-  "No approved supplier invoice of this order can be credited for this return": "Aucune facture fournisseur approuvée de cette commande ne peut être créditée pour ce retour",
-  "The returned quantity is not fully invoiced on approved supplier invoices of this order": "La quantité retournée n'est pas entièrement facturée sur des factures fournisseur approuvées de cette commande",
-  "This return spans several supplier invoices: create one credit note per invoice in Finance": "Ce retour concerne plusieurs factures fournisseur : créez un avoir par facture dans Finance",
-  "Only an issued order with receipts can be returned to the supplier": "Seule une commande émise et réceptionnée peut faire l'objet d'un retour fournisseur",
-  "A returned line does not belong to this order": "Une ligne retournée n'appartient pas à cette commande",
-  "Each order line may appear only once per return": "Chaque ligne de commande n'apparaît qu'une fois par retour",
-  "Line {x}: returned {x} exceeds net received {x}": "Ligne {1} : quantité retournée {2} supérieure au reçu net {3}",
-  "Stocked items must leave from a warehouse where this order was received": "Les articles stockés doivent sortir d'un dépôt où cette commande a été réceptionnée",
+  "No approved supplier invoice of this order can be credited for this return":
+    "Aucune facture fournisseur approuvée de cette commande ne peut être créditée pour ce retour",
+  "The returned quantity is not fully invoiced on approved supplier invoices of this order":
+    "La quantité retournée n'est pas entièrement facturée sur des factures fournisseur approuvées de cette commande",
+  "This return spans several supplier invoices: create one credit note per invoice in Finance":
+    "Ce retour concerne plusieurs factures fournisseur : créez un avoir par facture dans Finance",
+  "Only an issued order with receipts can be returned to the supplier":
+    "Seule une commande émise et réceptionnée peut faire l'objet d'un retour fournisseur",
+  "A returned line does not belong to this order":
+    "Une ligne retournée n'appartient pas à cette commande",
+  "Each order line may appear only once per return":
+    "Chaque ligne de commande n'apparaît qu'une fois par retour",
+  "Line {x}: returned {x} exceeds net received {x}":
+    "Ligne {1} : quantité retournée {2} supérieure au reçu net {3}",
+  "Stocked items must leave from a warehouse where this order was received":
+    "Les articles stockés doivent sortir d'un dépôt où cette commande a été réceptionnée",
 
   // --- Projets ------------------------------------------------------------
-  "A note is required to reject a change order": "Un motif est obligatoire pour refuser un avenant",
-  "A reason is required to suspend or cancel a project": "Un motif est obligatoire pour suspendre ou annuler un projet",
-  "A {x} project can no longer be modified": "Un projet au statut {1} ne peut plus être modifié",
-  "Add at least one budget line before freezing the baseline": "Ajoutez au moins une ligne de budget avant de figer la référence",
-  "Assignee is not a member of this company": "Le responsable n'est pas membre de cette entreprise",
+  "A note is required to reject a change order":
+    "Un motif est obligatoire pour refuser un avenant",
+  "A reason is required to suspend or cancel a project":
+    "Un motif est obligatoire pour suspendre ou annuler un projet",
+  "A {x} project can no longer be modified":
+    "Un projet au statut {1} ne peut plus être modifié",
+  "Add at least one budget line before freezing the baseline":
+    "Ajoutez au moins une ligne de budget avant de figer la référence",
+  "Assignee is not a member of this company":
+    "Le responsable n'est pas membre de cette entreprise",
   "Budget baseline is already frozen": "Le budget de référence est déjà figé",
-  "Budget baseline is frozen: lines are immutable": "Le budget de référence est figé : les lignes sont immuables",
-  "Budget baseline is frozen: use a change order": "Le budget de référence est figé : passez par un avenant",
+  "Budget baseline is frozen: lines are immutable":
+    "Le budget de référence est figé : les lignes sont immuables",
+  "Budget baseline is frozen: use a change order":
+    "Le budget de référence est figé : passez par un avenant",
   "Budget line not found": "Ligne de budget introuvable",
-  "Budget, tasks and change orders are carried by leaf WBS items only": "Budget, tâches et avenants ne se portent que sur des feuilles du WBS",
+  "Budget, tasks and change orders are carried by leaf WBS items only":
+    "Budget, tâches et avenants ne se portent que sur des feuilles du WBS",
   "Change order not found": "Avenant introuvable",
-  "Change orders apply after the budget baseline; edit budget lines instead": "Les avenants s'appliquent après le budget de référence : modifiez plutôt les lignes",
-  "Freeze the budget baseline before starting the project": "Figez le budget de référence avant de démarrer le projet",
-  "Milestone not found or already achieved": "Jalon introuvable ou déjà atteint",
-  "Only a pending change order can be decided": "Seul un avenant en attente peut être décidé",
-  "Only an ACTIVE contract can start a project": "Seul un contrat actif peut lancer un projet",
+  "Change orders apply after the budget baseline; edit budget lines instead":
+    "Les avenants s'appliquent après le budget de référence : modifiez plutôt les lignes",
+  "Freeze the budget baseline before starting the project":
+    "Figez le budget de référence avant de démarrer le projet",
+  "Milestone not found or already achieved":
+    "Jalon introuvable ou déjà atteint",
+  "Only a pending change order can be decided":
+    "Seul un avenant en attente peut être décidé",
+  "Only an ACTIVE contract can start a project":
+    "Seul un contrat actif peut lancer un projet",
   "Parent WBS item not found": "Élément WBS parent introuvable",
   "Risk not found": "Risque introuvable",
   "Task not found": "Tâche introuvable",
-  "Tasks cannot progress while the project is {x}": "Les tâches ne peuvent pas avancer tant que le projet est au statut {1}",
-  "The requester cannot decide on their own change order": "Le demandeur ne peut pas décider de son propre avenant",
-  "This WBS item carries budget lines, tasks or change orders: budget is carried by leaf items only": "Cet élément WBS porte du budget, des tâches ou des avenants : seules les feuilles portent le budget",
-  "This contract already has a project ({x})": "Ce contrat a déjà un projet ({1})",
+  "Tasks cannot progress while the project is {x}":
+    "Les tâches ne peuvent pas avancer tant que le projet est au statut {1}",
+  "The requester cannot decide on their own change order":
+    "Le demandeur ne peut pas décider de son propre avenant",
+  "This WBS item carries budget lines, tasks or change orders: budget is carried by leaf items only":
+    "Cet élément WBS porte du budget, des tâches ou des avenants : seules les feuilles portent le budget",
+  "This contract already has a project ({x})":
+    "Ce contrat a déjà un projet ({1})",
   "Transition {x} -> {x} is not allowed": "Transition {1} → {2} non autorisée",
-  'WBS code "{x}" already exists in this project': "Le code WBS « {1} » existe déjà dans ce projet",
+  'WBS code "{x}" already exists in this project':
+    "Le code WBS « {1} » existe déjà dans ce projet",
   "WBS item not found": "Élément WBS introuvable",
   "currency must be an ISO 4217 code": "La devise doit être un code ISO 4217",
-  "plannedEnd must be on or after plannedStart": "La fin prévue doit suivre ou égaler le début prévu",
+  "plannedEnd must be on or after plannedStart":
+    "La fin prévue doit suivre ou égaler le début prévu",
   "{x} change order(s) are still pending": "{1} avenant(s) encore en attente",
   "{x} task(s) are not done": "{1} tâche(s) non terminée(s)",
 
   // --- QHSE ---------------------------------------------------------------
-  "A lost-time incident declares at least one lost day": "Un accident avec arrêt déclare au moins un jour perdu",
-  "A non-conformity is closed by someone other than its creator": "Une non-conformité est clôturée par une autre personne que son auteur",
-  "A non-conformity must be described (comment)": "Une non-conformité doit être décrite (commentaire)",
-  "A note is required to reject a permit": "Un motif est obligatoire pour refuser un permis",
-  "A note is required to reject an action": "Un motif est obligatoire pour refuser une action",
-  "A toolbox meeting is recorded after it is held": "Un quart d'heure sécurité s'enregistre après sa tenue",
-  "A work permit covers at most 14 days": "Un permis de travail couvre 14 jours au plus",
-  "A work permit is issued by someone other than the requester": "Un permis de travail est délivré par une autre personne que le demandeur",
+  "A lost-time incident declares at least one lost day":
+    "Un accident avec arrêt déclare au moins un jour perdu",
+  "A non-conformity is closed by someone other than its creator":
+    "Une non-conformité est clôturée par une autre personne que son auteur",
+  "A non-conformity must be described (comment)":
+    "Une non-conformité doit être décrite (commentaire)",
+  "A note is required to reject a permit":
+    "Un motif est obligatoire pour refuser un permis",
+  "A note is required to reject an action":
+    "Un motif est obligatoire pour refuser une action",
+  "A toolbox meeting is recorded after it is held":
+    "Un quart d'heure sécurité s'enregistre après sa tenue",
+  "A work permit covers at most 14 days":
+    "Un permis de travail couvre 14 jours au plus",
+  "A work permit is issued by someone other than the requester":
+    "Un permis de travail est délivré par une autre personne que le demandeur",
   "Already closed": "Déjà clôturé",
   "Already completed": "Déjà terminé",
-  "An action is verified by someone other than the person who carried it out": "Une action est vérifiée par une autre personne que celle qui l'a réalisée",
-  "An incident is closed only after its investigation": "Un incident n'est clôturé qu'après son analyse",
-  "At least one corrective action is required before closing": "Au moins une action corrective est requise avant la clôture",
+  "An action is verified by someone other than the person who carried it out":
+    "Une action est vérifiée par une autre personne que celle qui l'a réalisée",
+  "An incident is closed only after its investigation":
+    "Un incident n'est clôturé qu'après son analyse",
+  "At least one corrective action is required before closing":
+    "Au moins une action corrective est requise avant la clôture",
   "At most 200 checklist items": "200 points de contrôle au plus",
   'Checklist "{x}" already exists': "La checklist « {1} » existe déjà",
   "Checklist item not found": "Point de contrôle introuvable",
   "Checklist template not found": "Checklist introuvable",
   "Corrective action not found": "Action corrective introuvable",
   "Inspection not found": "Inspection introuvable",
-  "Lost days can only be extended, never reduced": "Les jours perdus ne peuvent qu'augmenter, jamais diminuer",
+  "Lost days can only be extended, never reduced":
+    "Les jours perdus ne peuvent qu'augmenter, jamais diminuer",
   "Non-conformity not found": "Non-conformité introuvable",
-  "Only a completed action can be verified": "Seule une action réalisée peut être vérifiée",
-  "Only a requested permit can be decided": "Seul un permis demandé peut être décidé",
-  "Only an approved permit can be closed": "Seul un permis délivré peut être clôturé",
-  "Only an open action can be completed": "Seule une action ouverte peut être réalisée",
-  "Only the assigned inspector completes the inspection": "Seul l'inspecteur désigné clôture l'inspection",
-  "Only the assigned inspector records the results": "Seul l'inspecteur désigné saisit les résultats",
+  "Only a completed action can be verified":
+    "Seule une action réalisée peut être vérifiée",
+  "Only a requested permit can be decided":
+    "Seul un permis demandé peut être décidé",
+  "Only an approved permit can be closed":
+    "Seul un permis délivré peut être clôturé",
+  "Only an open action can be completed":
+    "Seule une action ouverte peut être réalisée",
+  "Only the assigned inspector completes the inspection":
+    "Seul l'inspecteur désigné clôture l'inspection",
+  "Only the assigned inspector records the results":
+    "Seul l'inspecteur désigné saisit les résultats",
   "The incident is closed": "L'incident est clôturé",
-  "The inspection is completed and frozen": "L'inspection est clôturée et figée",
-  "The inspector must be a member of this company": "L'inspecteur doit être membre de cette entreprise",
+  "The inspection is completed and frozen":
+    "L'inspection est clôturée et figée",
+  "The inspector must be a member of this company":
+    "L'inspecteur doit être membre de cette entreprise",
   "The non-conformity is closed": "La non-conformité est clôturée",
-  "The validity window is already over": "La période de validité est déjà terminée",
+  "The validity window is already over":
+    "La période de validité est déjà terminée",
   "Unknown attendee": "Participant inconnu",
   "Work permit not found": "Permis de travail introuvable",
-  "attendeeEmployeeIds must list at least one attendee": "Au moins un participant est requis",
-  "detectedAt cannot be in the future": "La date de détection ne peut pas être dans le futur",
-  "items must list at least one checklist item": "Au moins un point de contrôle est requis",
+  "attendeeEmployeeIds must list at least one attendee":
+    "Au moins un participant est requis",
+  "detectedAt cannot be in the future":
+    "La date de détection ne peut pas être dans le futur",
+  "items must list at least one checklist item":
+    "Au moins un point de contrôle est requis",
   "validTo must be after validFrom": "La fin de validité doit suivre le début",
-  "{x} checklist item(s) are not answered": "{1} point(s) de contrôle sans réponse",
-  "{x} corrective action(s) are not verified": "{1} action(s) corrective(s) non vérifiée(s)",
-  "{x} related non-conformity(ies) are still open": "{1} non-conformité(s) liée(s) encore ouverte(s)",
+  "{x} checklist item(s) are not answered":
+    "{1} point(s) de contrôle sans réponse",
+  "{x} corrective action(s) are not verified":
+    "{1} action(s) corrective(s) non vérifiée(s)",
+  "{x} related non-conformity(ies) are still open":
+    "{1} non-conformité(s) liée(s) encore ouverte(s)",
 
   // --- Ventes -------------------------------------------------------------
-  'A Contract with code "{x}" already exists': "Un contrat de code « {1} » existe déjà",
-  'A Quote with code "{x}" already exists': "Un devis de code « {1} » existe déjà",
-  "Contract can only be created from an ACCEPTED Quote": "Un contrat ne se crée qu'à partir d'un devis accepté",
-  "DQE has no opportunity to quote against": "Le DQE n'est rattaché à aucune opportunité",
-  "Only a draft Quote can be submitted": "Seul un devis en brouillon peut être soumis",
-  "Only a submitted Quote can be accepted": "Seul un devis soumis peut être accepté",
-  "Only a submitted Quote can be rejected": "Seul un devis soumis peut être refusé",
-  "Quote can only be created from a FINALIZED DQE": "Un devis ne se crée qu'à partir d'un DQE finalisé",
+  'A Contract with code "{x}" already exists':
+    "Un contrat de code « {1} » existe déjà",
+  'A Quote with code "{x}" already exists':
+    "Un devis de code « {1} » existe déjà",
+  "Contract can only be created from an ACCEPTED Quote":
+    "Un contrat ne se crée qu'à partir d'un devis accepté",
+  "DQE has no opportunity to quote against":
+    "Le DQE n'est rattaché à aucune opportunité",
+  "Only a draft Quote can be submitted":
+    "Seul un devis en brouillon peut être soumis",
+  "Only a submitted Quote can be accepted":
+    "Seul un devis soumis peut être accepté",
+  "Only a submitted Quote can be rejected":
+    "Seul un devis soumis peut être refusé",
+  "Quote can only be created from a FINALIZED DQE":
+    "Un devis ne se crée qu'à partir d'un DQE finalisé",
   "Quote not found": "Devis introuvable",
-  "Quote was accepted concurrently": "Le devis vient d'être accepté par ailleurs",
-  "Quote was rejected concurrently": "Le devis vient d'être refusé par ailleurs",
-  "Quote was submitted concurrently": "Le devis vient d'être soumis par ailleurs",
+  "Quote was accepted concurrently":
+    "Le devis vient d'être accepté par ailleurs",
+  "Quote was rejected concurrently":
+    "Le devis vient d'être refusé par ailleurs",
+  "Quote was submitted concurrently":
+    "Le devis vient d'être soumis par ailleurs",
   "This Quote already has a Contract": "Ce devis a déjà un contrat",
+  "Contract variation not found": "Avenant contractuel introuvable",
+  "lines must contain between 1 and 500 entries":
+    "Les lignes doivent contenir entre 1 et 500 entrées",
+  "lines[{x}].position must be a unique positive integer":
+    "lines[{1}].position doit être un entier positif unique",
+  "lines[{x}].quantity must not be zero":
+    "lines[{1}].quantity ne peut pas être nulle",
+  "lines[{x}].unitPrice must be positive or zero":
+    "lines[{1}].unitPrice doit être positif ou nul",
+  "Contract variation amount must not be zero":
+    "Le montant de l’avenant contractuel ne peut pas être nul",
+  "Variations require an ACTIVE Contract":
+    "Les avenants exigent un contrat actif",
+  "A variation line references a Contract lot outside this Contract":
+    "Une ligne d’avenant référence un lot extérieur à ce contrat",
+  "Only a {x} Contract variation can become {x}":
+    "Seul un avenant contractuel au statut {1} peut passer au statut {2}",
+  "companyId must be a string": "companyId doit être une chaîne de caractères",
+  "lines must be an array": "lines doit être une liste",
+  "expectedVersion must be a positive 32-bit integer":
+    "expectedVersion doit être un entier positif sur 32 bits",
+  "note must be a string": "note doit être une chaîne de caractères",
+  "{x} must be a JSON object": "{1} doit être un objet JSON",
+  "{x} contains unknown field: {x}": "{1} contient un champ inconnu : {2}",
+  "{x} must be a decimal string with at most 6 decimals":
+    "{1} doit être un décimal transmis en texte avec au plus 6 décimales",
+  "{x} exceeds DECIMAL(24,6)": "{1} dépasse la capacité DECIMAL(24,6)",
+  "Optional text exceeds {x} characters":
+    "Le texte facultatif dépasse {1} caractères",
+  "Optional text fields must be strings":
+    "Les champs de texte facultatifs doivent être des chaînes de caractères",
 
   // --- Smart Building -----------------------------------------------------
-  "A binary or multistate point uses the EQUALS condition": "Un point binaire ou multi-états utilise la condition « égal »",
+  "A binary or multistate point uses the EQUALS condition":
+    "Un point binaire ou multi-états utilise la condition « égal »",
   "A binary point expects 0 or 1": "Un point binaire attend 0 ou 1",
-  "A setpoint is already pending on this point: cancel it or wait for its confirmation": "Une consigne est déjà en cours sur ce point : annulez-la ou attendez sa confirmation",
-  "A simulator is never evidence of physical communication": "Un simulateur n'est jamais une preuve de communication physique",
+  "A setpoint is already pending on this point: cancel it or wait for its confirmation":
+    "Une consigne est déjà en cours sur ce point : annulez-la ou attendez sa confirmation",
+  "A simulator is never evidence of physical communication":
+    "Un simulateur n'est jamais une preuve de communication physique",
   "Alarm is {x}": "Alarme au statut {1}",
   "Alarm not found": "Alarme introuvable",
   "At most {x} readings per batch": "{1} relevés au plus par lot",
@@ -318,72 +545,108 @@ export const DOMAIN_MESSAGES: Record<string, string> = {
   "Gateway not authenticated": "Passerelle non authentifiée",
   "Gateway not found": "Passerelle introuvable",
   "Gateway {x} already exists": "La passerelle {1} existe déjà",
-  "No reading received from this point in the last 15 minutes": "Aucun relevé reçu de ce point depuis 15 minutes",
-  "Only a setpoint confirmed by readback can support a write test": "Seule une consigne confirmée par relecture peut attester un test d'écriture",
+  "No reading received from this point in the last 15 minutes":
+    "Aucun relevé reçu de ce point depuis 15 minutes",
+  "Only a setpoint confirmed by readback can support a write test":
+    "Seule une consigne confirmée par relecture peut attester un test d'écriture",
   "Point not found": "Point introuvable",
   "Point not found on this gateway": "Point introuvable sur cette passerelle",
-  "Point {x} already exists on this gateway": "Le point {1} existe déjà sur cette passerelle",
+  "Point {x} already exists on this gateway":
+    "Le point {1} existe déjà sur cette passerelle",
   "Setpoint is {x}": "Consigne au statut {1}",
   "Setpoint not found": "Consigne introuvable",
-  "Setpoint not found on this gateway": "Consigne introuvable sur cette passerelle",
-  "The point or its gateway is inactive": "Le point ou sa passerelle est inactif",
-  "The setpoint is outside the plausible range of the point": "La consigne est hors de la plage plausible du point",
+  "Setpoint not found on this gateway":
+    "Consigne introuvable sur cette passerelle",
+  "The point or its gateway is inactive":
+    "Le point ou sa passerelle est inactif",
+  "The setpoint is outside the plausible range of the point":
+    "La consigne est hors de la plage plausible du point",
   "This point is read-only": "Ce point est en lecture seule",
   "Unknown or disabled gateway": "Passerelle inconnue ou désactivée",
   "applied must be a boolean": "applied doit être un booléen",
-  "minPlausible must be lower than maxPlausible": "Le minimum plausible doit être inférieur au maximum",
-  "physicallyObserved must be a boolean": "physicallyObserved doit être un booléen",
+  "minPlausible must be lower than maxPlausible":
+    "Le minimum plausible doit être inférieur au maximum",
+  "physicallyObserved must be a boolean":
+    "physicallyObserved doit être un booléen",
   "readings must be a non-empty array": "readings doit être une liste non vide",
   "simulated must be a boolean": "simulated doit être un booléen",
   "writable must be a boolean": "writable doit être un booléen",
-  "writeTolerance applies to a writable point and must be >= 0": "La tolérance d'écriture s'applique à un point inscriptible et doit être positive ou nulle",
-  "{x} must contain letters, digits, dot, dash or underscore": "{1} ne doit contenir que lettres, chiffres, point, tiret ou soulignement",
+  "writeTolerance applies to a writable point and must be >= 0":
+    "La tolérance d'écriture s'applique à un point inscriptible et doit être positive ou nulle",
+  "{x} must contain letters, digits, dot, dash or underscore":
+    "{1} ne doit contenir que lettres, chiffres, point, tiret ou soulignement",
 
   // --- Sous-traitance -----------------------------------------------------
-  "A draft statement already exists for this package": "Une situation en brouillon existe déjà pour ce lot",
+  "A draft statement already exists for this package":
+    "Une situation en brouillon existe déjà pour ce lot",
   "A rejection needs a note": "Un refus exige un motif",
-  "A statement is approved by someone other than its preparer": "Une situation est approuvée par une autre personne que celle qui l'a préparée",
-  "A {x} order cannot back a subcontract package": "Une commande au statut {1} ne peut pas porter un lot sous-traité",
+  "A statement is approved by someone other than its preparer":
+    "Une situation est approuvée par une autre personne que celle qui l'a préparée",
+  "A {x} order cannot back a subcontract package":
+    "Une commande au statut {1} ne peut pas porter un lot sous-traité",
   "Cannot qualify: {x}": "Qualification impossible : {1}",
-  "Decide the draft statement first": "Décidez d'abord la situation en brouillon",
-  "No new progress: {x} % of the package tasks are done, {x} % already certified": "Aucun nouvel avancement : {1} % des tâches du lot sont terminées, {2} % déjà certifiés",
-  "Only an approved statement is invoiced": "Seule une situation approuvée est facturée",
+  "Decide the draft statement first":
+    "Décidez d'abord la situation en brouillon",
+  "No new progress: {x} % of the package tasks are done, {x} % already certified":
+    "Aucun nouvel avancement : {1} % des tâches du lot sont terminées, {2} % déjà certifiés",
+  "Only an approved statement is invoiced":
+    "Seule une situation approuvée est facturée",
   "Package is {x}": "Lot au statut {1}",
   "Package not found": "Lot introuvable",
   "Retention already released": "Retenue déjà libérée",
-  "Retention is due on {x}: an early release needs a bank guarantee reference": "La retenue est libérable le {1} : une libération anticipée exige une caution bancaire",
+  "Retention is due on {x}: an early release needs a bank guarantee reference":
+    "La retenue est libérable le {1} : une libération anticipée exige une caution bancaire",
   "Retention not found": "Retenue introuvable",
   "Statement is {x}": "Situation au statut {1}",
   "Statement not found": "Situation introuvable",
   "Subcontractor not compliant: {x}": "Sous-traitant non en règle : {1}",
   "Subcontractor not found": "Sous-traitant introuvable",
-  "The WBS item has no task: progress could not be derived": "L'élément WBS n'a aucune tâche : l'avancement ne peut pas être calculé",
+  "The WBS item has no task: progress could not be derived":
+    "L'élément WBS n'a aucune tâche : l'avancement ne peut pas être calculé",
   "The order has no amount": "La commande n'a pas de montant",
-  "The order is not attached to a project": "La commande n'est rattachée à aucun projet",
-  "The qualification must be decided by someone other than the creator of the file": "La qualification est décidée par une autre personne que celle qui a créé la fiche",
+  "The order is not attached to a project":
+    "La commande n'est rattachée à aucun projet",
+  "The qualification must be decided by someone other than the creator of the file":
+    "La qualification est décidée par une autre personne que celle qui a créé la fiche",
   "The subcontractor is {x}": "Sous-traitant au statut {1}",
-  "The supplier of the order is not registered as a subcontractor": "Le fournisseur de la commande n'est pas enregistré comme sous-traitant",
+  "The supplier of the order is not registered as a subcontractor":
+    "Le fournisseur de la commande n'est pas enregistré comme sous-traitant",
   "This order already backs a package": "Cette commande porte déjà un lot",
   "This statement is already invoiced": "Cette situation est déjà facturée",
-  "This supplier is already a subcontractor": "Ce fournisseur est déjà sous-traitant",
+  "This supplier is already a subcontractor":
+    "Ce fournisseur est déjà sous-traitant",
   "Vigilance obligation: {x}": "Obligation de vigilance : {1}",
-  "WBS item not found in the order's project": "Élément WBS introuvable dans le projet de la commande",
-  "periodEnd cannot be in the future": "La fin de période ne peut pas être dans le futur",
-  "retentionRate must be <= 10 %": "Le taux de retenue doit être inférieur ou égal à 10 %",
-  "idempotencyKey already used for another reservation operation": "Clé d'idempotence déjà utilisée pour une autre opération de réservation",
-  "A terminal project cannot receive a stock reservation": "Un projet terminé ou annulé ne peut plus recevoir de réservation de stock",
+  "WBS item not found in the order's project":
+    "Élément WBS introuvable dans le projet de la commande",
+  "periodEnd cannot be in the future":
+    "La fin de période ne peut pas être dans le futur",
+  "retentionRate must be <= 10 %":
+    "Le taux de retenue doit être inférieur ou égal à 10 %",
+  "idempotencyKey already used for another reservation operation":
+    "Clé d'idempotence déjà utilisée pour une autre opération de réservation",
+  "A terminal project cannot receive a stock reservation":
+    "Un projet terminé ou annulé ne peut plus recevoir de réservation de stock",
   "The inventory item is inactive": "L'article de stock est inactif",
   "The warehouse is inactive": "Le dépôt est inactif",
-  "Reservations must use the project's active site store": "Les réservations doivent utiliser le dépôt de chantier actif du projet",
+  "Reservations must use the project's active site store":
+    "Les réservations doivent utiliser le dépôt de chantier actif du projet",
   "Only {x} {x} is free to reserve": "Seuls {1} {2} sont libres à réserver",
   "Stock reservation not found": "Réservation de stock introuvable",
-  "Only an active reservation can be released": "Seule une réservation active peut être libérée",
+  "Only an active reservation can be released":
+    "Seule une réservation active peut être libérée",
   "Stock balance not found": "Solde de stock introuvable",
-  "{x} must have at most 3 decimal places": "{1} doit comporter au plus 3 décimales",
-  "Active stock reservation not found": "Réservation de stock active introuvable",
-  "The reservation belongs to another project": "La réservation appartient à un autre projet",
-  "Only a project issue can consume a reservation": "Seule une sortie de projet peut consommer une réservation",
-  "The requested quantity exceeds the remaining reservation": "La quantité demandée dépasse le reste réservé",
-  "Insufficient free stock for {x} in {x}: free {x} {x}, requested {x}": "Stock libre insuffisant pour {1} dans {2} : libre {3} {4}, demandé {5}",
-  "A stock entry cannot consume a reservation": "Une entrée de stock ne peut pas consommer une réservation",
+  "{x} must have at most 3 decimal places":
+    "{1} doit comporter au plus 3 décimales",
+  "Active stock reservation not found":
+    "Réservation de stock active introuvable",
+  "The reservation belongs to another project":
+    "La réservation appartient à un autre projet",
+  "Only a project issue can consume a reservation":
+    "Seule une sortie de projet peut consommer une réservation",
+  "The requested quantity exceeds the remaining reservation":
+    "La quantité demandée dépasse le reste réservé",
+  "Insufficient free stock for {x} in {x}: free {x} {x}, requested {x}":
+    "Stock libre insuffisant pour {1} dans {2} : libre {3} {4}, demandé {5}",
+  "A stock entry cannot consume a reservation":
+    "Une entrée de stock ne peut pas consommer une réservation",
 };

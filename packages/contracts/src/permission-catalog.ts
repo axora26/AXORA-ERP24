@@ -57,6 +57,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   library: "la bibliothèque",
   quote: "les devis",
   contract: "les contrats",
+  variation: "les avenants contractuels",
   project: "les projets",
   budget: "les budgets",
   changeorder: "les avenants",
@@ -154,25 +155,37 @@ export const PERMISSION_LABEL_OVERRIDES: Record<string, string> = {
   "fleet.assignment.manage": "Affecter véhicules et engins aux chauffeurs",
   "fleet.fuel.record": "Enregistrer les pleins de carburant",
   "fleet.incident.report": "Déclarer et clôturer les incidents de parc",
-  "subcontracting.package.read": "Consulter les sous-traitants, lots et situations",
-  "subcontracting.package.manage": "Gérer les sous-traitants et les lots confiés",
-  "subcontracting.subcontractor.qualify": "Qualifier ou suspendre un sous-traitant",
-  "subcontracting.statement.prepare": "Préparer les situations de sous-traitance",
-  "subcontracting.statement.approve": "Approuver les situations de sous-traitance",
+  "subcontracting.package.read":
+    "Consulter les sous-traitants, lots et situations",
+  "subcontracting.package.manage":
+    "Gérer les sous-traitants et les lots confiés",
+  "subcontracting.subcontractor.qualify":
+    "Qualifier ou suspendre un sous-traitant",
+  "subcontracting.statement.prepare":
+    "Préparer les situations de sous-traitance",
+  "subcontracting.statement.approve":
+    "Approuver les situations de sous-traitance",
   "subcontracting.retention.release": "Libérer les retenues de garantie",
-  "portal.principal.read": "Consulter les accès portail (clients, fournisseurs)",
+  "portal.principal.read":
+    "Consulter les accès portail (clients, fournisseurs)",
   "portal.principal.manage": "Inviter, suspendre ou révoquer les accès portail",
   "portal.grant.manage": "Exposer ou retirer des ressources sur les portails",
   "workflow.definition.read": "Consulter workflows, exécutions et approbations",
   "workflow.definition.manage": "Configurer les workflows et automatisations",
-  "workflow.approval.decide": "Décider les approbations de workflow (rôle désigné)",
-  "ai.copilot.use": "Interroger le copilote (dans la limite de ses propres droits de lecture)",
+  "workflow.approval.decide":
+    "Décider les approbations de workflow (rôle désigné)",
+  "ai.copilot.use":
+    "Interroger le copilote (dans la limite de ses propres droits de lecture)",
   "ai.evidence.read": "Auditer les preuves d'inférence du copilote",
-  "analytics.report.read": "Consulter les analyses (dans la limite des droits de lecture de chaque module)",
+  "analytics.report.read":
+    "Consulter les analyses (dans la limite des droits de lecture de chaque module)",
   "analytics.snapshot.manage": "Figer des instantanés analytiques mensuels",
-  "analytics.dashboard.manage": "Créer et partager des tableaux de bord analytiques",
-  "integrations.apikey.read": "Consulter les clés d'API, leur journal et le registre des connecteurs",
-  "integrations.apikey.manage": "Émettre et révoquer des clés d'API (jamais plus que ses propres droits)",
+  "analytics.dashboard.manage":
+    "Créer et partager des tableaux de bord analytiques",
+  "integrations.apikey.read":
+    "Consulter les clés d'API, leur journal et le registre des connecteurs",
+  "integrations.apikey.manage":
+    "Émettre et révoquer des clés d'API (jamais plus que ses propres droits)",
   "integrations.inbound.manage": "Configurer les webhooks entrants signés",
 };
 

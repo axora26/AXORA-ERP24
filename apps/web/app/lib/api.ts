@@ -1,5 +1,7 @@
 import type {
   ContractSummaryView,
+  ContractVariationParentView,
+  ContractVariationView,
   ContractView,
   CrmActivityView,
   CrmDashboardView,
@@ -72,7 +74,8 @@ export function setActiveCompanyId(companyId: string | null): void {
 }
 
 function withCompany(path: string): string {
-  if (!isCompanyScoped(path) || !activeCompanyId || /[?&]companyId=/.test(path)) return path;
+  if (!isCompanyScoped(path) || !activeCompanyId || /[?&]companyId=/.test(path))
+    return path;
   return `${path}${path.includes("?") ? "&" : "?"}companyId=${encodeURIComponent(activeCompanyId)}`;
 }
 
@@ -83,37 +86,72 @@ export function assetUrl(url: string): string {
 }
 
 function isCompanyScoped(path: string): boolean {
-  return !path.startsWith("/auth/") && !path.startsWith("/admin/") && !path.startsWith("/organizations/");
+  return (
+    !path.startsWith("/auth/") &&
+    !path.startsWith("/admin/") &&
+    !path.startsWith("/organizations/")
+  );
 }
 
 function bodyWithCompany(path: string, body: unknown): unknown {
-  if (!isCompanyScoped(path) || !activeCompanyId || body === null || typeof body !== "object" || Array.isArray(body)) return body;
+  if (
+    !isCompanyScoped(path) ||
+    !activeCompanyId ||
+    body === null ||
+    typeof body !== "object" ||
+    Array.isArray(body)
+  )
+    return body;
   return "companyId" in body ? body : { ...body, companyId: activeCompanyId };
 }
 
-async function call<T>(path: string, init?: RequestInit, retriedAfterStepUp = false): Promise<T> {
+async function call<T>(
+  path: string,
+  init?: RequestInit,
+  retriedAfterStepUp = false,
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_URL}${withCompany(path)}`, {
       ...init,
       credentials: "include",
       // FormData : le navigateur fixe lui-meme le Content-Type multipart (avec sa frontiere).
-      headers: init?.body instanceof FormData ? { ...(init?.headers ?? {}) } : { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+      headers:
+        init?.body instanceof FormData
+          ? { ...(init?.headers ?? {}) }
+          : { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
   } catch {
-    throw new ApiError(0, "L'API AXORA est momentanément injoignable (réseau indisponible ?).");
+    throw new ApiError(
+      0,
+      "L'API AXORA est momentanément injoignable (réseau indisponible ?).",
+    );
   }
 
   if (!response.ok) {
     // Le code machine distingue un step-up d'un refus RBAC ordinaire.
-    const body = (await response.json().catch(() => null)) as { code?: string; message?: string | string[] } | null;
-    const message = Array.isArray(body?.message) ? body.message.join(" · ") : body?.message;
-    if (response.status === 403 && body?.code === "MFA_STEP_UP_REQUIRED" && mfaStepUpHandler && !retriedAfterStepUp) {
+    const body = (await response.json().catch(() => null)) as {
+      code?: string;
+      message?: string | string[];
+    } | null;
+    const message = Array.isArray(body?.message)
+      ? body.message.join(" · ")
+      : body?.message;
+    if (
+      response.status === 403 &&
+      body?.code === "MFA_STEP_UP_REQUIRED" &&
+      mfaStepUpHandler &&
+      !retriedAfterStepUp
+    ) {
       const verified = await mfaStepUpHandler();
       if (verified) return call<T>(path, init, true);
       throw new StepUpCancelledError();
     }
-    throw new ApiError(response.status, message ?? `Erreur ${response.status}`, body?.code);
+    throw new ApiError(
+      response.status,
+      message ?? `Erreur ${response.status}`,
+      body?.code,
+    );
   }
 
   if (response.status === 204) {
@@ -125,28 +163,78 @@ async function call<T>(path: string, init?: RequestInit, retriedAfterStepUp = fa
 
 export const api = {
   downloadUrl: (path: string) => `${API_URL}${withCompany(path)}`,
-  download: async (path: string): Promise<{ blob: Blob; filename: string | null }> => {
+  download: async (
+    path: string,
+  ): Promise<{ blob: Blob; filename: string | null }> => {
     let response: Response;
-    try { response = await fetch(`${API_URL}${withCompany(path)}`, { credentials: "include" }); }
-    catch { throw new ApiError(0, "Le téléchargement est momentanément indisponible. Réessayez."); }
+    try {
+      response = await fetch(`${API_URL}${withCompany(path)}`, {
+        credentials: "include",
+      });
+    } catch {
+      throw new ApiError(
+        0,
+        "Le téléchargement est momentanément indisponible. Réessayez.",
+      );
+    }
     if (!response.ok) {
-      const body = await response.json().catch(() => null) as { message?: string | string[] } | null;
-      throw new ApiError(response.status, Array.isArray(body?.message) ? body.message.join(" · ") : body?.message ?? "Le téléchargement a échoué.");
+      const body = (await response.json().catch(() => null)) as {
+        message?: string | string[];
+      } | null;
+      throw new ApiError(
+        response.status,
+        Array.isArray(body?.message)
+          ? body.message.join(" · ")
+          : (body?.message ?? "Le téléchargement a échoué."),
+      );
     }
     const disposition = response.headers.get("content-disposition") ?? "";
     const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
-    let filename = /filename="?([^";]+)"?/i.exec(disposition)?.[1]?.trim() ?? null;
-    if (encoded) { try { filename = decodeURIComponent(encoded); } catch { /* conserver le nom simple */ } }
-    return { blob: await response.blob(), filename: filename ? Array.from(filename, character => character === "/" || character === "\\" || character.charCodeAt(0) < 32 ? "_" : character).join("") : null };
+    let filename =
+      /filename="?([^";]+)"?/i.exec(disposition)?.[1]?.trim() ?? null;
+    if (encoded) {
+      try {
+        filename = decodeURIComponent(encoded);
+      } catch {
+        /* conserver le nom simple */
+      }
+    }
+    return {
+      blob: await response.blob(),
+      filename: filename
+        ? Array.from(filename, (character) =>
+            character === "/" ||
+            character === "\\" ||
+            character.charCodeAt(0) < 32
+              ? "_"
+              : character,
+          ).join("")
+        : null,
+    };
   },
   get: <T>(path: string) => call<T>(path),
   post: <T>(path: string, body: unknown = {}) =>
-    call<T>(path, { method: "POST", body: JSON.stringify(bodyWithCompany(path, body)) }),
+    call<T>(path, {
+      method: "POST",
+      body: JSON.stringify(bodyWithCompany(path, body)),
+    }),
   patch: <T>(path: string, body: unknown = {}) =>
-    call<T>(path, { method: "PATCH", body: JSON.stringify(bodyWithCompany(path, body)) }),
+    call<T>(path, {
+      method: "PATCH",
+      body: JSON.stringify(bodyWithCompany(path, body)),
+    }),
   put: <T>(path: string, body: unknown = {}) =>
-    call<T>(path, { method: "PUT", body: JSON.stringify(bodyWithCompany(path, body)) }),
-  delete: <T>(path: string, body?: unknown) => call<T>(path, { method: "DELETE", ...(body !== undefined ? { body: JSON.stringify(bodyWithCompany(path, body)) } : {}) }),
+    call<T>(path, {
+      method: "PUT",
+      body: JSON.stringify(bodyWithCompany(path, body)),
+    }),
+  delete: <T>(path: string, body?: unknown) =>
+    call<T>(path, {
+      method: "DELETE",
+      ...(body !== undefined
+        ? { body: JSON.stringify(bodyWithCompany(path, body)) }
+        : {}),
+    }),
   upload: <T>(path: string, file: Blob, filename: string) => {
     const form = new FormData();
     form.append("file", file, filename);
@@ -167,15 +255,20 @@ export const crmApi = {
     phone?: string;
     source?: string;
   }) => api.post<CrmLeadView>("/crm/leads", input),
-  convertLead: (leadId: string, input: { amount: string; opportunityName?: string }) =>
-    api.post<CrmOpportunityView>(`/crm/leads/${leadId}/convert`, input),
+  convertLead: (
+    leadId: string,
+    input: { amount: string; opportunityName?: string },
+  ) => api.post<CrmOpportunityView>(`/crm/leads/${leadId}/convert`, input),
   moveOpportunity: (opportunityId: string, stageId: string) =>
-    api.patch<CrmOpportunityView>(`/crm/opportunities/${opportunityId}/stage`, { stageId }),
+    api.patch<CrmOpportunityView>(`/crm/opportunities/${opportunityId}/stage`, {
+      stageId,
+    }),
 };
 
 export const estimationApi = {
   studies: () => api.get<EstimationStudySummaryView[]>("/estimation/studies"),
-  study: (studyId: string) => api.get<EstimationStudyView>(`/estimation/studies/${studyId}`),
+  study: (studyId: string) =>
+    api.get<EstimationStudyView>(`/estimation/studies/${studyId}`),
   createStudy: (input: {
     opportunityId: string;
     code: string;
@@ -192,13 +285,23 @@ export const estimationApi = {
       sourceReference?: string;
       expectedVersion?: number;
     },
-  ) => api.post<EstimationRequirementView>(`/estimation/studies/${studyId}/requirements`, input),
+  ) =>
+    api.post<EstimationRequirementView>(
+      `/estimation/studies/${studyId}/requirements`,
+      input,
+    ),
   markStudyReady: (studyId: string, expectedVersion?: number) =>
-    api.post<EstimationStudyView>(`/estimation/studies/${studyId}/ready`, { expectedVersion }),
+    api.post<EstimationStudyView>(`/estimation/studies/${studyId}/ready`, {
+      expectedVersion,
+    }),
   dqes: () => api.get<DqeSummaryView[]>("/estimation/dqes"),
   dqe: (dqeId: string) => api.get<DqeView>(`/estimation/dqes/${dqeId}`),
-  createDqe: (input: { studyId: string; code: string; title: string; currency: string }) =>
-    api.post<DqeView>("/estimation/dqes", input),
+  createDqe: (input: {
+    studyId: string;
+    code: string;
+    title: string;
+    currency: string;
+  }) => api.post<DqeView>("/estimation/dqes", input),
   addDqeLine: (
     dqeId: string,
     input: {
@@ -213,15 +316,44 @@ export const estimationApi = {
       expectedVersion?: number;
     },
   ) => api.post<DqeLineView>(`/estimation/dqes/${dqeId}/lines`, input),
-  createDqeLot: (dqeId: string, input: { expectedVersion: number; position: number; code: string; designation: string }) =>
-    api.post<DqeView>(`/estimation/dqes/${dqeId}/lots`, input),
-  updateDqePricing: (dqeId: string, input: { expectedVersion: number; overheadRate?: string; marginRate?: string; taxRate?: string }) =>
-    api.patch<DqeView>(`/estimation/dqes/${dqeId}/pricing`, input),
-  dqeVariants: (dqeId: string) => api.get<import("@axora24/contracts").DqeVariantView[]>(`/estimation/dqes/${dqeId}/variants`),
-  createDqeVariant: (dqeId: string, input: { expectedVersion: number; code: string; title: string }) =>
-    api.post<import("@axora24/contracts").DqeVariantView>(`/estimation/dqes/${dqeId}/variants`, input),
-  dqeLibrary: () => api.get<import("@axora24/contracts").DqeLibraryItemView[]>("/estimation/library"),
-  finalizeDqe: (dqeId: string, expectedVersion?: number) => api.post<DqeView>(`/estimation/dqes/${dqeId}/finalize`, { expectedVersion }),
+  createDqeLot: (
+    dqeId: string,
+    input: {
+      expectedVersion: number;
+      position: number;
+      code: string;
+      designation: string;
+    },
+  ) => api.post<DqeView>(`/estimation/dqes/${dqeId}/lots`, input),
+  updateDqePricing: (
+    dqeId: string,
+    input: {
+      expectedVersion: number;
+      overheadRate?: string;
+      marginRate?: string;
+      taxRate?: string;
+    },
+  ) => api.patch<DqeView>(`/estimation/dqes/${dqeId}/pricing`, input),
+  dqeVariants: (dqeId: string) =>
+    api.get<import("@axora24/contracts").DqeVariantView[]>(
+      `/estimation/dqes/${dqeId}/variants`,
+    ),
+  createDqeVariant: (
+    dqeId: string,
+    input: { expectedVersion: number; code: string; title: string },
+  ) =>
+    api.post<import("@axora24/contracts").DqeVariantView>(
+      `/estimation/dqes/${dqeId}/variants`,
+      input,
+    ),
+  dqeLibrary: () =>
+    api.get<import("@axora24/contracts").DqeLibraryItemView[]>(
+      "/estimation/library",
+    ),
+  finalizeDqe: (dqeId: string, expectedVersion?: number) =>
+    api.post<DqeView>(`/estimation/dqes/${dqeId}/finalize`, {
+      expectedVersion,
+    }),
 };
 
 export const salesApi = {
@@ -229,14 +361,73 @@ export const salesApi = {
   quote: (quoteId: string) => api.get<QuoteView>(`/sales/quotes/${quoteId}`),
   createQuote: (input: { dqeId: string; code: string; title: string }) =>
     api.post<QuoteView>("/sales/quotes", input),
-  submitQuote: (quoteId: string) => api.post<QuoteView>(`/sales/quotes/${quoteId}/submit`, {}),
-  acceptQuote: (quoteId: string) => api.post<QuoteView>(`/sales/quotes/${quoteId}/accept`, {}),
+  submitQuote: (quoteId: string) =>
+    api.post<QuoteView>(`/sales/quotes/${quoteId}/submit`, {}),
+  acceptQuote: (quoteId: string) =>
+    api.post<QuoteView>(`/sales/quotes/${quoteId}/accept`, {}),
   rejectQuote: (quoteId: string, reason: string) =>
     api.post<QuoteView>(`/sales/quotes/${quoteId}/reject`, { reason }),
   contracts: () => api.get<ContractSummaryView[]>("/sales/contracts"),
-  contract: (contractId: string) => api.get<ContractView>(`/sales/contracts/${contractId}`),
+  variationContracts: () =>
+    api.get<ContractVariationParentView[]>("/sales/variation-contracts"),
+  contract: (contractId: string) =>
+    api.get<ContractView>(`/sales/contracts/${contractId}`),
   createContract: (input: { quoteId: string; code: string; title: string }) =>
     api.post<ContractView>("/sales/contracts", input),
+  contractVariations: (contractId: string) =>
+    api.get<ContractVariationView[]>(
+      `/sales/contracts/${contractId}/variations`,
+    ),
+  createContractVariation: (
+    contractId: string,
+    input: {
+      code: string;
+      title: string;
+      reason: string;
+      lines: Array<{
+        sourceContractLotId?: string;
+        position: number;
+        reference?: string;
+        designation: string;
+        unitCode: string;
+        quantity: string;
+        unitPrice: string;
+      }>;
+    },
+  ) =>
+    api.post<ContractVariationView>(
+      `/sales/contracts/${contractId}/variations`,
+      input,
+    ),
+  submitContractVariation: (
+    contractId: string,
+    variationId: string,
+    expectedVersion: number,
+  ) =>
+    api.post<ContractVariationView>(
+      `/sales/contracts/${contractId}/variations/${variationId}/submit`,
+      { expectedVersion },
+    ),
+  approveContractVariation: (
+    contractId: string,
+    variationId: string,
+    expectedVersion: number,
+    note?: string,
+  ) =>
+    api.post<ContractVariationView>(
+      `/sales/contracts/${contractId}/variations/${variationId}/approve`,
+      { expectedVersion, note },
+    ),
+  rejectContractVariation: (
+    contractId: string,
+    variationId: string,
+    expectedVersion: number,
+    note: string,
+  ) =>
+    api.post<ContractVariationView>(
+      `/sales/contracts/${contractId}/variations/${variationId}/reject`,
+      { expectedVersion, note },
+    ),
 };
 
 /**
@@ -247,9 +438,12 @@ export const salesApi = {
 export function formatAmount(amount: string, currency: string): string {
   const value = Number(amount);
   const formatted = Number.isFinite(value)
-    ? new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-        value,
-      )
+    ? new Intl.NumberFormat("fr-FR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value)
     : amount;
-  return currency === "MIXED" ? `${formatted} (devises mixtes)` : `${formatted} ${currency}`;
+  return currency === "MIXED"
+    ? `${formatted} (devises mixtes)`
+    : `${formatted} ${currency}`;
 }

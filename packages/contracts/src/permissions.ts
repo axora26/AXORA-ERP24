@@ -53,6 +53,9 @@ export const SALES_PERMISSIONS = {
   QUOTE_MANAGE: "sales.quote.manage",
   CONTRACT_READ: "sales.contract.read",
   CONTRACT_MANAGE: "sales.contract.manage",
+  VARIATION_READ: "sales.variation.read",
+  VARIATION_MANAGE: "sales.variation.manage",
+  VARIATION_APPROVE: "sales.variation.approve",
 } as const;
 
 /** INC-05 — Projets & Construction. L'approbation d'avenant est separee de leur saisie. */
@@ -325,7 +328,12 @@ export type PermissionKey = GroupValues<(typeof PERMISSION_GROUPS)[number]>;
  * d'objets par nom de constante perdait silencieusement des permissions).
  */
 export const ALL_PERMISSIONS = Object.freeze(
-  Object.fromEntries(PERMISSION_GROUPS.flatMap((group) => Object.values(group)).map((key) => [key, key])),
+  Object.fromEntries(
+    PERMISSION_GROUPS.flatMap((group) => Object.values(group)).map((key) => [
+      key,
+      key,
+    ]),
+  ),
 ) as { readonly [K in PermissionKey]: K };
 
 export type CorePermissionKey =
@@ -339,7 +347,6 @@ export type EstimationPermissionKey =
 
 export type SalesPermissionKey =
   (typeof SALES_PERMISSIONS)[keyof typeof SALES_PERMISSIONS];
-
 
 export interface PermissionCheck {
   key: PermissionKey | string;
