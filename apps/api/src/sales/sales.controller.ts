@@ -1,9 +1,21 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import type { Request } from "express";
 import { SALES_PERMISSIONS } from "@axora24/contracts";
 import { SessionGuard } from "../auth/session.guard.js";
 import { PermissionGuard } from "../auth/permission.guard.js";
-import { RequirePermission } from "../auth/require-permission.decorator.js";
+import {
+  RequireAnyPermission,
+  RequirePermission,
+} from "../auth/require-permission.decorator.js";
 import { CompanyScopeService } from "../common/company-scope.service.js";
 import { CompanyScopeGuard } from "../common/scope.guard.js";
 import { SalesService } from "./sales.service.js";
@@ -13,6 +25,10 @@ import type {
   CreateQuoteDto,
   RejectQuoteDto,
   SubmitQuoteDto,
+} from "./sales.dto.js";
+import {
+  parseContractVariationTransitionDto,
+  parseCreateContractVariationDto,
 } from "./sales.dto.js";
 
 /** INC-04 — Devis (issus d'un DQE finalise) -> Contrat (issu d'un devis accepte). */
@@ -26,8 +42,14 @@ export class SalesController {
 
   @Get("quotes")
   @RequirePermission(SALES_PERMISSIONS.QUOTE_READ)
-  async listQuotes(@Req() request: Request, @Query("companyId") companyId?: string) {
-    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+  async listQuotes(
+    @Req() request: Request,
+    @Query("companyId") companyId?: string,
+  ) {
+    const scope = await this.companyScope.resolve(
+      request.axoraUser!,
+      companyId,
+    );
     return this.sales.listQuotes(scope);
   }
 
@@ -38,7 +60,10 @@ export class SalesController {
     @Param("id") id: string,
     @Query("companyId") companyId?: string,
   ) {
-    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+    const scope = await this.companyScope.resolve(
+      request.axoraUser!,
+      companyId,
+    );
     return this.sales.getQuote(scope, id);
   }
 
@@ -88,8 +113,14 @@ export class SalesController {
 
   @Get("contracts")
   @RequirePermission(SALES_PERMISSIONS.CONTRACT_READ)
-  async listContracts(@Req() request: Request, @Query("companyId") companyId?: string) {
-    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+  async listContracts(
+    @Req() request: Request,
+    @Query("companyId") companyId?: string,
+  ) {
+    const scope = await this.companyScope.resolve(
+      request.axoraUser!,
+      companyId,
+    );
     return this.sales.listContracts(scope);
   }
 
@@ -100,15 +131,148 @@ export class SalesController {
     @Param("id") id: string,
     @Query("companyId") companyId?: string,
   ) {
-    const scope = await this.companyScope.resolve(request.axoraUser!, companyId);
+    const scope = await this.companyScope.resolve(
+      request.axoraUser!,
+      companyId,
+    );
     return this.sales.getContract(scope, id);
+  }
+
+  @Get("variation-contracts")
+  @RequireAnyPermission(
+    SALES_PERMISSIONS.VARIATION_READ,
+    SALES_PERMISSIONS.VARIATION_MANAGE,
+    SALES_PERMISSIONS.VARIATION_APPROVE,
+  )
+  async listVariationContracts(
+    @Req() request: Request,
+    @Query("companyId") companyId?: string,
+  ) {
+    const scope = await this.companyScope.resolve(
+      request.axoraUser!,
+      companyId,
+    );
+    return this.sales.listVariationContracts(scope);
   }
 
   @Post("contracts")
   @RequirePermission(SALES_PERMISSIONS.CONTRACT_MANAGE)
-  async createContract(@Req() request: Request, @Body() body: CreateContractDto) {
+  async createContract(
+    @Req() request: Request,
+    @Body() body: CreateContractDto,
+  ) {
     const user = request.axoraUser!;
     const scope = await this.companyScope.resolve(user, body.companyId);
     return this.sales.createContract(scope, body, user.id);
+  }
+
+  @Get("contracts/:contractId/variations")
+  @RequireAnyPermission(
+    SALES_PERMISSIONS.VARIATION_READ,
+    SALES_PERMISSIONS.VARIATION_MANAGE,
+    SALES_PERMISSIONS.VARIATION_APPROVE,
+  )
+  async listContractVariations(
+    @Req() request: Request,
+    @Param("contractId") contractId: string,
+    @Query("companyId") companyId?: string,
+  ) {
+    const scope = await this.companyScope.resolve(
+      request.axoraUser!,
+      companyId,
+    );
+    return this.sales.listContractVariations(scope, contractId);
+  }
+
+  @Get("contracts/:contractId/variations/:variationId")
+  @RequireAnyPermission(
+    SALES_PERMISSIONS.VARIATION_READ,
+    SALES_PERMISSIONS.VARIATION_MANAGE,
+    SALES_PERMISSIONS.VARIATION_APPROVE,
+  )
+  async getContractVariation(
+    @Req() request: Request,
+    @Param("contractId") contractId: string,
+    @Param("variationId") variationId: string,
+    @Query("companyId") companyId?: string,
+  ) {
+    const scope = await this.companyScope.resolve(
+      request.axoraUser!,
+      companyId,
+    );
+    return this.sales.getContractVariation(scope, contractId, variationId);
+  }
+
+  @Post("contracts/:contractId/variations")
+  @RequirePermission(SALES_PERMISSIONS.VARIATION_MANAGE)
+  async createContractVariation(
+    @Req() request: Request,
+    @Param("contractId") contractId: string,
+    @Body() rawBody: unknown,
+  ) {
+    const user = request.axoraUser!;
+    const body = parseCreateContractVariationDto(rawBody);
+    const scope = await this.companyScope.resolve(user, body.companyId);
+    return this.sales.createContractVariation(scope, contractId, body, user.id);
+  }
+
+  @Post("contracts/:contractId/variations/:variationId/submit")
+  @RequirePermission(SALES_PERMISSIONS.VARIATION_MANAGE)
+  async submitContractVariation(
+    @Req() request: Request,
+    @Param("contractId") contractId: string,
+    @Param("variationId") variationId: string,
+    @Body() rawBody: unknown,
+  ) {
+    const user = request.axoraUser!;
+    const body = parseContractVariationTransitionDto(rawBody);
+    const scope = await this.companyScope.resolve(user, body.companyId);
+    return this.sales.submitContractVariation(
+      scope,
+      contractId,
+      variationId,
+      body,
+      user.id,
+    );
+  }
+
+  @Post("contracts/:contractId/variations/:variationId/approve")
+  @RequirePermission(SALES_PERMISSIONS.VARIATION_APPROVE)
+  async approveContractVariation(
+    @Req() request: Request,
+    @Param("contractId") contractId: string,
+    @Param("variationId") variationId: string,
+    @Body() rawBody: unknown,
+  ) {
+    const user = request.axoraUser!;
+    const body = parseContractVariationTransitionDto(rawBody);
+    const scope = await this.companyScope.resolve(user, body.companyId);
+    return this.sales.approveContractVariation(
+      scope,
+      contractId,
+      variationId,
+      body,
+      user.id,
+    );
+  }
+
+  @Post("contracts/:contractId/variations/:variationId/reject")
+  @RequirePermission(SALES_PERMISSIONS.VARIATION_APPROVE)
+  async rejectContractVariation(
+    @Req() request: Request,
+    @Param("contractId") contractId: string,
+    @Param("variationId") variationId: string,
+    @Body() rawBody: unknown,
+  ) {
+    const user = request.axoraUser!;
+    const body = parseContractVariationTransitionDto(rawBody);
+    const scope = await this.companyScope.resolve(user, body.companyId);
+    return this.sales.rejectContractVariation(
+      scope,
+      contractId,
+      variationId,
+      body,
+      user.id,
+    );
   }
 }

@@ -100,6 +100,91 @@ describe("Study and DQE draft corrections (PostgreSQL)", () => {
     })).rejects.toMatchObject({ code: "P2003" });
   });
 
+  it.each([null, ""])("unassigns a DQE lot with %j while preserving scope, version, totals and audit", async (clearLotId) => {
+    const current = await dqe();
+    const lineId = current.lines[0].id as string;
+    const path = `dqes/${current.id}/lines/${lineId}`;
+    const created = await post(`dqes/${current.id}/lots`, { expectedVersion: 2, position: 1, code: "LOT-CLEAR", designation: "Lot à désaffecter" });
+    expect(created.status).toBe(201);
+    const lotId = created.body.lots[0].id as string;
+    const assigned = await patch(path, { expectedVersion: 3, lotId });
+    expect(assigned.status).toBe(200);
+    expect(assigned.body.lines[0].lotId).toBe(lotId);
+    const identity = { id: lineId, organizationId, companyId, dqeId: current.id };
+    expect(await prisma.dqeLine.findUniqueOrThrow({ where: { id: lineId } })).toMatchObject({ ...identity, lotId });
+
+    const cleared = await patch(path, { expectedVersion: 4, lotId: clearLotId });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body).toMatchObject({ version: 5, subtotal: "10.000000", total: "10.000000" });
+    expect(cleared.body.lines[0]).toMatchObject({ id: lineId, lotId: null, lineTotal: "10.000000" });
+    expect(cleared.body.lots[0]).toMatchObject({ id: lotId, lineCount: 0, subtotal: "0.000000" });
+    expect(await prisma.dqeLine.findUniqueOrThrow({ where: { id: lineId } })).toMatchObject({ ...identity, lotId: null });
+    const audit = await prisma.auditLog.findMany({ where: { organizationId, resourceId: lineId, action: "estimation.dqe.line.updated" } });
+    expect(audit).toHaveLength(2);
+    expect(audit).toEqual(expect.arrayContaining([expect.objectContaining({ metadata: expect.objectContaining({ companyId, parentId: current.id, version: 5, fields: ["lotId"] }) })]));
+  });
+
+  it.each([null, ""])("updates an already unassigned DQE line with lotId %j and keeps draft guards", async (clearLotId) => {
+    const current = await dqe();
+    const lineId = current.lines[0].id as string;
+    const path = `dqes/${current.id}/lines/${lineId}`;
+    const identity = { id: lineId, organizationId, companyId, dqeId: current.id, lotId: null };
+    const edited = await patch(path, { expectedVersion: 2, lotId: clearLotId, quantity: "1.234560", unitPrice: "123.456780" });
+    expect(edited.status).toBe(200);
+    expect(edited.body).toMatchObject({ version: 3, subtotal: "152.414802", total: "152.414802", lots: [] });
+    expect(edited.body.lines[0]).toMatchObject({ id: lineId, lotId: null, quantity: "1.234560", unitPrice: "123.456780", lineTotal: "152.414802" });
+    expect(await prisma.dqeLine.findUniqueOrThrow({ where: { id: lineId } })).toMatchObject(identity);
+    expect(await prisma.auditLog.count({ where: { organizationId, resourceId: lineId, action: "estimation.dqe.line.updated" } })).toBe(1);
+    const audit = await prisma.auditLog.findFirstOrThrow({ where: { organizationId, resourceId: lineId, action: "estimation.dqe.line.updated" } });
+    expect(audit.metadata).toMatchObject({ companyId, parentId: current.id, version: 3, fields: ["quantity", "unitPrice", "lotId"] });
+
+    expect((await patch(path, { expectedVersion: 2, lotId: clearLotId, quantity: "99" })).status).toBe(409);
+    expect((await get(`dqes/${current.id}`)).body).toMatchObject({ version: 3, subtotal: "152.414802" });
+    expect((await post(`dqes/${current.id}/finalize`, { expectedVersion: 3 })).status).toBe(201);
+    expect((await patch(path, { expectedVersion: 4, lotId: clearLotId, quantity: "99" })).status).toBe(400);
+    expect((await get(`dqes/${current.id}`)).body).toMatchObject({ version: 4, status: "FINALIZED", subtotal: "152.414802" });
+    expect(await prisma.dqeLine.findUniqueOrThrow({ where: { id: lineId } })).toMatchObject(identity);
+    expect(await prisma.auditLog.count({ where: { organizationId, resourceId: lineId, action: "estimation.dqe.line.updated" } })).toBe(1);
+  });
+
+  it("rejects foreign lots and scope changes without mutating the DQE line, version or audit", async () => {
+    const current = await dqe();
+    const lineId = current.lines[0].id as string;
+    const path = `dqes/${current.id}/lines/${lineId}`;
+    const other = await dqe();
+    const foreignCompany = await prisma.company.create({ data: { organizationId, name: "Foreign lot company" } });
+    const foreignOrganization = await prisma.organization.create({ data: { name: "Foreign lot organization", slug: `foreign-lot-${suffix}` } });
+    const foreignTenantCompany = await prisma.company.create({ data: { organizationId: foreignOrganization.id, name: "Foreign tenant company" } });
+    const companyDocument = await prisma.dqeDocument.create({ data: { organizationId, companyId: foreignCompany.id, code: "FOREIGN-LOT", title: "Foreign company DQE" } });
+    const tenantDocument = await prisma.dqeDocument.create({ data: { organizationId: foreignOrganization.id, companyId: foreignTenantCompany.id, code: "FOREIGN-LOT", title: "Foreign tenant DQE" } });
+    const targets = [
+      { organizationId, companyId, dqeId: other.id },
+      { organizationId, companyId: foreignCompany.id, dqeId: companyDocument.id },
+      { organizationId: foreignOrganization.id, companyId: foreignTenantCompany.id, dqeId: tenantDocument.id },
+    ];
+    const before = await prisma.dqeLine.findUniqueOrThrow({ where: { id: lineId } });
+    const auditBefore = await prisma.auditLog.count({ where: { organizationId, resourceId: lineId } });
+    const missingLot = await patch(path, { expectedVersion: 2, lotId: "missing-lot", quantity: "99" });
+    expect(missingLot.status).toBe(404);
+    for (const target of targets) {
+      const lot = await prisma.dqeLot.create({ data: { ...target, position: 1, code: "LOT-FOREIGN", designation: "Foreign lot" } });
+      const refused = await patch(path, { expectedVersion: 2, lotId: lot.id, quantity: "99" });
+      expect(refused.status).toBe(404);
+      expect(refused.body.message).toBe(missingLot.body.message);
+    }
+    for (const data of [{ dqeId: other.id }, { organizationId: foreignOrganization.id }, { companyId: foreignCompany.id }]) {
+      await expect(prisma.dqeLine.update({ where: { id: lineId }, data })).rejects.toThrow("A DQE line cannot change document or scope");
+    }
+    for (const data of [{ dqeId: other.id }, { organizationId: foreignOrganization.id }]) {
+      expect((await patch(path, { expectedVersion: 2, lotId: null, ...data })).status).toBe(400);
+    }
+    expect((await patch(path, { expectedVersion: 2, lotId: null, companyId: foreignCompany.id })).status).toBe(403);
+    expect((await patch(`dqes/${other.id}/lines/${lineId}`, { expectedVersion: 2, lotId: null })).status).toBe(404);
+    expect(await prisma.dqeLine.findUniqueOrThrow({ where: { id: lineId } })).toEqual(before);
+    expect((await get(`dqes/${current.id}`)).body).toMatchObject({ version: 2, subtotal: "10.000000", lines: [expect.objectContaining({ id: lineId, lotId: null })] });
+    expect(await prisma.auditLog.count({ where: { organizationId, resourceId: lineId } })).toBe(auditBefore);
+  });
+
   it("corrects exact DQE quantities and prices, recalculates totals and deletes draft lines", async () => {
     const current = await dqe(); const line = current.lines[0];
     const edited = await patch(`dqes/${current.id}/lines/${line.id}`, { expectedVersion: 2, quantity: "1.234560", unitPrice: "123.456780", designation: "Corrected item", reference: "BPU-1" });

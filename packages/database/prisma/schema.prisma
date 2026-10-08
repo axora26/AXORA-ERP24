@@ -108,7 +108,6 @@ model User {
   crmNextActionsUpdated  CrmNextAction[]     @relation("CrmNextActionUpdatedBy")
 
   @@unique([organizationId, email])
-
   @@index([organizationId])
   @@map("users")
 }
@@ -647,7 +646,7 @@ model DqeLine {
   updatedAt      DateTime        @updatedAt
 
   document DqeDocument @relation(fields: [dqeId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
-  lot      DqeLot?      @relation(fields: [lotId, organizationId, companyId, dqeId], references: [id, organizationId, companyId, dqeId], onDelete: Restrict)
+  lot      DqeLot?     @relation(fields: [lotId, organizationId, companyId, dqeId], references: [id, organizationId, companyId, dqeId], onDelete: Restrict)
 
   @@unique([dqeId, position])
   @@index([organizationId, companyId, dqeId, position])
@@ -723,6 +722,13 @@ enum QuoteStatus {
 enum ContractStatus {
   ACTIVE
   ARCHIVED
+}
+
+enum ContractVariationStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
 }
 
 model Quote {
@@ -816,9 +822,10 @@ model Contract {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  lines ContractLine[]
-  lots  ContractLot[]
-  quote Quote          @relation(fields: [quoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  lines      ContractLine[]
+  lots       ContractLot[]
+  variations ContractVariation[]
+  quote      Quote               @relation(fields: [quoteId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
 
   @@unique([companyId, code])
   @@unique([id, organizationId, companyId])
@@ -843,7 +850,7 @@ model ContractLine {
   unitPrice      Decimal  @db.Decimal(24, 6)
   createdAt      DateTime @default(now())
 
-  contract Contract    @relation(fields: [contractId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  contract Contract     @relation(fields: [contractId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
   lot      ContractLot? @relation(fields: [lotId, organizationId, companyId, contractId], references: [id, organizationId, companyId, contractId], onDelete: Restrict)
 
   @@unique([contractId, position])
@@ -862,8 +869,9 @@ model ContractLot {
   designation    String
   createdAt      DateTime @default(now())
 
-  contract Contract       @relation(fields: [contractId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
-  lines    ContractLine[]
+  contract       Contract                @relation(fields: [contractId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Cascade)
+  lines          ContractLine[]
+  variationLines ContractVariationLine[]
 
   @@unique([contractId, position])
   @@unique([contractId, code])
@@ -871,4 +879,63 @@ model ContractLot {
   @@unique([id, organizationId, companyId, contractId])
   @@index([organizationId, companyId, contractId, position])
   @@map("sales_contract_lots")
+}
+
+/// Avenant contractuel structure. Le contrat initial reste immuable ; seuls les
+/// avenants APPROVED participent au montant contractuel approuve.
+model ContractVariation {
+  id              String                  @id @default(cuid())
+  organizationId  String
+  companyId       String
+  contractId      String
+  revisionNumber  Int
+  code            String
+  title           String
+  reason          String
+  currency        String                  @db.Char(3)
+  amountDelta     Decimal                 @db.Decimal(24, 6)
+  status          ContractVariationStatus @default(DRAFT)
+  version         Int                     @default(1)
+  submittedAt     DateTime?
+  decidedAt       DateTime?
+  decisionNote    String?
+  createdByUserId String
+  decidedByUserId String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  contract Contract                @relation(fields: [contractId, organizationId, companyId], references: [id, organizationId, companyId], onDelete: Restrict)
+  lines    ContractVariationLine[]
+
+  @@unique([contractId, revisionNumber])
+  @@unique([contractId, code])
+  @@unique([id, organizationId, companyId])
+  @@unique([id, organizationId, companyId, contractId])
+  @@index([organizationId, companyId, contractId, status, createdAt])
+  @@map("sales_contract_variations")
+}
+
+/// Ligne immuable d'un avenant. Une quantite negative represente une moins-value.
+model ContractVariationLine {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  companyId           String
+  contractId          String
+  variationId         String
+  sourceContractLotId String?
+  position            Int
+  reference           String?
+  designation         String
+  unitCode            String
+  quantity            Decimal  @db.Decimal(24, 6)
+  unitPrice           Decimal  @db.Decimal(24, 6)
+  createdAt           DateTime @default(now())
+
+  variation         ContractVariation @relation(fields: [variationId, organizationId, companyId, contractId], references: [id, organizationId, companyId, contractId], onDelete: Cascade)
+  sourceContractLot ContractLot?      @relation(fields: [sourceContractLotId, organizationId, companyId, contractId], references: [id, organizationId, companyId, contractId], onDelete: Restrict)
+
+  @@unique([variationId, position])
+  @@index([organizationId, companyId, contractId, variationId, position])
+  @@index([organizationId, companyId, sourceContractLotId])
+  @@map("sales_contract_variation_lines")
 }

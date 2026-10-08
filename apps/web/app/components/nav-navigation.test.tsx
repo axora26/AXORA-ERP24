@@ -15,13 +15,23 @@ describe("navigation premium", () => {
       "Administration",
     ]);
     expect(NAV_GROUPS.flatMap((group) => group.items)).toHaveLength(37);
-    const commercial = NAV_GROUPS.find((group) => group.label === "Gestion commerciale");
-    expect(commercial?.items.map((item) => item.href)).toEqual(["/commercial", "/crm", "/estimation", "/sales"]);
+    const commercial = NAV_GROUPS.find(
+      (group) => group.label === "Gestion commerciale",
+    );
+    expect(commercial?.items.map((item) => item.href)).toEqual([
+      "/commercial",
+      "/crm",
+      "/estimation",
+      "/sales",
+    ]);
     expect(commercial?.items[0]?.permission).toEqual([
       "crm.account.read",
       "estimation.dqe.read",
       "sales.quote.read",
       "sales.contract.read",
+      "sales.variation.read",
+      "sales.variation.manage",
+      "sales.variation.approve",
       "procurement.request.read",
       "procurement.order.read",
       "procurement.supplier.read",
@@ -30,8 +40,18 @@ describe("navigation premium", () => {
       "finance.payable.read",
       "finance.credit.read",
     ]);
-    expect(commercial?.items.find((item) => item.href === "/sales")?.permission).toEqual(["sales.quote.read", "sales.contract.read"]);
-    const security = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.href === "/admin/security");
+    const sales = commercial?.items.find((item) => item.href === "/sales");
+    expect(sales?.label).toBe("Devis, contrats & avenants");
+    expect(sales?.permission).toEqual([
+      "sales.quote.read",
+      "sales.contract.read",
+      "sales.variation.read",
+      "sales.variation.manage",
+      "sales.variation.approve",
+    ]);
+    const security = NAV_GROUPS.flatMap((group) => group.items).find(
+      (item) => item.href === "/admin/security",
+    );
     expect(security?.permission).toBe("core.organization.manage");
   });
 
@@ -39,18 +59,25 @@ describe("navigation premium", () => {
     const denied = visibleGroups(() => false).flatMap((group) => group.items);
     expect(denied.map((item) => item.href)).toEqual(["/", "/account"]);
 
-    const granted = visibleGroups((permission) => permission === "crm.contact.read").flatMap((group) => group.items);
+    const granted = visibleGroups(
+      (permission) => permission === "crm.contact.read",
+    ).flatMap((group) => group.items);
     expect(granted.some((item) => item.href === "/crm")).toBe(true);
     expect(granted.some((item) => item.href === "/admin/users")).toBe(false);
 
     for (const [permission, expected] of [
       ["sales.contract.read", ["/commercial", "/sales"]],
+      ["sales.variation.read", ["/commercial", "/sales"]],
+      ["sales.variation.manage", ["/commercial", "/sales"]],
+      ["sales.variation.approve", ["/commercial", "/sales"]],
       ["procurement.order.read", ["/commercial", "/procurement"]],
       ["procurement.supplier.read", ["/commercial", "/procurement"]],
       ["finance.payable.read", ["/commercial", "/finance"]],
       ["finance.credit.read", ["/commercial", "/finance"]],
     ] as const) {
-      const hrefs = visibleGroups((candidate) => candidate === permission).flatMap((group) => group.items.map((item) => item.href));
+      const hrefs = visibleGroups(
+        (candidate) => candidate === permission,
+      ).flatMap((group) => group.items.map((item) => item.href));
       expected.forEach((href) => expect(hrefs).toContain(href));
     }
   });

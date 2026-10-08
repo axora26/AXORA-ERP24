@@ -323,6 +323,14 @@ export class AccountingService {
   }
 
   private async ensureDefaults(tx: Tx, scope: CompanyScope) {
+    // Share the invoice issuance company lock before any check-then-create.
+    // Both bootstrap and automatic posting must serialize default creation.
+    const companies = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "companies"
+      WHERE "id" = ${scope.companyId} AND "organizationId" = ${scope.organizationId}
+      FOR UPDATE
+    `;
+    if (!companies.length) throw new NotFoundException("Company not found");
     const accounts: Record<string, { id: string }> = {};
     for (const item of DEFAULT_ACCOUNTS) {
       const existing = await tx.accountingAccount.findFirst({ where: { companyId: scope.companyId, systemKey: item.systemKey } });

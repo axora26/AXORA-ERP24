@@ -14,7 +14,11 @@ function labelSegment(segment: string): string {
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
 }
 
-export function NavBreadcrumbs({ pathname }: { pathname: string }): React.ReactElement | null {
+export function NavBreadcrumbs({
+  pathname,
+}: {
+  pathname: string;
+}): React.ReactElement | null {
   const active = activeNavigation(pathname);
   if (!active) return null;
 
@@ -23,11 +27,13 @@ export function NavBreadcrumbs({ pathname }: { pathname: string }): React.ReactE
   const remainder = pathSegments.slice(baseSegments.length);
   const crumbs = [
     { label: active.group.label },
-    { label: active.item.label, href: remainder.length > 0 ? active.item.href : undefined },
-    ...remainder.map((segment, index) => ({
-      label: labelSegment(segment),
-      href: index < remainder.length - 1 ? `/${pathSegments.slice(0, baseSegments.length + index + 1).join("/")}` : undefined,
-    })),
+    {
+      label: active.item.label,
+      href: remainder.length > 0 ? active.item.href : undefined,
+    },
+    // Un segment intermédiaire n'est pas nécessairement une page existante.
+    // Seule l'entrée de navigation connue ci-dessus est un lien de retour.
+    ...remainder.map((segment) => ({ label: labelSegment(segment) })),
   ];
 
   return (
@@ -37,7 +43,13 @@ export function NavBreadcrumbs({ pathname }: { pathname: string }): React.ReactE
           const current = index === crumbs.length - 1;
           return (
             <li key={`${crumb.label}-${index}`}>
-              {crumb.href && !current ? <Link href={crumb.href}>{crumb.label}</Link> : <span aria-current={current ? "page" : undefined}>{crumb.label}</span>}
+              {crumb.href && !current ? (
+                <Link href={crumb.href}>{crumb.label}</Link>
+              ) : (
+                <span aria-current={current ? "page" : undefined}>
+                  {crumb.label}
+                </span>
+              )}
             </li>
           );
         })}
