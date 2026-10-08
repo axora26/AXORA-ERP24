@@ -37,6 +37,7 @@
 [data-theme="dark"] :is(input, textarea)::placeholder { color: #aeb9ca; opacity: 1; }
 [data-theme="dark"] :is(.btn-primary, .primary-button, .primary-inline-button) { color: #fff; }
 [data-theme="dark"] :is(a, .eyebrow, .password-field button, .link-button, .text-link, .monthly-toggle, .copilot-cite, .btn-ghost, .quick-links a, .notification-panel header button, .analytics-boards .analytics-new, .copilot-sessions .copilot-new, .currency-summary-list h3) { color: var(--theme-link); }
+[data-theme="dark"] .command-hero .command-primary-action { color: #0b2852; }
 [data-theme="dark"] .sidebar :is(a, button) { color: #d7e3f7; }
 [data-theme="dark"] :is(.form-error, .inline-warning, .copilot-denied) { color: #ffb2bc; background: #3d202a; border-color: #7d3b4a; }
 [data-theme="dark"] :is(.form-success, .text-success, .workflow-log li.ok, .copilot-evidence li.ok) { color: #75e0a7; }

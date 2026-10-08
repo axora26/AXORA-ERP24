@@ -297,7 +297,7 @@ export class EstimationService {
   async updateDqeLine(scope: CompanyScope, dqeId: string, lineId: string, input: UpdateDqeLineDto, actorUserId: string) {
     assertDraftFields(input, ["companyId", "expectedVersion", "lotId", "position", "reference", "designation", "unitCode", "costCategory", "quantity", "unitPrice"]);
     const version = draftVersion(input.expectedVersion)!;
-    const data: Prisma.DqeLineUpdateInput = {};
+    const data: Prisma.DqeLineUncheckedUpdateInput = {};
     if (input.position !== undefined) data.position = positiveInteger(input.position, "position");
     if (input.reference !== undefined) data.reference = optionalText(input.reference, "reference", 120);
     if (input.designation !== undefined) data.designation = requiredText(input.designation, "designation", 500);
@@ -312,11 +312,13 @@ export class EstimationService {
       const current = await tx.dqeLine.findFirst({ where: { id: lineId, dqeId, ...scope } });
       if (!current) throw new NotFoundException("DQE line not found");
       if (input.lotId !== undefined) {
-        if (input.lotId === null || input.lotId === "") data.lot = { disconnect: true };
+        // The composite lot relation shares tenant/document keys: change only lotId,
+        // never disconnect the relation (which would also clear those scope keys).
+        if (input.lotId === null || input.lotId === "") data.lotId = null;
         else {
           const lotId = requiredText(input.lotId, "lotId", 120);
           await this.requireLot(tx, scope, dqeId, lotId);
-          data.lot = { connect: { id: lotId } };
+          data.lotId = lotId;
         }
       }
       if (typeof data.position === "number") await this.linePosition(tx, scope, dqeId, data.position, lineId);

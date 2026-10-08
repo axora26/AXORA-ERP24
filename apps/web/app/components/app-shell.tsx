@@ -248,7 +248,7 @@ export function AppShell({ children }: { children: ReactNode }): React.ReactElem
                 <kbd>Ctrl K</kbd>
               </button>
             </div>
-            <div className="company-context" aria-label="Contexte de travail">
+            <div className="company-context" role="group" aria-label="Contexte de travail">
               <div className="company-context-copy">
                 <span>{sessionApi.organization?.name ?? "Organisation"}</span>
                 <strong>Société active</strong>

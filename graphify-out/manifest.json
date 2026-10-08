@@ -636,9 +636,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/estimation/estimation.service.ts": {
-    "mtime": 1791470648.8287222,
-    "seen": 1791475466.4714386,
-    "ast_hash": "201151f071604f8e3295333df9e6f3ce",
+    "mtime": 1791495043.0141,
+    "seen": 1791496615.967062,
+    "ast_hash": "9f57930ec51063cb37baa2b9a3cfc424",
     "semantic_hash": ""
   },
   "apps/api/src/field/field.controller.ts": {
@@ -1428,9 +1428,9 @@
     "semantic_hash": ""
   },
   "apps/api/test/estimation-drafts.e2e.test.ts": {
-    "mtime": 1791470649.0265322,
-    "seen": 1791475466.4714386,
-    "ast_hash": "ebdd15bfc78e8c00ae16cc95700a7ad4",
+    "mtime": 1791495218.0530605,
+    "seen": 1791496615.967565,
+    "ast_hash": "5504ec1fdf14b175efd629c06d7eb927",
     "semantic_hash": ""
   },
   "apps/api/test/estimation.e2e.test.ts": {
@@ -2160,9 +2160,9 @@
     "semantic_hash": ""
   },
   "apps/web/app/components/app-shell.tsx": {
-    "mtime": 1791470649.2820165,
-    "seen": 1791475466.4714386,
-    "ast_hash": "d20b79e0bd34fff9c6346e22fb520e12",
+    "mtime": 1791495177.6891205,
+    "seen": 1791496615.967565,
+    "ast_hash": "fc8679b76f4b0289c52ee54f54538eeb",
     "semantic_hash": ""
   },
   "apps/web/app/components/bank-reconciliation.tsx": {
@@ -2340,15 +2340,15 @@
     "semantic_hash": ""
   },
   "apps/web/app/components/nav-breadcrumbs.test.tsx": {
-    "mtime": 1791470649.384843,
-    "seen": 1791475466.4714386,
-    "ast_hash": "83ff66483c43128dfe50b84fd0b780e4",
+    "mtime": 1791496404.8169212,
+    "seen": 1791496615.967565,
+    "ast_hash": "a8aefb4e5f85ffcaf0f6b5751089c273",
     "semantic_hash": ""
   },
   "apps/web/app/components/nav-breadcrumbs.tsx": {
-    "mtime": 1791470649.3903475,
-    "seen": 1791475466.4714386,
-    "ast_hash": "cffafa3a3118374e82a1eefcafb461fb",
+    "mtime": 1791496404.8038573,
+    "seen": 1791496615.967565,
+    "ast_hash": "1d960dd5d20e2cd0f8e3d982659af333",
     "semantic_hash": ""
   },
   "apps/web/app/components/nav-navigation.test.tsx": {
@@ -2922,9 +2922,9 @@
     "semantic_hash": ""
   },
   "apps/web/e2e/payroll-policy-access.spec.ts": {
-    "mtime": 1791470649.608607,
-    "seen": 1791475466.4714386,
-    "ast_hash": "731996e2223514a384768dded6dc88ca",
+    "mtime": 1791495110.3832364,
+    "seen": 1791496615.967565,
+    "ast_hash": "b2812d8be1e49c968abf81a519bcd055",
     "semantic_hash": ""
   },
   "apps/web/e2e/project-operations.spec.ts": {
@@ -2958,15 +2958,15 @@
     "semantic_hash": ""
   },
   "apps/web/e2e/supplier-returns.spec.ts": {
-    "mtime": 1791470649.6174207,
-    "seen": 1791475466.4714386,
-    "ast_hash": "f710b41e8a9ce814cc965f2d9953df99",
+    "mtime": 1791495958.66754,
+    "seen": 1791496615.967565,
+    "ast_hash": "e011ea58552bed4bab5d38f07d411e20",
     "semantic_hash": ""
   },
   "apps/web/e2e/support.ts": {
-    "mtime": 1791470649.6186419,
-    "seen": 1791475466.4714386,
-    "ast_hash": "b4c095da5c1abd50ad593623b3471bb9",
+    "mtime": 1791495873.5205286,
+    "seen": 1791496615.967565,
+    "ast_hash": "5a2a3909aaae3938e3471f971cdf0865",
     "semantic_hash": ""
   },
   "apps/web/e2e/theme.spec.ts": {
@@ -2976,8 +2976,8 @@
     "semantic_hash": ""
   },
   "apps/web/next-env.d.ts": {
-    "mtime": 1791470649.625414,
-    "seen": 1791475466.4714386,
+    "mtime": 1791496439.8556385,
+    "seen": 1791496615.967565,
     "ast_hash": "90426577ad8f38459f3e566411c85589",
     "semantic_hash": ""
   },
@@ -2988,9 +2988,9 @@
     "semantic_hash": ""
   },
   "apps/web/package.json": {
-    "mtime": 1791470649.6334207,
-    "seen": 1791475466.4714386,
-    "ast_hash": "f765d06bdb0f5d3177eb7e087646b3d0",
+    "mtime": 1791493881.920933,
+    "seen": 1791494111.7584863,
+    "ast_hash": "3cf3df7e12937ca23858e4ed6cf3b7ae",
     "semantic_hash": ""
   },
   "apps/web/playwright.config.ts": {
@@ -3012,8 +3012,8 @@
     "semantic_hash": ""
   },
   "apps/web/tsconfig.json": {
-    "mtime": 1791470649.648383,
-    "seen": 1791475466.4714386,
+    "mtime": 1791496439.8566384,
+    "seen": 1791496615.967565,
     "ast_hash": "6c76df6e9c7e387957088d179d8d6c93",
     "semantic_hash": ""
   },
@@ -3066,9 +3066,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1791470650.0411208,
-    "seen": 1791475466.4714386,
-    "ast_hash": "d756ab7b87fa84434cd295c6b233d7aa",
+    "mtime": 1791493881.9152215,
+    "seen": 1791494111.7584863,
+    "ast_hash": "731f8b9148b5cd0f94634a9c1c31adb3",
     "semantic_hash": ""
   },
   "packages/contracts/package.json": {
@@ -3624,9 +3624,9 @@
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1791470648.5618663,
-    "seen": 1791475466.4714386,
-    "ast_hash": "8ed53a5aa53e7e47c5bddd1132b524fa",
+    "mtime": 1791495093.8592925,
+    "seen": 1791496615.967565,
+    "ast_hash": "30eb7a28ae730409006265afc25b5b1b",
     "semantic_hash": ""
   },
   "AXORA-ERP24.txt": {
@@ -3690,9 +3690,9 @@
     "semantic_hash": ""
   },
   "docs/EXECUTION_STATE.md": {
-    "mtime": 1791492279.3473544,
-    "seen": 1791492974.1650949,
-    "ast_hash": "e058dbf1990ab4629079ef7ccb70452f",
+    "mtime": 1791495672.2331288,
+    "seen": 1791496615.967565,
+    "ast_hash": "6a4299e3a77c40f03c69816573b07d7f",
     "semantic_hash": ""
   },
   "docs/MODULE_STATUS.md": {
@@ -4437,6 +4437,12 @@
     "mtime": 1791484852.9465296,
     "seen": 1791487122.0171683,
     "ast_hash": "9734aeef41d7a33141d92461c373bebb",
+    "semantic_hash": ""
+  },
+  "apps/web/e2e/workspace-context-accessibility.spec.ts": {
+    "mtime": 1791495216.3166745,
+    "seen": 1791496615.967565,
+    "ast_hash": "df5356af2ed57c7d14942e72d0cdb067",
     "semantic_hash": ""
   }
 }

@@ -65,10 +65,13 @@ export function watchProblems(page: Page): string[] {
   return problems;
 }
 
-/** Ouvre un ecran et attend que son titre et ses chargements soient termines. */
-export async function openScreen(page: Page, path: string): Promise<void> {
+/** Ouvre un ecran ; un contrat metier explicite prime sur l'inactivite reseau. */
+export async function openScreen(page: Page, path: string, ready?: (page: Page) => Promise<void>): Promise<void> {
   await page.goto(path);
-  await page.waitForLoadState("networkidle");
+  // Les prechargements RSC via le service worker peuvent rester ouverts apres
+  // le chargement metier. Seuls les parcours qualifies fournissent leur contrat.
+  if (ready) await ready(page);
+  else await page.waitForLoadState("networkidle");
   // Le titre est rendu dans l'espace de travail (et non l'ecran de chargement de session).
   await expect(page.locator("main.workspace h1").first()).toBeVisible();
 }
